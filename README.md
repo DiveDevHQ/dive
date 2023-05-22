@@ -43,18 +43,20 @@ You can install all the required dependencies by running
 pip install -r requirements.txt
 ```
 
-Then simply apply the migrations:
-```
-python manage.py migrate
-```
 
 You can add .env file under dive folder with following:
 
 SECRET_KEY=YOUR Secret Key <br/>
 DEBUG=True<br/>
 ENVIRONMENT=test<br/>
-DOMAIN=http://localhost:8000/
+DOMAIN=http://localhost:8000/<br/>
 ALLOWED_HOSTS=.localhost example.com
+
+
+Then simply apply the migrations:
+```
+python manage.py migrate
+```
 
 You can now run the development server:
 
@@ -62,9 +64,10 @@ You can now run the development server:
 python manage.py runserver
 ```
 
-To <a href="https://docs.diveapi.co/#connect-your-instance" target="blank"> connect with your instance</a>, follow web app UI http://localhost:8000/ instructions.
+You can now open http://localhost:8000 to view the web app.
+To <a href="https://docs.diveapi.co/#connect-your-instance" target="blank"> connect with your instance</a>, follow web app UI instructions.
 
-To connect with your customer's instances, follow the instructions on web app UI http://localhost:8000/ and <a href="https://docs.diveapi.co/#connect-multiple-instances"> api doc</a>.
+To connect with your customer's instances, follow the instructions on web app UI and <a href="https://docs.diveapi.co/#connect-multiple-instances"> api doc</a>.
 
 
 ### Dive Cloud
