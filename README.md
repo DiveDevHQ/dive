@@ -83,4 +83,4 @@ Get started by checking Github issues and creating a Pull Request. An easy way t
 
 ## License
 
-See the LICENSE file for licensing information
+See the <a href="https://github.com/DiveDevHQ/dive/blob/master/LICENSE">LICENSE</a> file for licensing information
