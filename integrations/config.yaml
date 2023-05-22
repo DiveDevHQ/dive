@@ -1,0 +1,33 @@
+hubspot:
+  api:
+    - schema: crm
+  auth_method: OAUTH2
+  authorization_url: https://app.hubspot.com/oauth/authorize
+  token_url: https://api.hubapi.com/oauth/v1/token
+  authorization_params:
+    response_type: code
+    auth_callback: True
+  token_params:
+    grant_type: authorization_code
+  refresh_params:
+    grant_type: refresh_token
+  scope_params:
+    default_scopes: crm.objects.owners.read timeline
+    scope_separator: ' '
+    request_type: request_param
+
+salesforce:
+  api:
+    - schema: crm
+  auth_method: OAUTH2
+  authorization_url: https://login.salesforce.com/services/oauth2/authorize
+  token_url: https://login.salesforce.com/services/oauth2/token
+  authorization_params:
+    response_type: code
+    auth_callback: True
+  token_params:
+    token_name: access_token
+    grant_type: authorization_code
+    expire_in: 7200
+  refresh_params:
+    grant_type: refresh_token

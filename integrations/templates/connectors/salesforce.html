@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% include "head.html" %}
+</head>
+<body>
+{% include "nav.html" %}
+<div class="main-page">
+    <div class="page_title">{{title}}</div>
+    <form action="/integrations/authorize/salesforce" method="post">
+        {% csrf_token %}
+        <h4>Prerequisite</h4>
+        You need to have the following data ready:<br/><br/>
+        <ul>
+            <li>Client Id</li>
+            <li>Client Secret</li>
+        </ul>
+        <br/>
+        To get "client id" and "client secret", please create a "connected app" under "App Manager" in Salesforce.
+        Enable OAuth settings. For OAUTH scopes, select "Manage user data via APIs (api)" or whatever meets your needs,
+        make sure to also select "Perform requests at any time (refresh_token, offline_access)".
+        <br/>
+        If you can not find "App Manager", check your permissions <a
+            href="https://help.salesforce.com/s/articleView?id=000384657&type=1" target="_blank">here</a>.
+        <br/> <br/>
+        <h4>Connect</h4>
+
+        <a href="#" onclick="show_single();return false;"> Connect my company's Salesforce instance</a><br/>
+        <a href="#" onclick="show_multiple();return false;"> Connect my customers' Salesforce instances</a><br/><br/>
+        <div class="hide_element" id="single">
+            <span style="color:red">Add</span> "http://localhost:8000/integrations/oauth-callback/salesforce" to "Callback URL" field in your developer account.
+
+            <br/> <br/>
+            <label for="client_id"><span style="color:red">*</span> Client Id:</label>
+            <input id="client_id" type="text" name="client_id" value="{{ client_id }}" class="form-control"
+                   style="max-width:300px">
+            <label for="client_secret"><span style="color:red">*</span> Client Secret:</label>
+            <input id="client_secret" type="text" name="client_secret" value="{{ client_secret }}" class="form-control"
+                   style="max-width:300px">
+            <br/>
+            <br/>
+
+            <input class="btn" type="submit" value="Connect">
+        </div>
+
+        <div class="hide_element" id="multiple">
+            <span style="color:red">Add</span> your custom app callback url (i.e. https://example.com/callback) to "Callback URL" field in your developer
+            account.
+            <br/> <br/>
+            <input class="btn" type="button" value="Connect" onclick="window.open('https://divedevhq.github.io/#connect-multiple-instances', '_blank')"/>
+
+        </div>
+    </form>
+</div>
+
+</body>
+<script>
+     function show_single(){
+        document.getElementById("single").classList.remove("hide_element");
+        document.getElementById("multiple").classList.add("hide_element");
+    }
+     function show_multiple(){
+        document.getElementById("single").classList.add("hide_element");
+        document.getElementById("multiple").classList.remove("hide_element");
+    }
+</script>
+</html>

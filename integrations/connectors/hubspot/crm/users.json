@@ -1,0 +1,5 @@
+{
+  "name": "${reference.firstName} ${reference.lastName}",
+  "email": "email",
+  "is_active": "isActive"
+}

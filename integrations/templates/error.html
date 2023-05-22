@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% include "head.html" %}
+</head>
+<body  >
+{% include "nav.html" %}
+<div class="main-page">
+    <div class="page_title">{{title}}</div>
+    {% if status_code %}Http Status Code: {{status_code}}<br/>{% endif %}
+    Error: {{error}}
+</div>
+
+</body>
+</html>

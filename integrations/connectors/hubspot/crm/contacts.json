@@ -1,0 +1,46 @@
+{
+    "first_name": "firstname",
+    "last_name": "lastname",
+    "account_id": "associatedcompanyid",
+    "job_title": "jobtitle",
+    "owner_id": "hubspot_owner_id",
+    "email_addresses": [
+        {
+            "email_address": "email",
+            "email_address_type": "${constant.Work}"
+        }
+    ],
+    "addresses": [
+        {
+            "street_1": "address",
+            "street_2": "",
+            "city":  "city",
+            "state": "state",
+            "postal_code": "zip",
+            "country": "country",
+            "address_type": "${constant.Work}"
+        }
+    ],
+    "phone_numbers": [
+        {
+            "phone_number": "phone",
+            "phone_number_type": "${constant.Work}"
+        },
+        {
+            "phone_number": "mobilephone",
+            "phone_number_type": "${constant.Mobile}"
+        },
+        {
+            "phone_number": "fax",
+            "phone_number_type": "${constant.Fax}"
+        },
+        {
+            "phone_number": "hs_whatsapp_phone_number",
+            "phone_number_type": "${constant.Whatsapp}"
+        }
+    ],
+    "last_activity_at": "notes_last_updated",
+    "created_at": "createdate",
+    "updated_at": "lastmodifieddate"
+
+  }

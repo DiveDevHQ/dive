@@ -1,0 +1,28 @@
+<div class="nav" id="navbar">
+    <nav class="nav__container">
+        <div>
+
+            <div class="nav__list">
+
+                <div class="nav__items">
+                    {% load static %}
+                    <img src="{% static 'images/logo.png' %}" width="50px" />
+
+                    <h3 class="nav__subtitle">Menu</h3>
+
+                    <a  class="nav__link" href="/">
+                        <i class='bx bx-compass nav__icon' ></i>
+                        <span class="nav__name cursor-pointer">Your Apps</span>
+                    </a>
+                    <a  class="nav__link" href="/integrations">
+                        <i class='bx bx-compass nav__icon' ></i>
+                        <span class="nav__name cursor-pointer"> Connectors</span>
+                    </a>
+
+                </div>
+            </div>
+        </div>
+
+
+    </nav>
+</div>

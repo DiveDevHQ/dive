@@ -1,0 +1,3 @@
+{
+  "name": "${reference.pipeline}:${reference.stage}"
+}
