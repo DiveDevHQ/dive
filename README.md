@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <a href="https://docs.diveapi.co/">Dive Api Docs</a>
+  <a href="https://docs.diveapi.co/" target="blank">Dive Api Docs</a>
 </p>
 
 ## Dive is an open-source universal Api for business integrations
@@ -62,7 +62,7 @@ You can now run the development server:
 python manage.py runserver
 ```
 
-To <a href="https://docs.diveapi.co/#connect-your-instance"> connect with your instance</a>, follow web app UI http://localhost:8000/ instructions.
+To <a href="https://docs.diveapi.co/#connect-your-instance" target="blank"> connect with your instance</a>, follow web app UI http://localhost:8000/ instructions.
 
 To connect with your customer's instances, follow the instructions on web app UI http://localhost:8000/ and <a href="https://docs.diveapi.co/#connect-multiple-instances"> api doc</a>.
 
@@ -74,7 +74,7 @@ To connect with your customer's instances, follow the instructions on web app UI
 
 
 ## Docs and support
-Read how to use Dive Api in our [documentation](https://docs.diveapi.co/)
+Read how to use Dive Api in our <a href="https://docs.diveapi.co/" target="blank">documentation</a>
 
 <a href="mailto:sherry@diveapi.co">Ask questions, request integrations or give feedback</a>
 
