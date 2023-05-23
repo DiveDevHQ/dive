@@ -656,15 +656,7 @@ def query_objects(auth, url, obj_type_plural, obj_type_singular, properties, com
         return error
 
     data = {'results': []}
-    if 'errors' in result.json_body and len(result.json_body['errors']) > 0:
-        data['error'] = {}
-        data['error']['id'] = 'Bad request'
-        data['error']['status_code'] = 400
-        error = ''
-        for e in result.json_body['errors']:
-            error += e.get('message', '') + ' '
-        data['error']['message'] = error.rstrip(' ')
-        return data
+
     records = result.json_body['data']['uiapi']['query'][obj_type_singular]['edges']
     for record in records:
         data_obj = {}
