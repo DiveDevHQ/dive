@@ -8,10 +8,10 @@
 
 ## Dive is an open-source universal Api for business integrations
 
-We believe **open-source** is the best way to solve ever growth integrations pain, convering **long tail of data sources**. 
+We believe **open-source** is the best way to solve every growth integrations pain, covering the **long tail of data sources**. 
 
 - Handling authentication for your integrated apps
-- Normalized one api schema for all your business integrations CRUD needs
+- Normalized one api schema for all your business integrations' CRUD needs
 
 ## Table of Contents
 
