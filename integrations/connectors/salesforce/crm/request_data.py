@@ -17,7 +17,7 @@ def get_object_by_id(auth, app, obj_type, obj_id, include_field_properties, cust
     instance_url = config.get('instance_url', None)
     match obj_type:
         case 'accounts':
-            return get_account_by_id(auth, instance_url, obj_id, 'accounts', field_dict, custom_fields,
+            return get_account_by_id(auth, instance_url, obj_id, obj_type, field_dict, custom_fields,
                                      include_field_properties)
         case _:
             return
@@ -38,7 +38,7 @@ def get_objects(auth, app, obj_type, include_field_properties, custom_fields, ob
     if len(obj_ids) > 0:
         match obj_type:
             case 'accounts':
-                return get_accounts_by_ids(auth, instance_url, obj_ids, 'accounts', field_dict, custom_fields,
+                return get_accounts_by_ids(auth, instance_url, obj_ids, obj_type, field_dict, custom_fields,
                                            include_field_properties)
             case _:
                 return
@@ -46,12 +46,48 @@ def get_objects(auth, app, obj_type, include_field_properties, custom_fields, ob
         match obj_type:
 
             case 'accounts':
-                return get_accounts(auth, instance_url, 'accounts', field_dict, custom_fields, include_field_properties,
+                return get_accounts(auth, instance_url, obj_type, field_dict, custom_fields, include_field_properties,
                                     owner_id,
                                     created_before, created_after, modified_before, modified_after,
                                     page_size, cursor)
             case _:
                 return
+
+
+def create_object(auth, app, obj_type, input_data):
+    base_path = Path(__file__).parent
+    try:
+        with open(str(base_path) + '/' + obj_type + '.json') as f:
+            field_dict = json.load(f)
+    except FileNotFoundError:
+        return
+
+    config = json.loads(app.auth_json)
+    instance_url = config.get('instance_url', None)
+    match obj_type:
+        case 'accounts':
+            return create_account(auth, instance_url, obj_type, input_data, field_dict)
+        case _:
+            return
+
+
+def update_object(auth, app, obj_id, obj_type, input_data):
+    base_path = Path(__file__).parent
+    try:
+        with open(str(base_path) + '/' + obj_type + '.json') as f:
+            field_dict = json.load(f)
+    except FileNotFoundError:
+        return
+
+    config = json.loads(app.auth_json)
+    instance_url = config.get('instance_url', None)
+
+    match obj_type:
+        case 'accounts':
+            return update_account(auth, instance_url, obj_id, obj_type, input_data, field_dict)
+
+        case _:
+            return
 
 
 def get_account_by_id(auth, instance_url, obj_id, obj_type, fields, custom_fields, include_field_properties):
@@ -168,6 +204,121 @@ def get_accounts_by_ids(auth, instance_url, obj_ids: [], obj_type, fields, custo
     return accounts
 
 
+def create_account(auth, instance_url, obj_type, input_dict, fields):
+    obj_type_singular = capitalize_first_letter(obj_type[:-1])
+    url = instance_url + "/services/data/v57.0/sobjects/" + obj_type_singular
+    return upsert_account(auth, url, input_dict, fields, None)
+
+
+def update_account(auth, instance_url, obj_id, obj_type, input_dict, fields):
+    obj_type_singular = capitalize_first_letter(obj_type[:-1])
+    url = instance_url + "/services/data/v57.0/sobjects/" + obj_type_singular + "/" + obj_id
+    return upsert_account(auth, url, input_dict, fields, obj_id)
+
+
+def upsert_account(auth, url, input_dict, fields, obj_id):
+    properties_dict = {}
+    custom_fields = {}
+    for key in input_dict:
+        if key in fields:
+            if key == 'addresses':
+                if not isinstance(input_dict[key], list):
+                    return {
+                        'error': {'id': 'Bad Request', 'status_code': 400, 'message': 'Invalid addresses, addresses '
+                                                                                      'should be an array'}}
+                for address in input_dict[key]:
+                    type_field = 'address_type'
+                    street_1 = address.get('street_1', '')
+                    street_2 = address.get('street_2', '')
+                    full_street = street_1
+                    if street_2:
+                        if full_street:
+                            full_street += ' '
+                        full_street += street_2
+                    if full_street:
+                        address['street_1'] = full_street
+                    try:
+                        m = next(i for i in fields[key] if
+                                 i[type_field].lower() == '${constant.' + address.get(type_field,
+                                                                                      '').lower() + '}')
+                        for a in address:
+                            if a == type_field:
+                                continue
+                            if a in m:
+                                if not m[a]:
+                                    continue
+                                properties_dict[m[a]] = address[a]
+                            else:
+                                return {
+                                    'error': {'id': 'Bad Request', 'status_code': 400,
+                                              'message': 'Invalid addresses property ' + a}}
+                    except StopIteration:
+                        return {
+                            'error': {'id': 'Bad Request', 'status_code': 400, 'message': 'Invalid addresses, only '
+                                                                                          'address_type -> Billing, Shipping '
+                                                                                          'is supported for this '
+                                                                                          'vendor'}}
+            elif key == 'phone_numbers':
+                if not isinstance(input_dict[key], list):
+                    return {
+                        'error': {'id': 'Bad Request', 'status_code': 400,
+                                  'message': 'Invalid phone_numbers, phone_numbers should be an array'}}
+                for phone_number in input_dict[key]:
+                    type_field = 'phone_number_type'
+                    try:
+                        m = next(i for i in fields[key] if
+                                 i[type_field].lower() == '${constant.' + phone_number.get(type_field,
+                                                                                           '').lower() + '}')
+                        for p_n in phone_number:
+                            if p_n == 'phone_number_type':
+                                continue
+                            if p_n in m:
+                                properties_dict[m[p_n]] = phone_number[p_n]
+                            else:
+                                return {
+                                    'error': {'id': 'Bad Request', 'status_code': 400,
+                                              'message': 'Invalid phone_numbers property ' + p_n}}
+                    except StopIteration:
+                        return {
+                            'error': {'id': 'Bad Request', 'status_code': 400,
+                                      'message': 'Invalid phone_numbers, only phone_number_type -> Work, Fax '
+                                                 'is supported for this '
+                                                 'vendor'}}
+
+            else:
+                properties_dict[fields[key]] = input_dict[key]
+        else:
+            properties_dict[key] = input_dict[key]
+            custom_fields[key] = input_dict[key]
+    if not obj_id:
+        result = insert_object(auth, url, properties_dict)
+    else:
+        result = patch_object(auth, url, properties_dict, obj_id)
+    if 'id' in result:
+        return result
+    return {'error': result['error']}
+
+
+def insert_object(auth, url, properties_dict):
+    request_data = properties_dict
+    result = ru.post_request_with_bearer(url, auth, request_data)
+    error = get_normalized_error(result)
+    if not error:
+        return {'id': result.json_body['id'], 'created_at': util.get_now_iso_format()}
+    else:
+        return error
+
+
+def patch_object(auth, url, properties_dict, obj_id):
+    request_data = properties_dict
+    result = ru.patch_request_with_bearer(url, auth, request_data)
+    error = get_normalized_error(result)
+    if not error:
+        return {'id': obj_id, 'updated_at': util.get_now_iso_format()}
+    else:
+        return error
+
+
 def get_properties_from_model(common_model, custom_model):
     properties = []
     for key in common_model:
@@ -217,42 +368,25 @@ def query_object_by_id(auth, url, obj_id, obj_type_plural, obj_type_singular, pr
     }}
     """
     result = ru.post_request_with_bearer(url, auth, {"query": query_string})
-    result_dict = {}
-    if result.success:
-        if 'errors' in result.json_body and len(result.json_body['errors']) > 0:
-            result_dict['error'] = {}
-            result_dict['error']['id'] = 'Bad request'
-            result_dict['error']['status_code'] = 400
-            error = ''
-            for e in result.json_body['errors']:
-                error += e.get('message', '') + ' '
-            result_dict['error']['message'] = error.rstrip(' ')
-            return result_dict
 
-        records = result.json_body['data']['uiapi']['query'][obj_type_singular]['edges']
-        if len(records) == 0:
-            result_dict['error'] = {}
-            result_dict['error']['id'] = 'Not found'
-            result_dict['error']['status_code'] = 404
-        else:
-            data = {}
-            for r in records[0]['node']:
-                if r == 'Id':
-                    data['Id'] = records[0]['node']['Id']
-                else:
-                    data[r] = records[0]['node'][r].get('value', None)
-            result_dict = get_result_from_model(data, common_model, custom_model)
-    else:
+    error = get_normalized_error(result)
+    if error:
+        return error
+
+    result_dict = {}
+    records = result.json_body['data']['uiapi']['query'][obj_type_singular]['edges']
+    if len(records) == 0:
         result_dict['error'] = {}
-        result_dict['error']['id'] = result.error_description
-        result_dict['error']['status_code'] = result.status_code
-        if isinstance(result.json_body, list):
-            error = ''
-            for e in result.json_body:
-                error += e.get('message', '') + ' '
-            result_dict['error']['message'] = error.rstrip(' ')
-        else:
-            result_dict['error']['message'] = result.json_body.get('message', result.json_body)
+        result_dict['error']['id'] = 'Not found'
+        result_dict['error']['status_code'] = 404
+    else:
+        data = {}
+        for r in records[0]['node']:
+            if r == 'Id':
+                data['Id'] = records[0]['node']['Id']
+            else:
+                data[r] = records[0]['node'][r].get('value', None)
+        result_dict = get_result_from_model(data, common_model, custom_model)
 
     return result_dict
 
@@ -284,42 +418,22 @@ def query_object_by_ids(auth, url, obj_ids, obj_type_plural, obj_type_singular, 
     }}
     """
     result = ru.post_request_with_bearer(url, auth, {"query": query_string})
+    error = get_normalized_error(result)
+    if error:
+        error['results']=[]
+        return error
+
     data = {'results': []}
-    if result.success:
-        if 'errors' in result.json_body and len(result.json_body['errors']) > 0:
-            data['error'] = {}
-            data['error']['id'] = 'Bad request'
-            data['error']['status_code'] = 400
-            error = ''
-            for e in result.json_body['errors']:
-                error += e.get('message', '') + ' '
-            data['error']['message'] = error.rstrip(' ')
-            return data
-
-        records = result.json_body['data']['uiapi']['query'][obj_type_singular]['edges']
-        for record in records:
-            data_obj = {}
-            for r in record['node']:
-                if r == 'Id':
-                    data_obj['Id'] = record['node']['Id']
-                else:
-                    data_obj[r] = record['node'][r].get('value', None)
-            result_dict = get_result_from_model(data_obj, common_model, custom_model)
-            data['results'].append(result_dict)
-
-    else:
-        data['error'] = {}
-        data['error']['id'] = result.error_description
-        data['error']['status_code'] = result.status_code
-        if result.json_body:
-            if isinstance(result.json_body, list):
-                error = ''
-                for e in result.json_body:
-                    error += e.get('message', '') + ' '
-                data['error']['message'] = error.rstrip(' ')
+    records = result.json_body['data']['uiapi']['query'][obj_type_singular]['edges']
+    for record in records:
+        data_obj = {}
+        for r in record['node']:
+            if r == 'Id':
+                data_obj['Id'] = record['node']['Id']
             else:
-                data['error']['message'] = result.json_body.get('message', result.json_body)
-
+                data_obj[r] = record['node'][r].get('value', None)
+        result_dict = get_result_from_model(data_obj, common_model, custom_model)
+        data['results'].append(result_dict)
     return data
 
 
@@ -536,46 +650,38 @@ def query_objects(auth, url, obj_type_plural, obj_type_singular, properties, com
     }}
     """
     result = ru.post_request_with_bearer(url, auth, {"query": query_string})
+    error = get_normalized_error(result)
+    if error:
+        error['results'] = []
+        return error
+
     data = {'results': []}
-    if result.success:
-        if 'errors' in result.json_body and len(result.json_body['errors']) > 0:
-            data['error'] = {}
-            data['error']['id'] = 'Bad request'
-            data['error']['status_code'] = 400
-            error = ''
-            for e in result.json_body['errors']:
-                error += e.get('message', '') + ' '
-            data['error']['message'] = error.rstrip(' ')
-            return data
-        records = result.json_body['data']['uiapi']['query'][obj_type_singular]['edges']
-        for record in records:
-            data_obj = {}
-            for r in record['node']:
-                if r == 'Id':
-                    data_obj['Id'] = record['node']['Id']
-                else:
-                    data_obj[r] = record['node'][r].get('value', None)
-            result_dict = get_result_from_model(data_obj, common_model, custom_model)
-            data['results'].append(result_dict)
-
-        page_info = result.json_body['data']['uiapi']['query'][obj_type_singular]['pageInfo']
-
-        next_cursor = page_info.get('endCursor', None)
-        has_next_page = page_info.get('hasNextPage', False)
-        if next_cursor and has_next_page:
-            data['next_cursor'] = next_cursor
-    else:
+    if 'errors' in result.json_body and len(result.json_body['errors']) > 0:
         data['error'] = {}
-        data['error']['id'] = result.error_description
-        data['error']['status_code'] = result.status_code
-        if result.json_body:
-            if isinstance(result.json_body, list):
-                error = ''
-                for e in result.json_body:
-                    error += e.get('message', '') + ' '
-                data['error']['message'] = error.rstrip(' ')
+        data['error']['id'] = 'Bad request'
+        data['error']['status_code'] = 400
+        error = ''
+        for e in result.json_body['errors']:
+            error += e.get('message', '') + ' '
+        data['error']['message'] = error.rstrip(' ')
+        return data
+    records = result.json_body['data']['uiapi']['query'][obj_type_singular]['edges']
+    for record in records:
+        data_obj = {}
+        for r in record['node']:
+            if r == 'Id':
+                data_obj['Id'] = record['node']['Id']
             else:
-                data['error']['message'] = result.json_body.get('message', result.json_body)
+                data_obj[r] = record['node'][r].get('value', None)
+        result_dict = get_result_from_model(data_obj, common_model, custom_model)
+        data['results'].append(result_dict)
+
+    page_info = result.json_body['data']['uiapi']['query'][obj_type_singular]['pageInfo']
+
+    next_cursor = page_info.get('endCursor', None)
+    has_next_page = page_info.get('hasNextPage', False)
+    if next_cursor and has_next_page:
+        data['next_cursor'] = next_cursor
 
     return data
 
@@ -586,3 +692,29 @@ def capitalize_first_letter(text):
     if len(text) == 1:
         return text.upper()
     return text[:1].upper() + text[1:]
+
+
+def get_normalized_error(response):
+    error_data = {}
+    if response.json_body and 'errors' in response.json_body and isinstance(response.json_body['errors'], list) and len(
+            response.json_body['errors']) > 0:
+        error_data['error'] = {}
+        error_data['error']['id'] = 'Bad request'
+        error_data['error']['status_code'] = 400
+        error = ''
+        for e in response.json_body['errors']:
+            error += e.get('message', '') + ' '
+        error_data['error']['message'] = error.rstrip(' ')
+        return error_data
+    elif not response.success:
+        error_data['error'] = {}
+        error_data['error']['id'] = response.error_description
+        error_data['error']['status_code'] = response.status_code
+        if isinstance(response.json_body, list):
+            error = ''
+            for e in response.json_body:
+                error += e.get('message', '') + ' '
+            error_data['error']['message'] = error.rstrip(' ')
+        elif response.json_body:
+            error_data['error']['message'] = response.json_body.get('message', response.json_body)
+        return error_data

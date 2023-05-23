@@ -5,7 +5,6 @@ from urllib.parse import urlparse
 import json
 import copy
 from pathlib import Path
-import re
 
 
 def get_object_by_id(auth, app, obj_type, obj_id, include_field_properties, custom_fields):
@@ -445,15 +444,15 @@ def get_companies_by_filter(auth, fields, custom_fields, include_field_propertie
 
 def create_company(auth, input_dict, fields):
     url = "https://api.hubapi.com/crm/v3/objects/companies"
-    return upsert_company(auth, url, input_dict, fields, True)
+    return upsert_company(auth, url, input_dict, fields, None)
 
 
 def update_company(auth, obj_id, input_dict, fields):
     url = "https://api.hubapi.com/crm/v3/objects/companies/" + obj_id
-    return upsert_company(auth, url, input_dict, fields, False)
+    return upsert_company(auth, url, input_dict, fields, obj_id)
 
 
-def upsert_company(auth, url, input_dict, fields, is_new):
+def upsert_company(auth, url, input_dict, fields, obj_id):
     properties_dict = {}
     custom_fields = {}
     for key in input_dict:
@@ -477,6 +476,8 @@ def upsert_company(auth, url, input_dict, fields, is_new):
                             if a == type_field:
                                 continue
                             if a in m:
+                                if not m[a]:
+                                    continue
                                 properties_dict[m[a]] = address[a]
                             else:
                                 return {
@@ -520,10 +521,10 @@ def upsert_company(auth, url, input_dict, fields, is_new):
         else:
             properties_dict[key] = input_dict[key]
             custom_fields[key] = input_dict[key]
-    if is_new:
+    if not obj_id:
         result = insert_object(auth, url, properties_dict)
     else:
-        result = patch_object(auth, url, properties_dict)
+        result = patch_object(auth, url, properties_dict, obj_id)
     if 'id' in result:
         return result
     return {'error': result['error']}
@@ -531,25 +532,25 @@ def upsert_company(auth, url, input_dict, fields, is_new):
 
 def create_deal(auth, input_dict, fields):
     url = "https://api.hubapi.com/crm/v3/objects/deals"
-    return upsert_deal(auth, url, input_dict, fields, True, None)
+    return upsert_deal(auth, url, input_dict, fields, None)
 
 
 def update_deal(auth, obj_id, input_dict, fields):
     url = "https://api.hubapi.com/crm/v3/objects/deals/" + obj_id
-    return upsert_deal(auth, url, input_dict, fields, False, obj_id)
+    return upsert_deal(auth, url, input_dict, fields, obj_id)
 
 
 def create_contact(auth, input_dict, fields):
     url = "https://api.hubapi.com/crm/v3/objects/contacts"
-    return upsert_contact(auth, url, input_dict, fields, True)
+    return upsert_contact(auth, url, input_dict, fields, None)
 
 
 def update_contact(auth, obj_id, input_dict, fields):
     url = "https://api.hubapi.com/crm/v3/objects/contacts/" + obj_id
-    return upsert_contact(auth, url, input_dict, fields, False)
+    return upsert_contact(auth, url, input_dict, fields, obj_id)
 
 
-def upsert_contact(auth, url, input_dict, fields, is_new):
+def upsert_contact(auth, url, input_dict, fields, obj_id):
     properties_dict = {}
     custom_fields = {}
     for key in input_dict:
@@ -644,16 +645,16 @@ def upsert_contact(auth, url, input_dict, fields, is_new):
         else:
             properties_dict[key] = input_dict[key]
             custom_fields[key] = input_dict[key]
-    if is_new:
+    if not obj_id:
         result = insert_object(auth, url, properties_dict)
     else:
-        result = patch_object(auth, url, properties_dict)
+        result = patch_object(auth, url, properties_dict, obj_id)
     if 'id' in result:
         return result
     return {'error': result['error']}
 
 
-def upsert_deal(auth, url, input_dict, fields, is_new, obj_id):
+def upsert_deal(auth, url, input_dict, fields, obj_id):
     properties_dict = {}
     custom_fields = {}
     account_id = None
@@ -687,10 +688,12 @@ def upsert_deal(auth, url, input_dict, fields, is_new, obj_id):
             properties_dict[key] = input_dict[key]
             custom_fields[key] = input_dict[key]
     result = {}
-    if is_new:
+    is_new = False
+    if not obj_id:
+        is_new = True
         result = insert_object(auth, url, properties_dict)
     elif len(properties_dict) > 0:
-        result = patch_object(auth, url, properties_dict)
+        result = patch_object(auth, url, properties_dict, obj_id)
     elif not account_id:
         return {'error': {'id': 'Bad Request', 'status_code': 400,
                           'message': 'No properties found to update, please provide at least one.'}}
@@ -939,7 +942,7 @@ def insert_object(auth, url, properties_dict):
     return data
 
 
-def patch_object(auth, url, properties_dict):
+def patch_object(auth, url, properties_dict, obj_id):
     request_data = {"properties": properties_dict}
     result = ru.patch_request_with_bearer(url, auth, request_data)
     data = {}

@@ -8,21 +8,21 @@
   "last_activity_at": "LastActivityDate",
   "addresses": [
     {
-      "street_1": "${reference.BillingStreet}",
+      "street_1": "BillingStreet",
       "street_2": "",
-      "city":  "${reference.BillingCity}",
-      "state": "${reference.BillingState}",
-      "postal_code": "${reference.BillingPostalCode}",
-      "country": "${reference.BillingCountry}",
+      "city":  "BillingCity",
+      "state": "BillingState",
+      "postal_code": "BillingPostalCode",
+      "country": "BillingCountry",
       "address_type": "${constant.Billing}"
     },
     {
-      "street_1": "${reference.ShippingStreet}",
+      "street_1": "ShippingStreet",
       "street_2": "",
-      "city":  "${reference.ShippingCity}",
-      "state": "${reference.ShippingState}",
-      "postal_code": "${reference.ShippingPostalCode}",
-      "country": "${reference.ShippingCountry}",
+      "city":  "ShippingCity",
+      "state": "ShippingState",
+      "postal_code": "ShippingPostalCode",
+      "country": "ShippingCountry",
       "address_type": "${constant.Shipping}"
     }
   ],
