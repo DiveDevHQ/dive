@@ -52,7 +52,7 @@ ENVIRONMENT=test<br/>
 DOMAIN=http://localhost:8000/<br/>
 ALLOWED_HOSTS=.localhost
 
-To connect with other database servers, add DATABASES json to your .env file <br/>
+To connect with other database servers, add DATABASES json to your .env file, for example <br/>
 DATABASES= {"default":{"ENGINE": "django.db.backends.postgresql","NAME": "postgres","USER":"postgres", "PASSWORD": "54321","HOST":"localhost","PORT":"5432"}}
 
 Then simply apply the migrations:
