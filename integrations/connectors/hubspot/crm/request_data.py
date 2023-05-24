@@ -462,12 +462,17 @@ def upsert_company(auth, url, input_dict, fields, obj_id):
                 properties_dict['domain'] = domain or input_dict[key]
                 properties_dict[fields[key]] = input_dict[key]
             elif key == 'addresses':
+                type_field = 'address_type'
+                address_types = []
+                for fk in fields[key]:
+                    params_type, text = util.get_params_value(fk[type_field], None)
+                    address_types.append(text)
+
                 if not isinstance(input_dict[key], list):
                     return {
                         'error': {'id': 'Bad Request', 'status_code': 400, 'message': 'Invalid addresses, addresses '
                                                                                       'should be an array'}}
                 for address in input_dict[key]:
-                    type_field = 'address_type'
                     try:
                         m = next(i for i in fields[key] if
                                  i[type_field].lower() == '${constant.' + address.get(type_field,
@@ -485,23 +490,30 @@ def upsert_company(auth, url, input_dict, fields, obj_id):
                                               'message': 'Invalid addresses property ' + a}}
                     except StopIteration:
                         return {
-                            'error': {'id': 'Bad Request', 'status_code': 400, 'message': 'Invalid addresses, only '
-                                                                                          'address_type -> Work '
-                                                                                          'is supported for this '
-                                                                                          'vendor'}}
+                            'error': {'id': 'Bad Request', 'status_code': 400,
+                                      'message': 'Invalid addresses, supported '
+                                                 + type_field + ' : ' + ', '.join(
+                                          address_types)}}
             elif key == 'phone_numbers':
+                type_field = 'phone_number_type'
+                phone_number_types = []
+                for fk in fields[key]:
+                    params_type, text = util.get_params_value(fk[type_field], None)
+                    phone_number_types.append(text)
+
                 if not isinstance(input_dict[key], list):
                     return {
                         'error': {'id': 'Bad Request', 'status_code': 400,
                                   'message': 'Invalid phone_numbers, phone_numbers should be an array'}}
+
                 for phone_number in input_dict[key]:
-                    type_field = 'phone_number_type'
+
                     try:
                         m = next(i for i in fields[key] if
                                  i[type_field].lower() == '${constant.' + phone_number.get(type_field,
                                                                                            '').lower() + '}')
                         for p_n in phone_number:
-                            if p_n == 'phone_number_type':
+                            if p_n == type_field:
                                 continue
                             if p_n in m:
                                 properties_dict[m[p_n]] = phone_number[p_n]
@@ -512,9 +524,8 @@ def upsert_company(auth, url, input_dict, fields, obj_id):
                     except StopIteration:
                         return {
                             'error': {'id': 'Bad Request', 'status_code': 400,
-                                      'message': 'Invalid phone_numbers, only phone_number_type -> Work '
-                                                 'is supported for this '
-                                                 'vendor'}}
+                                      'message': 'Invalid phone_numbers, supported ' + type_field + ' : ' + ', '.join(
+                                          phone_number_types)}}
 
             else:
                 properties_dict[fields[key]] = input_dict[key]
@@ -556,12 +567,17 @@ def upsert_contact(auth, url, input_dict, fields, obj_id):
     for key in input_dict:
         if key in fields:
             if key == 'email_addresses':
+                type_field = 'email_address_type'
+                email_types = []
+                for fk in fields[key]:
+                    params_type, text = util.get_params_value(fk[type_field], None)
+                    email_types.append(text)
                 if not isinstance(input_dict[key], list):
                     return {
                         'error': {'id': 'Bad Request', 'status_code': 400,
                                   'message': 'Invalid email_addresses, email addresses should be an array'}}
                 for email in input_dict[key]:
-                    type_field = 'email_address_type'
+
                     try:
                         m = next(i for i in fields[key] if
                                  i[type_field].lower() == '${constant.' + email.get(type_field, '').lower() + '}')
@@ -575,16 +591,20 @@ def upsert_contact(auth, url, input_dict, fields, obj_id):
                                                   'message': 'Invalid email_addresses property ' + e}}
                     except StopIteration:
                         return {'error': {'id': 'Bad Request', 'status_code': 400,
-                                          'message': 'Invalid email_addresses, only email_address_type -> Work '
-                                                     'is supported for this '
-                                                     'vendor'}}
+                                          'message': 'Invalid email_addresses, supported ' + type_field + ' : ' + ', '.join(
+                                              email_types)}}
             elif key == 'addresses':
+                type_field = 'address_type'
+                address_types = []
+                for fk in fields[key]:
+                    params_type, text = util.get_params_value(fk[type_field], None)
+                    address_types.append(text)
+
                 if not isinstance(input_dict[key], list):
                     return {
                         'error': {'id': 'Bad Request', 'status_code': 400, 'message': 'Invalid addresses, addresses '
                                                                                       'should be an array'}}
                 for address in input_dict[key]:
-                    type_field = 'address_type'
                     street_1 = address.get('street_1', '')
                     street_2 = address.get('street_2', '')
                     full_street = street_1
@@ -609,17 +629,21 @@ def upsert_contact(auth, url, input_dict, fields, obj_id):
                                                   'message': 'Invalid addresses property ' + a}}
                     except StopIteration:
                         return {
-                            'error': {'id': 'Bad Request', 'status_code': 400, 'message': 'Invalid addresses, only '
-                                                                                          'address_type -> Work '
-                                                                                          'is supported for this '
-                                                                                          'vendor'}}
+                            'error': {'id': 'Bad Request', 'status_code': 400,
+                                      'message': 'Invalid addresses, supported ' + type_field + ' : ' + ', '.join(
+                                          address_types)}}
             elif key == 'phone_numbers':
+                type_field = 'phone_number_type'
+                phone_number_types = []
+                for fk in fields[key]:
+                    params_type, text = util.get_params_value(fk[type_field], None)
+                    phone_number_types.append(text)
+
                 if not isinstance(input_dict[key], list):
                     return {
                         'error': {'id': 'Bad Request', 'status_code': 400,
                                   'message': 'Invalid phone_numbers, phone_numbers should be an array'}}
                 for phone_number in input_dict[key]:
-                    type_field = 'phone_number_type'
                     try:
                         m = next(i for i in fields[key] if
                                  i[type_field].lower() == '${constant.' + phone_number.get(type_field,
@@ -635,10 +659,8 @@ def upsert_contact(auth, url, input_dict, fields, obj_id):
                     except StopIteration:
                         return {
                             'error': {'id': 'Bad Request', 'status_code': 400,
-                                      'message': 'Invalid phone_numbers, only phone_number_type -> Work, Mobile, Fax, '
-                                                 'Whatsapp '
-                                                 'are supported for this '
-                                                 'vendor'}}
+                                      'message': 'Invalid phone_numbers, supported ' + type_field + ' : ' + ', '.join(
+                                          phone_number_types)}}
 
             else:
                 properties_dict[fields[key]] = input_dict[key]

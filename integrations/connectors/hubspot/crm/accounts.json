@@ -13,7 +13,7 @@
       "state": "state",
       "postal_code": "zip",
       "country": "country",
-      "address_type": "${constant.Work}"
+      "address_type": "${constant.Shipping}"
     }
   ],
   "phone_numbers": [
