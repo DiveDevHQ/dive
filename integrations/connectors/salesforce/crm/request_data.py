@@ -16,9 +16,9 @@ def get_object_by_id(auth, app, obj_type, obj_id, include_field_properties, cust
     config = json.loads(app.auth_json)
     instance_url = config.get('instance_url', None)
     match obj_type:
-        case 'accounts':
-            return get_account_by_id(auth, instance_url, obj_id, obj_type, field_dict, custom_fields,
-                                     include_field_properties)
+        case 'accounts' | 'contacts':
+            return execute_get_object_by_id(auth, instance_url, obj_id, obj_type, field_dict, custom_fields,
+                                            include_field_properties)
         case _:
             return
 
@@ -37,19 +37,20 @@ def get_objects(auth, app, obj_type, include_field_properties, custom_fields, ob
 
     if len(obj_ids) > 0:
         match obj_type:
-            case 'accounts':
-                return get_accounts_by_ids(auth, instance_url, obj_ids, obj_type, field_dict, custom_fields,
-                                           include_field_properties)
+            case 'accounts' | 'contacts':
+                return execute_get_objects_by_ids(auth, instance_url, obj_ids, obj_type, field_dict, custom_fields,
+                                                  include_field_properties)
             case _:
                 return
     else:
         match obj_type:
 
-            case 'accounts':
-                return get_accounts(auth, instance_url, obj_type, field_dict, custom_fields, include_field_properties,
-                                    owner_id,
-                                    created_before, created_after, modified_before, modified_after,
-                                    page_size, cursor)
+            case 'accounts' | 'contacts':
+                return execute_get_objects(auth, instance_url, obj_type, field_dict, custom_fields,
+                                           include_field_properties,
+                                           owner_id,
+                                           created_before, created_after, modified_before, modified_after,
+                                           page_size, cursor)
             case _:
                 return
 
@@ -65,8 +66,8 @@ def create_object(auth, app, obj_type, input_data):
     config = json.loads(app.auth_json)
     instance_url = config.get('instance_url', None)
     match obj_type:
-        case 'accounts':
-            return create_account(auth, instance_url, obj_type, input_data, field_dict)
+        case 'accounts' | 'contacts':
+            return execute_create_object(auth, instance_url, obj_type, input_data, field_dict)
         case _:
             return
 
@@ -83,14 +84,14 @@ def update_object(auth, app, obj_id, obj_type, input_data):
     instance_url = config.get('instance_url', None)
 
     match obj_type:
-        case 'accounts':
-            return update_account(auth, instance_url, obj_id, obj_type, input_data, field_dict)
+        case 'accounts' | 'contacts':
+            return execute_update_object(auth, instance_url, obj_id, obj_type, input_data, field_dict)
 
         case _:
             return
 
 
-def get_account_by_id(auth, instance_url, obj_id, obj_type, fields, custom_fields, include_field_properties):
+def execute_get_object_by_id(auth, instance_url, obj_id, obj_type, fields, custom_fields, include_field_properties):
     obj_type_singular = capitalize_first_letter(obj_type[:-1])
     url = instance_url + '/services/data/v57.0/graphql'
     properties = get_properties_from_model(fields, custom_fields)
@@ -113,6 +114,8 @@ def get_account_by_id(auth, instance_url, obj_id, obj_type, fields, custom_field
             for p in fields_properties:
                 if p['field_type'] == 'datetime':
                     account['data'][p['id']] = get_normalized_datetime(account['data'].get(p['id'], None))
+                if p['id'] == 'last_activity_at':
+                    p['field_type'] = 'datetime'
                 p['value'] = account['data'].get(p['id'], None)
             result['data'] = account['data']
             result['field_properties'] = fields_properties
@@ -121,9 +124,9 @@ def get_account_by_id(auth, instance_url, obj_id, obj_type, fields, custom_field
     return result
 
 
-def get_accounts(auth, instance_url, obj_type, fields, custom_fields, include_field_properties, owner_id,
-                 created_before,
-                 created_after, modified_before, modified_after, limit, cursor):
+def execute_get_objects(auth, instance_url, obj_type, fields, custom_fields, include_field_properties, owner_id,
+                        created_before,
+                        created_after, modified_before, modified_after, limit, cursor):
     properties = get_properties_from_model(fields, custom_fields)
     obj_type_singular = capitalize_first_letter(obj_type[:-1])
     if not limit:
@@ -157,12 +160,15 @@ def get_accounts(auth, instance_url, obj_type, fields, custom_fields, include_fi
             for p in account['field_properties']:
                 if p['field_type'] == 'datetime':
                     account['data'][p['id']] = get_normalized_datetime(account['data'].get(p['id'], None))
+                if p['id'] == 'last_activity_at':
+                    p['field_type'] = 'datetime'
                 p['value'] = account['data'].get(p['id'], None)
 
     return accounts
 
 
-def get_accounts_by_ids(auth, instance_url, obj_ids: [], obj_type, fields, custom_fields, include_field_properties):
+def execute_get_objects_by_ids(auth, instance_url, obj_ids: [], obj_type, fields, custom_fields,
+                               include_field_properties):
     obj_type_singular = capitalize_first_letter(obj_type[:-1])
     url = instance_url + '/services/data/v57.0/graphql'
     properties = get_properties_from_model(fields, custom_fields)
@@ -199,91 +205,81 @@ def get_accounts_by_ids(auth, instance_url, obj_ids: [], obj_type, fields, custo
             for p in account['field_properties']:
                 if p['field_type'] == 'datetime':
                     account['data'][p['id']] = get_normalized_datetime(account['data'].get(p['id'], None))
+                if p['id'] == 'last_activity_at':
+                    p['field_type'] = 'datetime'
                 p['value'] = account['data'].get(p['id'], None)
 
     return accounts
 
 
-def create_account(auth, instance_url, obj_type, input_dict, fields):
+def execute_create_object(auth, instance_url, obj_type, input_dict, fields):
     obj_type_singular = capitalize_first_letter(obj_type[:-1])
     url = instance_url + "/services/data/v57.0/sobjects/" + obj_type_singular
-    return upsert_account(auth, url, input_dict, fields, None)
+    return upsert_object(auth, url, input_dict, fields, None)
 
 
-def update_account(auth, instance_url, obj_id, obj_type, input_dict, fields):
+def execute_update_object(auth, instance_url, obj_id, obj_type, input_dict, fields):
     obj_type_singular = capitalize_first_letter(obj_type[:-1])
     url = instance_url + "/services/data/v57.0/sobjects/" + obj_type_singular + "/" + obj_id
-    return upsert_account(auth, url, input_dict, fields, obj_id)
+    return upsert_object(auth, url, input_dict, fields, obj_id)
 
 
-def upsert_account(auth, url, input_dict, fields, obj_id):
+def upsert_object(auth, url, input_dict, fields, obj_id):
     properties_dict = {}
     custom_fields = {}
     for key in input_dict:
         if key in fields:
-            if key == 'addresses':
-                if not isinstance(input_dict[key], list):
-                    return {
-                        'error': {'id': 'Bad Request', 'status_code': 400, 'message': 'Invalid addresses, addresses '
-                                                                                      'should be an array'}}
-                for address in input_dict[key]:
+            if isinstance(fields[key], list):
+                type_field = ''
+                if key == 'addresses':
                     type_field = 'address_type'
-                    street_1 = address.get('street_1', '')
-                    street_2 = address.get('street_2', '')
-                    full_street = street_1
-                    if street_2:
-                        if full_street:
-                            full_street += ' '
-                        full_street += street_2
-                    if full_street:
-                        address['street_1'] = full_street
-                    try:
-                        m = next(i for i in fields[key] if
-                                 i[type_field].lower() == '${constant.' + address.get(type_field,
-                                                                                      '').lower() + '}')
-                        for a in address:
-                            if a == type_field:
-                                continue
-                            if a in m:
-                                if not m[a]:
-                                    continue
-                                properties_dict[m[a]] = address[a]
-                            else:
-                                return {
-                                    'error': {'id': 'Bad Request', 'status_code': 400,
-                                              'message': 'Invalid addresses property ' + a}}
-                    except StopIteration:
-                        return {
-                            'error': {'id': 'Bad Request', 'status_code': 400, 'message': 'Invalid addresses, only '
-                                                                                          'address_type -> Billing, Shipping '
-                                                                                          'is supported for this '
-                                                                                          'vendor'}}
-            elif key == 'phone_numbers':
+                elif key == 'email_addresses':
+                    type_field = 'email_address_type'
+                elif key == 'phone_numbers':
+                    type_field = 'phone_number_type'
+
+                types = []
+                for fk in fields[key]:
+                    params_type, text = util.get_params_value(fk[type_field], None)
+                    types.append(text)
+
                 if not isinstance(input_dict[key], list):
                     return {
                         'error': {'id': 'Bad Request', 'status_code': 400,
-                                  'message': 'Invalid phone_numbers, phone_numbers should be an array'}}
-                for phone_number in input_dict[key]:
-                    type_field = 'phone_number_type'
+                                  'message': 'Invalid ' + key + ', ' + key + ' '
+                                                                             'should be an array'}}
+
+                for item in input_dict[key]:
+                    if key == 'addresses':
+                        street_1 = item.get('street_1', '')
+                        street_2 = item.get('street_2', '')
+                        full_street = street_1
+                        if street_2:
+                            if full_street:
+                                full_street += ' '
+                            full_street += street_2
+                        if full_street:
+                            item['street_1'] = full_street
                     try:
                         m = next(i for i in fields[key] if
-                                 i[type_field].lower() == '${constant.' + phone_number.get(type_field,
-                                                                                           '').lower() + '}')
-                        for p_n in phone_number:
-                            if p_n == 'phone_number_type':
+                                 i[type_field].lower() == '${constant.' + item.get(type_field,
+                                                                                      '').lower() + '}')
+                        for it in item:
+                            if it == type_field:
                                 continue
-                            if p_n in m:
-                                properties_dict[m[p_n]] = phone_number[p_n]
+                            if it in m:
+                                if not m[it]:
+                                    continue
+                                properties_dict[m[it]] = item[it]
                             else:
                                 return {
                                     'error': {'id': 'Bad Request', 'status_code': 400,
-                                              'message': 'Invalid phone_numbers property ' + p_n}}
+                                              'message': 'Invalid ' + key + ' property ' + it}}
                     except StopIteration:
                         return {
                             'error': {'id': 'Bad Request', 'status_code': 400,
-                                      'message': 'Invalid phone_numbers, only phone_number_type -> Work, Fax '
-                                                 'is supported for this '
-                                                 'vendor'}}
+                                      'message': 'Invalid ' + key + ', supported ' + type_field + ' : ' + ', '.join(
+                                          types)}}
 
             else:
                 properties_dict[fields[key]] = input_dict[key]
@@ -420,7 +416,7 @@ def query_object_by_ids(auth, url, obj_ids, obj_type_plural, obj_type_singular, 
     result = ru.post_request_with_bearer(url, auth, {"query": query_string})
     error = get_normalized_error(result)
     if error:
-        error['results']=[]
+        error['results'] = []
         return error
 
     data = {'results': []}
@@ -525,6 +521,7 @@ def get_properties_with_options(auth, instance_url, obj_type, records, fields):
         if field_name in fields:
             if data_type == 'picklist (multi-select)' or data_type == 'picklist':
                 r['field_choices'] = get_picklist(auth, instance_url, obj_type, field_name)
+
     return records
 
 
