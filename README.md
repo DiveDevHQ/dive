@@ -83,7 +83,9 @@ To connect with your customer's instances, follow the instructions on web app UI
 
 
 ## Docs and support
-Read how to use Dive Api in our <a href="https://docs.diveapi.co/" target="blank">documentation</a>
+Read how to use Dive API in our <a href="https://docs.diveapi.co/" target="blank">documentation</a>
+
+Supported business apps can be found at integrations/config.yaml, or open http://localhost:8000/integrations   
 
 <a href="mailto:sherry@diveapi.co">Ask questions, request integrations or give feedback</a>
 
