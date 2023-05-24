@@ -3,15 +3,19 @@
 </p>
 
 <p align="center">
-  <a href="https://docs.diveapi.co/" target="blank">Dive Api Docs</a>
+  <a href="https://docs.diveapi.co/" target="blank">Dive API Docs</a>
 </p>
 
-## Dive is an open-source universal Api for business integrations
+## Dive is an open-source universal API for business integrations
 
 We believe **open-source** is the best way to solve every growth integrations pain, covering the **long tail of data sources**. 
 
-- Handling authentication for your integrated apps
-- Normalized one api schema for all your business integrations' CRUD needs
+- Handling authentication for your integrations
+- Unified one API schema to exchange data with your or your customers' business apps
+
+### Schema docs
+
+[CRM](https://docs.diveapi.co/#crm), Marketing Automation, Accounting, HRIS, Ticketing, Recruiting ATS
 
 ## Table of Contents
 
@@ -69,7 +73,7 @@ python manage.py runserver
 You can now open http://localhost:8000 to view the web app.
 To <a href="https://docs.diveapi.co/#connect-your-instance" target="blank"> connect with your instance</a>, follow web app UI instructions.
 
-To connect with your customer's instances, follow the instructions on web app UI and <a href="https://docs.diveapi.co/#connect-multiple-instances"> api doc</a>.
+To connect with your customer's instances, follow the instructions on web app UI and <a href="https://docs.diveapi.co/#connect-multiple-instances"> API doc</a>.
 
 
 ### Dive Cloud
@@ -79,7 +83,9 @@ To connect with your customer's instances, follow the instructions on web app UI
 
 
 ## Docs and support
-Read how to use Dive Api in our <a href="https://docs.diveapi.co/" target="blank">documentation</a>
+Read how to use Dive API in our <a href="https://docs.diveapi.co/" target="blank">documentation</a>
+
+Supported business apps can be found at integrations/config.yaml, or open http://localhost:8000/integrations   
 
 <a href="mailto:sherry@diveapi.co">Ask questions, request integrations or give feedback</a>
 
