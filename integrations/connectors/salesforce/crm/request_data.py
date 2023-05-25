@@ -16,7 +16,7 @@ def get_object_by_id(auth, app, obj_type, obj_id, include_field_properties, cust
     config = json.loads(app.auth_json)
     instance_url = config.get('instance_url', None)
     match obj_type:
-        case 'accounts' | 'contacts':
+        case 'accounts' | 'contacts' | 'users':
             return execute_get_object_by_id(auth, instance_url, obj_id, obj_type, field_dict, custom_fields,
                                             include_field_properties)
         case _:
@@ -37,7 +37,7 @@ def get_objects(auth, app, obj_type, include_field_properties, custom_fields, ob
 
     if len(obj_ids) > 0:
         match obj_type:
-            case 'accounts' | 'contacts':
+            case 'accounts' | 'contacts' | 'users':
                 return execute_get_objects_by_ids(auth, instance_url, obj_ids, obj_type, field_dict, custom_fields,
                                                   include_field_properties)
             case _:
@@ -45,7 +45,7 @@ def get_objects(auth, app, obj_type, include_field_properties, custom_fields, ob
     else:
         match obj_type:
 
-            case 'accounts' | 'contacts':
+            case 'accounts' | 'contacts' | 'users':
                 return execute_get_objects(auth, instance_url, obj_type, field_dict, custom_fields,
                                            include_field_properties,
                                            owner_id,
@@ -135,6 +135,7 @@ def execute_get_objects(auth, instance_url, obj_type, fields, custom_fields, inc
     accounts = query_objects(auth, url, obj_type, obj_type_singular, properties, fields, custom_fields, owner_id,
                              created_before,
                              created_after, modified_before, modified_after, limit, cursor)
+
     if 'error' in accounts:
         return {'results': [], 'error': accounts['error']}
 
@@ -263,7 +264,7 @@ def upsert_object(auth, url, input_dict, fields, obj_id):
                     try:
                         m = next(i for i in fields[key] if
                                  i[type_field].lower() == '${constant.' + item.get(type_field,
-                                                                                      '').lower() + '}')
+                                                                                   '').lower() + '}')
                         for it in item:
                             if it == type_field:
                                 continue
@@ -609,9 +610,10 @@ def query_objects(auth, url, obj_type_plural, obj_type_singular, properties, com
     node_query = ''
     for p in properties:
         node_query += p + " {value} "
-    limit_query = 'first : ' + limit
+
+    limit_query = 'first:' + limit
     if cursor:
-        limit_query += ', after : "' + cursor + '"'
+        limit_query += ', after:"' + cursor + '"'
     if owner_id:
         limit_query += ' where: { OwnerId: { eq: "' + owner_id + '" } }'
     elif created_before:
@@ -622,11 +624,15 @@ def query_objects(auth, url, obj_type_plural, obj_type_singular, properties, com
         limit_query += ' where: { LastModifiedDate: { lt: {value: "' + modified_before + '"} } }'
     elif modified_after:
         limit_query += ' where: { LastModifiedDate: { gte: {value: "' + modified_after + '"} } }'
+
+    if limit_query:
+        limit_query = '(' + limit_query + ')'
+
     query_string = f"""
     query {obj_type_plural} {{
         uiapi {{
              query {{
-                 {obj_type_singular} ({limit_query}) {{
+                 {obj_type_singular} {limit_query} {{
                      edges {{
                          node 
                          {{
@@ -655,6 +661,7 @@ def query_objects(auth, url, obj_type_plural, obj_type_singular, properties, com
     data = {'results': []}
 
     records = result.json_body['data']['uiapi']['query'][obj_type_singular]['edges']
+
     for record in records:
         data_obj = {}
         for r in record['node']:

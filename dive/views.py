@@ -272,6 +272,8 @@ def get_or_create_crm_data_by_ids(request, obj_type):
                 instance_id = url_params_dict['instance_id'][0]
             if 'ids' in url_params_dict:
                 obj_ids = url_params_dict['ids']
+                if len(obj_ids) > 100:
+                    raise BadRequestException('number of ids can not exceed 100')
             if 'owner_id' in url_params_dict:
                 owner_id = url_params_dict['owner_id'][0]
             if 'page_size' in url_params_dict:

@@ -5,7 +5,7 @@
   "industry": "industry",
   "owner_id": "hubspot_owner_id",
   "stage_id": "${reference.pipeline}${reference.dealstage}",
-  "status": "${reference.hs_deal_stage_probability}",
+  "status": "hs_deal_stage_probability",
   "account_id": "",
   "close_date": "closedate",
   "last_activity_at": "notes_last_updated",
