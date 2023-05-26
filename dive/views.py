@@ -313,7 +313,6 @@ def get_or_create_crm_data_by_ids(request, obj_type):
 
 @api_view(["GET"])
 def get_crm_field_properties(request, obj_type):
-    print('sss')
     api = 'crm'
     url_params = request.GET.urlencode()
     instance_id = None
