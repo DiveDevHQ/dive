@@ -17,15 +17,15 @@ def get_object_by_id(auth, app, obj_type, obj_id, include_field_properties, cust
 
     match obj_type:
         case 'contacts':
-            return get_contact_by_id(auth, obj_id, field_dict, custom_fields, include_field_properties)
+            return get_contact_by_id(auth, obj_id, obj_type, field_dict, custom_fields, include_field_properties)
         case 'accounts':
-            return get_company_by_id(auth, obj_id, field_dict, custom_fields, include_field_properties)
+            return get_company_by_id(auth, obj_id, obj_type, field_dict, custom_fields, include_field_properties)
         case 'opportunities':
-            return get_deal_by_id(auth, obj_id, field_dict, custom_fields, include_field_properties)
+            return get_deal_by_id(auth, obj_id, obj_type, field_dict, custom_fields, include_field_properties)
         case 'stages':
-            return get_stage_by_id(auth, obj_id, field_dict, include_field_properties)
+            return get_stage_by_id(auth, obj_id, obj_type, field_dict, include_field_properties)
         case 'users':
-            return get_owner_by_id(auth, obj_id, field_dict, include_field_properties)
+            return get_owner_by_id(auth, obj_id, obj_type, field_dict, include_field_properties)
         case _:
             return
 
@@ -42,16 +42,17 @@ def get_objects(auth, app, obj_type, include_field_properties, custom_fields, ob
     if len(obj_ids) > 0:
         match obj_type:
             case 'contacts':
-                return get_contacts_by_ids(auth, obj_ids, field_dict, custom_fields, include_field_properties)
+                return get_contacts_by_ids(auth, obj_ids, obj_type, field_dict, custom_fields, include_field_properties)
             case 'accounts':
-                return get_companies_by_ids(auth, obj_ids, field_dict, custom_fields, include_field_properties)
+                return get_companies_by_ids(auth, obj_ids, obj_type, field_dict, custom_fields,
+                                            include_field_properties)
             case 'opportunities':
-                return get_deals_by_ids(auth, obj_ids, field_dict, custom_fields, include_field_properties)
+                return get_deals_by_ids(auth, obj_ids, obj_type, field_dict, custom_fields, include_field_properties)
             case 'stages':
-                return get_stages(auth, obj_ids, field_dict, include_field_properties,
+                return get_stages(auth, obj_ids, obj_type, field_dict, include_field_properties,
                                   None, None, None, None)
             case 'users':
-                return get_owners(auth, obj_ids, field_dict, include_field_properties,
+                return get_owners(auth, obj_ids, obj_type, field_dict, include_field_properties,
                                   None, None, None, None)
             case _:
                 return
@@ -66,22 +67,25 @@ def get_objects(auth, app, obj_type, include_field_properties, custom_fields, ob
             modified_after = convert_iso_date_to_timestamp(modified_after)
         match obj_type:
             case 'contacts':
-                return get_contacts_by_filter(auth, field_dict, custom_fields, include_field_properties, owner_id,
+                return get_contacts_by_filter(auth, obj_type, field_dict, custom_fields, include_field_properties,
+                                              owner_id,
                                               created_before, created_after, modified_before, modified_after,
                                               page_size, cursor)
             case 'accounts':
-                return get_companies_by_filter(auth, field_dict, custom_fields, include_field_properties, owner_id,
+                return get_companies_by_filter(auth, obj_type, field_dict, custom_fields, include_field_properties,
+                                               owner_id,
                                                created_before, created_after, modified_before, modified_after,
                                                page_size, cursor)
             case 'opportunities':
-                return get_deals_by_filter(auth, field_dict, custom_fields, include_field_properties, owner_id,
+                return get_deals_by_filter(auth, obj_type, field_dict, custom_fields, include_field_properties,
+                                           owner_id,
                                            created_before, created_after, modified_before, modified_after,
                                            page_size, cursor)
             case 'stages':
-                return get_stages(auth, [], field_dict, include_field_properties,
+                return get_stages(auth, [], obj_type, field_dict, include_field_properties,
                                   created_before, created_after, modified_before, modified_after)
             case 'users':
-                return get_owners(auth, [], field_dict, include_field_properties,
+                return get_owners(auth, [], obj_type, field_dict, include_field_properties,
                                   created_before, created_after, modified_before, modified_after)
             case _:
                 return
@@ -125,7 +129,23 @@ def update_object(auth, app, obj_id, obj_type, input_data):
             return
 
 
-def get_contact_by_id(auth, obj_id, fields, custom_fields, include_field_properties):
+def get_field_properties(auth, app, obj_type):
+    base_path = Path(__file__).parent
+    try:
+        with open(str(base_path) + '/' + obj_type + '.json') as f:
+            field_dict = json.load(f)
+    except FileNotFoundError:
+        return
+
+    match obj_type:
+        case 'accounts' | 'contacts' | 'opportunities' | 'users' | 'stages':
+            return execute_get_field_properties(auth, obj_type, field_dict)
+
+        case _:
+            return
+
+
+def get_contact_by_id(auth, obj_id, obj_type, fields, custom_fields, include_field_properties):
     url = "https://api.hubapi.com/crm/v3/objects/contacts/" + str(obj_id)
     properties = get_properties_from_model(fields, custom_fields)
     url_params = ''
@@ -148,7 +168,7 @@ def get_contact_by_id(auth, obj_id, fields, custom_fields, include_field_propert
 
     field_properties = None
     if include_field_properties and 'data' in contact:
-        field_properties = get_fields_properties(properties_details, fields, custom_fields)
+        field_properties = get_fields_properties(obj_type, properties_details, fields, custom_fields)
         for p in field_properties:
             if p['field_type'] == 'datetime':
                 contact['data'][p['id']] = get_normalized_datetime(contact['data'].get(p['id'], None))
@@ -162,7 +182,7 @@ def get_contact_by_id(auth, obj_id, fields, custom_fields, include_field_propert
     return result
 
 
-def get_contacts_by_ids(auth, obj_ids: [], fields, custom_fields, include_field_properties):
+def get_contacts_by_ids(auth, obj_ids: [], obj_type, fields, custom_fields, include_field_properties):
     url = "https://api.hubapi.com/crm/v3/objects/contacts/batch/read"
     properties = get_properties_from_model(fields, custom_fields)
 
@@ -180,7 +200,7 @@ def get_contacts_by_ids(auth, obj_ids: [], fields, custom_fields, include_field_
             contact['data'][df] = get_normalized_datetime(contact['data'].get(df, None))
 
     if include_field_properties:
-        field_properties = get_fields_properties(properties_details, fields, custom_fields)
+        field_properties = get_fields_properties(obj_type, properties_details, fields, custom_fields)
         for contact in contacts:
             contact['field_properties'] = copy.deepcopy(field_properties)
             for p in contact['field_properties']:
@@ -194,7 +214,7 @@ def get_contacts_by_ids(auth, obj_ids: [], fields, custom_fields, include_field_
         return {'results': contacts}
 
 
-def get_company_by_id(auth, obj_id, fields, custom_fields, include_field_properties):
+def get_company_by_id(auth, obj_id, obj_type, fields, custom_fields, include_field_properties):
     url = "https://api.hubapi.com/crm/v3/objects/companies/" + str(obj_id)
     url_params = ''
     properties = get_properties_from_model(fields, custom_fields)
@@ -217,7 +237,7 @@ def get_company_by_id(auth, obj_id, fields, custom_fields, include_field_propert
 
     field_properties = None
     if include_field_properties and 'data' in company:
-        field_properties = get_fields_properties(properties_details, fields, custom_fields)
+        field_properties = get_fields_properties(obj_type, properties_details, fields, custom_fields)
         for p in field_properties:
             if p['field_type'] == 'datetime':
                 company['data'][p['id']] = get_normalized_datetime(company['data'].get(p['id'], None))
@@ -256,7 +276,7 @@ def get_properties_from_model(common_model, custom_model):
     return properties
 
 
-def get_companies_by_ids(auth, obj_ids: [], fields, custom_fields, include_field_properties):
+def get_companies_by_ids(auth, obj_ids: [], obj_type, fields, custom_fields, include_field_properties):
     url = "https://api.hubapi.com/crm/v3/objects/companies/batch/read"
     properties = get_properties_from_model(fields, custom_fields)
     data = query_objects_by_ids_batch(auth, url, obj_ids, properties, fields, custom_fields)
@@ -274,7 +294,7 @@ def get_companies_by_ids(auth, obj_ids: [], fields, custom_fields, include_field
             company['data'][df] = get_normalized_datetime(company['data'].get(df, None))
 
     if include_field_properties:
-        field_properties = get_fields_properties(properties_details, fields, custom_fields)
+        field_properties = get_fields_properties(obj_type, properties_details, fields, custom_fields)
         for company in companies:
             company['field_properties'] = copy.deepcopy(field_properties)
             for p in company['field_properties']:
@@ -288,7 +308,7 @@ def get_companies_by_ids(auth, obj_ids: [], fields, custom_fields, include_field
         return {'results': companies}
 
 
-def get_deals_by_ids(auth, object_ids: [], fields, custom_fields, include_field_properties):
+def get_deals_by_ids(auth, object_ids: [], obj_type, fields, custom_fields, include_field_properties):
     url = "https://api.hubapi.com/crm/v3/objects/deals/batch/read"
     properties = get_properties_from_model(fields, custom_fields)
     data = query_objects_by_ids_batch(auth, url, object_ids, properties, fields, custom_fields)
@@ -316,7 +336,7 @@ def get_deals_by_ids(auth, object_ids: [], fields, custom_fields, include_field_
             continue
 
     if include_field_properties:
-        field_properties = get_fields_properties(properties_details, fields, custom_fields)
+        field_properties = get_fields_properties(obj_type, properties_details, fields, custom_fields)
         for deal in deals:
             deal['field_properties'] = copy.deepcopy(field_properties)
             for p in deal['field_properties']:
@@ -330,7 +350,7 @@ def get_deals_by_ids(auth, object_ids: [], fields, custom_fields, include_field_
         return {'results': deals}
 
 
-def get_contacts_by_filter(auth, fields, custom_fields, include_field_properties, owner_id, created_before,
+def get_contacts_by_filter(auth, obj_type, fields, custom_fields, include_field_properties, owner_id, created_before,
                            created_after, modified_before, modified_after, limit, cursor):
     url = "https://api.hubapi.com/crm/v3/objects/contacts/search"
     properties = get_properties_from_model(fields, custom_fields)
@@ -369,7 +389,7 @@ def get_contacts_by_filter(auth, fields, custom_fields, include_field_properties
             contact['data'][df] = get_normalized_datetime(contact['data'].get(df, None))
 
     if include_field_properties:
-        field_properties = get_fields_properties(properties_details, fields, custom_fields)
+        field_properties = get_fields_properties(obj_type, properties_details, fields, custom_fields)
         for contact in contacts:
             contact['field_properties'] = copy.deepcopy(field_properties)
             for p in contact['field_properties']:
@@ -385,7 +405,7 @@ def get_contacts_by_filter(auth, fields, custom_fields, include_field_properties
     return result
 
 
-def get_companies_by_filter(auth, fields, custom_fields, include_field_properties, owner_id, created_before,
+def get_companies_by_filter(auth, obj_type, fields, custom_fields, include_field_properties, owner_id, created_before,
                             created_after, modified_before, modified_after, limit, cursor):
     url = "https://api.hubapi.com/crm/v3/objects/companies/search"
     properties = get_properties_from_model(fields, custom_fields)
@@ -424,7 +444,7 @@ def get_companies_by_filter(auth, fields, custom_fields, include_field_propertie
             company['data'][df] = get_normalized_datetime(company['data'].get(df, None))
 
     if include_field_properties:
-        field_properties = get_fields_properties(properties_details, fields, custom_fields)
+        field_properties = get_fields_properties(obj_type, properties_details, fields, custom_fields)
         for company in companies:
             company['field_properties'] = copy.deepcopy(field_properties)
             for p in company['field_properties']:
@@ -891,12 +911,13 @@ def get_datetime_fields(properties, common_models, custom_model):
     return datetime_fields
 
 
-def get_fields_properties(properties, common_models, custom_model):
+def get_fields_properties(obj_type, properties, common_models, custom_model):
     field_properties = []
     fields = util.merge_model(common_models, custom_model)
     for key in fields:
         if isinstance(fields[key], list):
             continue
+
         original_key_name = key
         is_custom = True
         if key in common_models:
@@ -937,9 +958,44 @@ def get_fields_properties(properties, common_models, custom_model):
             else:
                 field_obj['field_type'] = field_type
 
+            if obj_type == 'opportunities' or obj_type == 'accounts' or obj_type == 'contacts':
+                if original_key_name == 'hubspot_owner_id':
+                    field_obj['field_type'] = 'text'
+                if obj_type == 'contacts' and original_key_name == 'associatedcompanyid':
+                    field_obj['field_type'] = 'text'
+
             field_properties.append(field_obj)
+
         except StopIteration:
-            continue
+            if obj_type == 'opportunities':
+                if key == 'stage_id' or key == 'account_id':
+                    field_obj = {'id': key, 'display_name': key.replace('_', ' ').capitalize(), 'origin_key_name': None,
+                                 'description': None,
+                                 'is_custom': False, 'field_type': 'text', 'field_choices': [], 'field_format': '',
+                                 'is_required': False}
+                    field_properties.append(field_obj)
+                if key == 'status':
+                    field_obj = {'id': key, 'display_name': 'Status', 'origin_key_name': None,
+                                 'description': 'Deal WON/LOST status',
+                                 'is_custom': False, 'field_type': 'select',
+                                 'field_choices': [{'label': 'OPEN', 'value': 'OPEN'}, {'label': 'WON', 'value': 'WON'},
+                                                   {'label': 'LOST', 'value': 'LOST'}], 'field_format': '',
+                                 'is_required': False}
+                    field_properties.append(field_obj)
+            elif obj_type == 'users':
+                if key == 'name':
+                    field_obj = {'id': key, 'display_name': 'Name', 'origin_key_name': None,
+                                 'description': 'Name of the user',
+                                 'is_custom': False, 'field_type': 'text', 'field_choices': [], 'field_format': '',
+                                 'is_required': False}
+                    field_properties.append(field_obj)
+            elif obj_type == 'stages':
+                if key == 'name':
+                    field_obj = {'id': key, 'display_name': 'Name', 'origin_key_name': None,
+                                 'description': 'Pipeline deal stage name',
+                                 'is_custom': False, 'field_type': 'text', 'field_choices': [], 'field_format': '',
+                                 'is_required': False}
+                    field_properties.append(field_obj)
 
     return field_properties
 
@@ -976,7 +1032,7 @@ def patch_object(auth, url, properties_dict, obj_id):
     return data
 
 
-def get_owner_by_id(auth, obj_id, fields, include_field_properties):
+def get_owner_by_id(auth, obj_id, obj_type, fields, include_field_properties):
     url = 'https://api.hubapi.com/owners/v2/owners'
     result = ru.get_request_with_bearer(url, auth)
     data = {'id': obj_id}
@@ -987,7 +1043,7 @@ def get_owner_by_id(auth, obj_id, fields, include_field_properties):
             r = get_result_from_model(m, fields, None)
             owner = {'id': obj_id, 'data': r}
             if include_field_properties:
-                owner['field_properties'] = get_user_properties(fields, r)
+                owner['field_properties'] = get_user_properties(obj_type, fields, r)
             return owner
         except StopIteration:
             data['error'] = {}
@@ -1002,7 +1058,7 @@ def get_owner_by_id(auth, obj_id, fields, include_field_properties):
     return data
 
 
-def get_owners(auth, obj_ids, fields, include_field_properties,
+def get_owners(auth, obj_ids, obj_type, fields, include_field_properties,
                created_before, created_after, modified_before, modified_after):
     url = 'https://api.hubapi.com/owners/v2/owners'
     result = ru.get_request_with_bearer(url, auth)
@@ -1025,7 +1081,7 @@ def get_owners(auth, obj_ids, fields, include_field_properties,
             owner = get_result_from_model(r, fields, None)
             result_dict = {'id': str(r['ownerId']), 'data': owner}
             if include_field_properties:
-                result_dict['field_properties'] = get_user_properties(fields, owner)
+                result_dict['field_properties'] = get_user_properties(obj_type, fields, owner)
             data['results'].append(result_dict)
     else:
         data['error'] = {}
@@ -1036,31 +1092,33 @@ def get_owners(auth, obj_ids, fields, include_field_properties,
     return data
 
 
-def get_user_properties(fields, values):
-    properties = [{'name': 'email', 'description': 'owner email address', 'label': 'email', 'fieldType': 'text'},
-                  {'name': 'isActive', 'description': 'whether owner account is active', 'label': 'Is Active',
-                   'fieldType': 'boolean'}]
-    field_properties = []
-    for key in values:
-        original_key_name = key
-        is_custom = False
-        if key in fields:
-            if not fields[key]:
-                continue
-            if '$' in fields[key]:
-                continue
-            original_key_name = fields[key]
+def get_user_properties(obj_type, fields, values):
+    properties = get_static_user_properties()
+    field_properties = get_fields_properties(obj_type, properties, fields, None)
+    for p in field_properties:
+        p['value'] = values.get(p['id'], None)
 
-        property_obj = next(i for i in properties if i['name'] == original_key_name)
-        field_obj = {'id': key, 'display_name': property_obj['label'], 'origin_key_name': original_key_name,
-                     'description': property_obj['description'], 'is_custom': is_custom, 'field_choices': [],
-                     'field_format': None,
-                     'field_type': property_obj['fieldType'], 'value': values.get(key, None)}
-        field_properties.append(field_obj)
     return field_properties
 
 
-def get_deal_by_id(auth, obj_id, fields, custom_fields, include_field_properties):
+def get_static_user_properties():
+    properties = [
+        {'name': 'email', 'description': 'owner email address', 'label': 'email', 'type': 'text', 'fieldType': 'text',
+         'options': []},
+        {'name': 'isActive', 'description': 'whether owner account is active', 'label': 'Is Active',
+         'type': 'text', 'fieldType': 'boolean', 'options': []}]
+    return properties
+
+
+def get_stage_properties(obj_type, fields, values):
+    properties = []
+    field_properties = get_fields_properties(obj_type, properties, fields, None)
+    for p in field_properties:
+        p['value'] = values.get(p['id'], None)
+    return field_properties
+
+
+def get_deal_by_id(auth, obj_id, obj_type, fields, custom_fields, include_field_properties):
     url = "https://api.hubapi.com/crm/v3/objects/deals/" + str(obj_id)
     url_params = ''
     properties = get_properties_from_model(fields, custom_fields)
@@ -1095,7 +1153,7 @@ def get_deal_by_id(auth, obj_id, fields, custom_fields, include_field_properties
 
     field_properties = None
     if include_field_properties and 'data' in deal:
-        field_properties = get_fields_properties(properties_details, fields, custom_fields)
+        field_properties = get_fields_properties(obj_type, properties_details, fields, custom_fields)
         for p in field_properties:
             if p['field_type'] == 'datetime':
                 deal['data'][p['id']] = get_normalized_datetime(deal['data'].get(p['id'], None))
@@ -1108,7 +1166,7 @@ def get_deal_by_id(auth, obj_id, fields, custom_fields, include_field_properties
     return result
 
 
-def get_deals_by_filter(auth, fields, custom_fields, include_field_properties, owner_id, created_before,
+def get_deals_by_filter(auth, obj_type, fields, custom_fields, include_field_properties, owner_id, created_before,
                         created_after, modified_before, modified_after, limit, cursor):
     url = "https://api.hubapi.com/crm/v3/objects/deals/search"
     properties = get_properties_from_model(fields, custom_fields)
@@ -1158,7 +1216,7 @@ def get_deals_by_filter(auth, fields, custom_fields, include_field_properties, o
             continue
 
     if include_field_properties:
-        field_properties = get_fields_properties(properties_details, fields, custom_fields)
+        field_properties = get_fields_properties(obj_type, properties_details, fields, custom_fields)
         for deal in deals:
             deal['field_properties'] = copy.deepcopy(field_properties)
             for p in deal['field_properties']:
@@ -1174,7 +1232,7 @@ def get_deals_by_filter(auth, fields, custom_fields, include_field_properties, o
     return result
 
 
-def get_stage_by_id(auth, obj_id, fields, include_field_properties):
+def get_stage_by_id(auth, obj_id, obj_type, fields, include_field_properties):
     result = get_pipelines(auth)
     data = {'id': obj_id}
     if 'error' in result:
@@ -1188,7 +1246,7 @@ def get_stage_by_id(auth, obj_id, fields, include_field_properties):
         stage = get_result_from_model(m, fields, None)
         data['data'] = stage
         if include_field_properties:
-            data['field_properties'] = []
+            data['field_properties'] = get_stage_properties(obj_type, fields, stage)
     except StopIteration:
         data['error'] = {}
         data['error']['id'] = 'Not found'
@@ -1196,7 +1254,7 @@ def get_stage_by_id(auth, obj_id, fields, include_field_properties):
     return data
 
 
-def get_stages(auth, obj_ids, fields, include_field_properties,
+def get_stages(auth, obj_ids, obj_type, fields, include_field_properties,
                created_before, created_after, modified_before, modified_after):
     result = get_pipelines(auth)
     stages = result['results']
@@ -1215,7 +1273,7 @@ def get_stages(auth, obj_ids, fields, include_field_properties,
         stage = get_result_from_model(s, fields, None)
         result_dict = {'id': str(s['id']), 'data': stage}
         if include_field_properties:
-            result_dict['field_properties'] = []
+            result_dict['field_properties'] = get_stage_properties(obj_type, fields, stage)
         data['results'].append(result_dict)
     if 'error' in result:
         data['error'] = result['error']
@@ -1289,10 +1347,10 @@ def query_associations(auth, obj_ids, url):
     return {'results': associations}
 
 
-def create_associations(auth, from_object_id, to_object_id, definitionId):
+def create_associations(auth, from_object_id, to_object_id, definition_id):
     url = 'https://api.hubapi.com/crm-associations/v1/associations'
     request_object = {'fromObjectId': from_object_id, 'toObjectId': to_object_id, "category": "HUBSPOT_DEFINED",
-                      "definitionId": definitionId}
+                      "definitionId": definition_id}
     result = ru.put_request_with_bearer(url, auth, request_object)
     data = {}
     if result.success:
@@ -1324,3 +1382,22 @@ def get_normalized_datetime(hubspot_datetime):
     if len(date_parts) == 2:
         return date_parts[0] + 'Z'
     return hubspot_datetime
+
+
+def execute_get_field_properties(auth, obj_type, fields):
+    if obj_type == 'stages':
+        properties_details = []
+    elif obj_type == 'users':
+        properties_details = get_static_user_properties()
+    else:
+        obj_type_query = obj_type
+        if obj_type == 'accounts':
+            obj_type_query = 'companies'
+        elif obj_type == 'opportunities':
+            obj_type_query = 'deals'
+        url_properties = "https://api.hubapi.com/properties/v1/" + obj_type_query + "/properties"
+        properties_details = get_properties(auth, url_properties)
+
+    fields_properties = get_fields_properties(obj_type, properties_details, fields, [])
+
+    return {'results': fields_properties}

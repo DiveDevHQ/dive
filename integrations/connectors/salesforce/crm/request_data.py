@@ -25,6 +25,8 @@ def get_object_by_id(auth, app, obj_type, obj_id, include_field_properties, cust
             return execute_get_object_by_id(auth, instance_url, obj_id, obj_type, obj_type_singular, field_dict,
                                             custom_fields,
                                             include_field_properties)
+        case 'stages':
+            return get_stage_by_id(auth, instance_url, obj_id, field_dict, include_field_properties)
         case _:
             return
 
@@ -51,6 +53,8 @@ def get_objects(auth, app, obj_type, include_field_properties, custom_fields, ob
                 return execute_get_objects_by_ids(auth, instance_url, obj_ids, obj_type, obj_type_singular, field_dict,
                                                   custom_fields,
                                                   include_field_properties)
+            case 'stages':
+                return get_stages(auth, instance_url, obj_ids, field_dict, include_field_properties)
             case _:
                 return
     else:
@@ -66,6 +70,8 @@ def get_objects(auth, app, obj_type, include_field_properties, custom_fields, ob
                                            owner_id,
                                            created_before, created_after, modified_before, modified_after,
                                            page_size, cursor)
+            case 'stages':
+                return get_stages(auth, instance_url, [], field_dict, include_field_properties)
             case _:
                 return
 
@@ -114,6 +120,29 @@ def update_object(auth, app, obj_id, obj_type, input_data):
             return
 
 
+def get_field_properties(auth, app, obj_type):
+    base_path = Path(__file__).parent
+    try:
+        with open(str(base_path) + '/' + obj_type + '.json') as f:
+            field_dict = json.load(f)
+    except FileNotFoundError:
+        return
+
+    config = json.loads(app.auth_json)
+    instance_url = config.get('instance_url', None)
+
+    match obj_type:
+        case 'accounts' | 'contacts' | 'opportunities' | 'users' | 'stages':
+            if obj_type == 'opportunities':
+                obj_type_singular = 'Opportunity'
+            else:
+                obj_type_singular = capitalize_first_letter(obj_type[:-1])
+            return execute_get_field_properties(auth, instance_url, obj_type, obj_type_singular, field_dict)
+
+        case _:
+            return
+
+
 def execute_get_object_by_id(auth, instance_url, obj_id, obj_type_plural, obj_type_singular, fields, custom_fields,
                              include_field_properties):
     url = instance_url + '/services/data/v57.0/graphql'
@@ -123,10 +152,11 @@ def execute_get_object_by_id(auth, instance_url, obj_id, obj_type_plural, obj_ty
     result = {'id': obj_id}
     properties_details = get_properties(auth, instance_url, obj_type_singular)
     if 'data' in obj:
-        if 'last_activity_at' in fields and obj['data'].get('last_activity_at', None):
-            get_normalized_data(obj['data'], 'last_activity_at')
-        if 'close_date' in fields and obj['data'].get('close_date', None):
-            get_normalized_data(obj['data'], 'close_date')
+        if obj_type_plural == 'accounts' or obj_type_plural == 'contacts' or obj_type_plural == 'opportunities':
+            if obj['data'].get('last_activity_at', None):
+                get_normalized_data(obj['data'], 'last_activity_at')
+            elif obj_type_plural == 'opportunities' and obj['data'].get('close_date', None):
+                get_normalized_data(obj['data'], 'close_date')
         if not include_field_properties:
             datetime_fields = get_datetime_fields(properties_details, fields, custom_fields)
             for df in datetime_fields:
@@ -136,12 +166,10 @@ def execute_get_object_by_id(auth, instance_url, obj_id, obj_type_plural, obj_ty
             properties_with_options = get_properties_with_options(auth, instance_url, obj_type_singular,
                                                                   properties_details,
                                                                   properties)
-            fields_properties = get_fields_properties(properties_with_options, fields, custom_fields)
+            fields_properties = get_fields_properties(obj_type_plural, properties_with_options, fields, custom_fields)
             for p in fields_properties:
                 if p['field_type'] == 'datetime':
                     obj['data'][p['id']] = get_normalized_datetime(obj['data'].get(p['id'], None))
-                if p['id'] == 'last_activity_at' or p['id'] == 'close_date':
-                    p['field_type'] = 'datetime'
                 p['value'] = obj['data'].get(p['id'], None)
             result['data'] = obj['data']
             result['field_properties'] = fields_properties
@@ -184,14 +212,12 @@ def execute_get_objects(auth, instance_url, obj_type_plural, obj_type_singular, 
         properties_with_options = get_properties_with_options(auth, instance_url, obj_type_singular,
                                                               properties_details,
                                                               properties)
-        fields_properties = get_fields_properties(properties_with_options, fields, custom_fields)
+        fields_properties = get_fields_properties(obj_type_plural, properties_with_options, fields, custom_fields)
         for obj in objects['results']:
             obj['field_properties'] = copy.deepcopy(fields_properties)
             for p in obj['field_properties']:
                 if p['field_type'] == 'datetime':
                     obj['data'][p['id']] = get_normalized_datetime(obj['data'].get(p['id'], None))
-                if p['id'] == 'last_activity_at' or p['id'] == 'close_date':
-                    p['field_type'] = 'datetime'
                 p['value'] = obj['data'].get(p['id'], None)
 
     return objects
@@ -221,10 +247,11 @@ def execute_get_objects_by_ids(auth, instance_url, obj_ids: [], obj_type_plural,
         datetime_fields = get_datetime_fields(properties_details, fields, custom_fields)
 
     for obj in objects['results']:
-        if 'last_activity_at' in obj and obj['data'].get('last_activity_at', None):
-            get_normalized_data(obj['data'], 'last_activity_at')
-        if 'close_date' in fields and obj['data'].get('close_date', None):
-            get_normalized_data(obj['data'], 'close_date')
+        if obj_type_plural == 'accounts' or obj_type_plural == 'contacts' or obj_type_plural == 'opportunities':
+            if obj['data'].get('last_activity_at', None):
+                get_normalized_data(obj['data'], 'last_activity_at')
+            elif obj_type_plural == 'opportunities' and obj['data'].get('close_date', None):
+                get_normalized_data(obj['data'], 'close_date')
         for df in datetime_fields:
             obj['data'][df] = get_normalized_datetime(obj['data'].get(df, None))
 
@@ -232,14 +259,12 @@ def execute_get_objects_by_ids(auth, instance_url, obj_ids: [], obj_type_plural,
         properties_with_options = get_properties_with_options(auth, instance_url, obj_type_singular,
                                                               properties_details,
                                                               properties)
-        fields_properties = get_fields_properties(properties_with_options, fields, custom_fields)
+        fields_properties = get_fields_properties(obj_type_plural, properties_with_options, fields, custom_fields)
         for account in objects['results']:
             account['field_properties'] = copy.deepcopy(fields_properties)
             for p in account['field_properties']:
                 if p['field_type'] == 'datetime':
                     account['data'][p['id']] = get_normalized_datetime(account['data'].get(p['id'], None))
-                if p['id'] == 'last_activity_at' or p['id'] == 'close_date':
-                    p['field_type'] = 'datetime'
                 p['value'] = account['data'].get(p['id'], None)
 
     return objects
@@ -558,7 +583,7 @@ def get_properties_with_options(auth, instance_url, obj_type, records, fields):
     return records
 
 
-def get_fields_properties(properties, common_models, custom_model):
+def get_fields_properties(obj_type, properties, common_models, custom_model):
     field_properties = []
     fields = util.merge_model(common_models, custom_model)
     for key in fields:
@@ -580,10 +605,37 @@ def get_fields_properties(properties, common_models, custom_model):
             field_obj['is_required'] = not property_obj['IsNillable']
             if 'field_choices' in property_obj:
                 field_obj['field_choices'] = property_obj['field_choices']
+
+            if obj_type == 'accounts' or obj_type == 'contacts' or obj_type == 'opportunities':
+                if key == 'last_activity_at':
+                    field_obj['field_type'] = 'datetime'
+                elif obj_type == 'opportunities':
+                    if key == 'close_date':
+                        field_obj['field_type'] = 'datetime'
+                    elif key == 'stage_id':
+                        field_obj['field_type'] = 'text'
+                        field_obj['field_choices'] = []
+
             field_properties.append(field_obj)
 
         except StopIteration:
-            continue
+            if obj_type == 'opportunities':
+                if key == 'status':
+                    field_obj = {'id': key, 'display_name': 'Status', 'origin_key_name': None,
+                                 'description': 'Deal WON/LOST status',
+                                 'is_custom': False, 'field_type': 'select',
+                                 'field_choices': [{'label': 'OPEN', 'value': 'OPEN'}, {'label': 'WON', 'value': 'WON'},
+                                                   {'label': 'LOST', 'value': 'LOST'}], 'field_format': '',
+                                 'is_required': False}
+                    field_properties.append(field_obj)
+            elif obj_type == 'stages':
+                if key == 'name':
+                    field_obj = {'id': key, 'display_name': 'Name', 'origin_key_name': None,
+                                 'description': 'Pipeline deal stage name',
+                                 'is_custom': False, 'field_type': 'text', 'field_choices': [], 'field_format': '',
+                                 'is_required': False}
+                    field_properties.append(field_obj)
+
     return field_properties
 
 
@@ -760,3 +812,77 @@ def convert_datetime_to_date(datetime_string):
         return utc_dt.strftime('%Y-%m-%d')
     except ValueError:
         return None
+
+
+def get_stage_by_id(auth, instance_url, obj_id, fields, include_field_properties):
+    records = get_stage_objects(auth, instance_url, [obj_id], fields)
+    result_dict = {'id': obj_id}
+    if 'error' in records:
+        return {'id': obj_id, 'error': records['error']}
+    elif len(records['results']) == 0:
+        result_dict['error'] = {}
+        result_dict['error']['id'] = 'Not found'
+        result_dict['error']['status_code'] = 404
+        return result_dict
+
+    result_dict['data'] = records['results'][0]['data']
+    if include_field_properties:
+        result_dict['field_properties'] = get_stage_properties('stages', fields, result_dict['data'])
+    return result_dict
+
+
+def get_stages(auth, instance_url, obj_ids, fields, include_field_properties):
+    results = get_stage_objects(auth, instance_url, obj_ids, fields)
+    if 'error' in results:
+        return results
+
+    if include_field_properties:
+        for r in results['results']:
+            r['field_properties'] = get_stage_properties('stages', fields, r['data'])
+
+    return results
+
+
+def get_stage_objects(auth, instance_url, obj_ids, fields):
+    url = instance_url + '/services/data/v57.0/ui-api/object-info/Opportunity/picklist-values/012000000000000AAA/StageName'
+    result = ru.get_request_with_bearer(url, auth)
+    records = []
+    error = get_normalized_error(result)
+    if not error:
+        options = result.json_body['values']
+        for opt in options:
+            if len(obj_ids) > 0:
+                if opt['value'] in obj_ids:
+                    obj = {'id': opt['value'], 'data': {'name': opt[fields['name']]}}
+                    records.append(obj)
+            else:
+                obj = {'id': opt['value'], 'data': {'name': opt[fields['name']]}}
+                records.append(obj)
+        return {'results': records}
+    else:
+        error['results'] = []
+        return error
+
+
+def get_stage_properties(obj_type, fields, values):
+    properties = []
+    field_properties = get_fields_properties(obj_type, properties, fields, None)
+    for p in field_properties:
+        p['value'] = values.get(p['id'], None)
+    return field_properties
+
+
+def execute_get_field_properties(auth, instance_url, obj_type_plural, obj_type_singular, fields):
+    if obj_type_plural == 'stages':
+        properties = []
+        properties_details = []
+    else:
+        properties = get_properties_from_model(fields, [])
+        properties_details = get_properties(auth, instance_url, obj_type_singular)
+
+    properties_with_options = get_properties_with_options(auth, instance_url, obj_type_singular,
+                                                          properties_details,
+                                                          properties)
+    fields_properties = get_fields_properties(obj_type_plural, properties_with_options, fields, [])
+
+    return {'results': fields_properties}
