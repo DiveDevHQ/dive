@@ -239,20 +239,20 @@ def get_properties_from_model(common_model, custom_model):
                 for k in li:
                     if len(li[k]) == 0:
                         continue
-                    elif li[k][0] == '$':
+                    elif '$' in li[k]:
                         properties += util.get_params_keys(li[k])
                     else:
                         properties.append(li[k])
         else:
             if len(common_model[key]) == 0:
                 continue
-            elif common_model[key][0] == '$':
+            elif '$' in common_model[key]:
                 properties += util.get_params_keys(common_model[key])
             else:
                 properties.append(common_model[key])
     for field in custom_model:
         properties.append(field)
-
+    properties = list(set(properties))
     return properties
 
 
@@ -305,8 +305,6 @@ def get_deals_by_ids(auth, object_ids: [], fields, custom_fields, include_field_
         datetime_fields = get_datetime_fields(properties_details, fields, custom_fields)
 
     for deal in deals:
-        if deal['data'].get('status', None):
-            get_normalized_data(deal['data'], 'status')
         for df in datetime_fields:
             deal['data'][df] = get_normalized_datetime(deal['data'].get(df, None))
         try:
@@ -683,10 +681,7 @@ def upsert_deal(auth, url, input_dict, fields, obj_id):
     for key in input_dict:
         if key in fields:
             if key == 'status':
-                if input_dict[key] == 'WON':
-                    properties_dict['hs_deal_stage_probability'] = 1
-                elif input_dict[key] == 'LOST':
-                    properties_dict['hs_deal_stage_probability'] = 0
+                continue
             elif key == 'stage_id':
                 stages = get_pipelines(auth)
                 try:
@@ -771,7 +766,7 @@ def get_result_from_model(data, common_model, custom_model):
                 for k in li:
                     if len(li[k]) == 0:
                         item_dict[k] = None
-                    elif li[k][0] == '$':
+                    elif '$' in li[k]:
                         params_type, item_dict[k] = util.get_params_value(li[k], data)
                     elif li[k] in data:
                         item_dict[k] = data.get(li[k], None)
@@ -781,7 +776,7 @@ def get_result_from_model(data, common_model, custom_model):
                     result[key].append(item_dict)
         elif len(common_model[key]) == 0:
             result[key] = None
-        elif common_model[key][0] == '$':
+        elif '$' in common_model[key]:
             params_type, result[key] = util.get_params_value(common_model[key], data)
         elif common_model[key] in data:
             result[key] = data.get(common_model[key], None)
@@ -917,6 +912,7 @@ def get_fields_properties(properties, common_models, custom_model):
             field_type = property_obj['fieldType']
             field_obj['field_choices'] = []
             field_obj['field_format'] = ''
+            field_obj['is_required'] = False
             if property_obj['type'] == 'number':
                 field_obj['field_type'] = 'number'
                 if property_obj['numberDisplayHint'] == 'percentage':
@@ -1051,7 +1047,7 @@ def get_user_properties(fields, values):
         if key in fields:
             if not fields[key]:
                 continue
-            if fields[key][0] == '$':
+            if '$' in fields[key]:
                 continue
             original_key_name = fields[key]
 
@@ -1078,7 +1074,6 @@ def get_deal_by_id(auth, obj_id, fields, custom_fields, include_field_properties
     properties_details = get_properties(auth, url_properties)
 
     if 'data' in deal:
-        get_normalized_data(deal['data'], 'status')
         if not include_field_properties:
             datetime_fields = get_datetime_fields(properties_details, fields, custom_fields)
             for df in datetime_fields:
@@ -1152,7 +1147,6 @@ def get_deals_by_filter(auth, fields, custom_fields, include_field_properties, o
         datetime_fields = get_datetime_fields(properties_details, fields, custom_fields)
 
     for deal in deals:
-        get_normalized_data(deal['data'], 'status')
         for df in datetime_fields:
             deal['data'][df] = get_normalized_datetime(deal['data'].get(df, None))
         try:
@@ -1316,13 +1310,6 @@ def get_normalized_data(data, key):
     if not data.get(key, None):
         return None
     match key:
-        case 'status':
-            if data['status'] == '1':
-                data['status'] = 'WON'
-            elif data['status'] == '0':
-                data['status'] = 'LOST'
-            else:
-                data['status'] = 'OPEN'
         case 'createdAt' | 'updatedAt':
             data[key] = get_normalized_datetime(data[key])
         case _:
