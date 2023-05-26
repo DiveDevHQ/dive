@@ -208,6 +208,8 @@ def get_or_patch_crm_data_by_id(request, obj_type, obj_id):
                 custom_fields = url_params_dict['fields']
             if 'instance_id' in url_params_dict:
                 instance_id = url_params_dict['instance_id'][0]
+        if not instance_id:
+            raise BadRequestException("Please include instance_id in the query parameter.")
         integration, token = auth.get_auth(instance_id)
         if not integration or not token:
             raise UnauthorizedException("You have not connected the app " + instance_id)
@@ -290,6 +292,8 @@ def get_or_create_crm_data_by_ids(request, obj_type):
                 modified_before = url_params_dict['modified_before'][0]
             if 'modified_after' in url_params_dict:
                 modified_after = url_params_dict['modified_after'][0]
+        if not instance_id:
+            raise BadRequestException("Please include instance_id in the query parameter.")
         integration, token = auth.get_auth(instance_id)
         if not token or not integration:
             raise UnauthorizedException("You have not connected the app " + instance_id)
@@ -305,3 +309,31 @@ def get_or_create_crm_data_by_ids(request, obj_type):
         if 'error' in data:
             return JsonResponse(data, status=data['error'].get('status_code', 400))
         return JsonResponse(data)
+
+
+@api_view(["GET"])
+def get_crm_field_properties(request, obj_type):
+    print('sss')
+    api = 'crm'
+    url_params = request.GET.urlencode()
+    instance_id = None
+    if url_params:
+        url_params_dict = parse_qs(url_params)
+        if 'instance_id' in url_params_dict:
+            instance_id = url_params_dict['instance_id'][0]
+
+    if not instance_id:
+        raise BadRequestException("Please include instance_id in the query parameter.")
+    integration, token = auth.get_auth(instance_id)
+    if not token or not integration:
+        raise UnauthorizedException("You have not connected the app " + instance_id)
+    package_name = "integrations.connectors." + integration.name + "." + api + ".request_data"
+    mod = importlib.import_module(package_name)
+    data = mod.get_field_properties(token, integration, obj_type)
+    if not data:
+        raise BadRequestException(
+            "Api action is not supported for " + integration.name + " with object type " + obj_type)
+    if 'error' in data:
+        return JsonResponse(data, status=data['error'].get('status_code', 400))
+    return JsonResponse(data)
+

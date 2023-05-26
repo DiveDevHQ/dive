@@ -25,8 +25,9 @@ urlpatterns = [
     path("", views.index, name="index"),
     path("api/authorize/<str:app>", views.authorization_api, name="authorization_api"),
     path("api/callback", views.callback_api, name="callback_api"),
-    path("api/crm/v1/<str:obj_type>/<str:obj_id>", views.get_or_patch_crm_data_by_id, name="get_or_patch_object"),
-    path("api/crm/v1/<str:obj_type>", views.get_or_create_crm_data_by_ids, name="get_or_create_objects"),
+    path("api/crm/v1/<str:obj_type>/<str:obj_id>", views.get_or_patch_crm_data_by_id, name="get_or_patch_crm_data_by_id"),
+    path("api/crm/v1/<str:obj_type>", views.get_or_create_crm_data_by_ids, name="get_or_create_crm_data_by_ids"),
+    path("api/crm/v1/<str:obj_type>/meta/field-properties", views.get_crm_field_properties, name="get_crm_field_properties"),
     path("integrations/", include("integrations.urls")),
     path('admin/', admin.site.urls),
 ]+ static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
