@@ -2,6 +2,7 @@ import json
 import integrations.connectors.connectors_utils as util
 import dive.api.request_utils as ru
 from pathlib import Path
+from datetime import datetime
 import copy
 
 
@@ -16,8 +17,13 @@ def get_object_by_id(auth, app, obj_type, obj_id, include_field_properties, cust
     config = json.loads(app.auth_json)
     instance_url = config.get('instance_url', None)
     match obj_type:
-        case 'accounts' | 'contacts' | 'users':
-            return execute_get_object_by_id(auth, instance_url, obj_id, obj_type, field_dict, custom_fields,
+        case 'accounts' | 'contacts' | 'users' | 'opportunities':
+            if obj_type == 'opportunities':
+                obj_type_singular = 'Opportunity'
+            else:
+                obj_type_singular = capitalize_first_letter(obj_type[:-1])
+            return execute_get_object_by_id(auth, instance_url, obj_id, obj_type, obj_type_singular, field_dict,
+                                            custom_fields,
                                             include_field_properties)
         case _:
             return
@@ -37,16 +43,25 @@ def get_objects(auth, app, obj_type, include_field_properties, custom_fields, ob
 
     if len(obj_ids) > 0:
         match obj_type:
-            case 'accounts' | 'contacts' | 'users':
-                return execute_get_objects_by_ids(auth, instance_url, obj_ids, obj_type, field_dict, custom_fields,
+            case 'accounts' | 'contacts' | 'users' | 'opportunities':
+                if obj_type == 'opportunities':
+                    obj_type_singular = 'Opportunity'
+                else:
+                    obj_type_singular = capitalize_first_letter(obj_type[:-1])
+                return execute_get_objects_by_ids(auth, instance_url, obj_ids, obj_type, obj_type_singular, field_dict,
+                                                  custom_fields,
                                                   include_field_properties)
             case _:
                 return
     else:
         match obj_type:
 
-            case 'accounts' | 'contacts' | 'users':
-                return execute_get_objects(auth, instance_url, obj_type, field_dict, custom_fields,
+            case 'accounts' | 'contacts' | 'users' | 'opportunities':
+                if obj_type == 'opportunities':
+                    obj_type_singular = 'Opportunity'
+                else:
+                    obj_type_singular = capitalize_first_letter(obj_type[:-1])
+                return execute_get_objects(auth, instance_url, obj_type, obj_type_singular, field_dict, custom_fields,
                                            include_field_properties,
                                            owner_id,
                                            created_before, created_after, modified_before, modified_after,
@@ -66,8 +81,12 @@ def create_object(auth, app, obj_type, input_data):
     config = json.loads(app.auth_json)
     instance_url = config.get('instance_url', None)
     match obj_type:
-        case 'accounts' | 'contacts':
-            return execute_create_object(auth, instance_url, obj_type, input_data, field_dict)
+        case 'accounts' | 'contacts' | 'opportunities':
+            if obj_type == 'opportunities':
+                obj_type_singular = 'Opportunity'
+            else:
+                obj_type_singular = capitalize_first_letter(obj_type[:-1])
+            return execute_create_object(auth, instance_url, obj_type_singular, input_data, field_dict)
         case _:
             return
 
@@ -84,28 +103,35 @@ def update_object(auth, app, obj_id, obj_type, input_data):
     instance_url = config.get('instance_url', None)
 
     match obj_type:
-        case 'accounts' | 'contacts':
-            return execute_update_object(auth, instance_url, obj_id, obj_type, input_data, field_dict)
+        case 'accounts' | 'contacts' | 'opportunities':
+            if obj_type == 'opportunities':
+                obj_type_singular = 'Opportunity'
+            else:
+                obj_type_singular = capitalize_first_letter(obj_type[:-1])
+            return execute_update_object(auth, instance_url, obj_id, obj_type_singular, input_data, field_dict)
 
         case _:
             return
 
 
-def execute_get_object_by_id(auth, instance_url, obj_id, obj_type, fields, custom_fields, include_field_properties):
-    obj_type_singular = capitalize_first_letter(obj_type[:-1])
+def execute_get_object_by_id(auth, instance_url, obj_id, obj_type_plural, obj_type_singular, fields, custom_fields,
+                             include_field_properties):
     url = instance_url + '/services/data/v57.0/graphql'
     properties = get_properties_from_model(fields, custom_fields)
-    account = query_object_by_id(auth, url, obj_id, obj_type, obj_type_singular, properties, fields, custom_fields)
+    obj = query_object_by_id(auth, url, obj_id, obj_type_plural, obj_type_singular, properties, fields,
+                             custom_fields)
     result = {'id': obj_id}
     properties_details = get_properties(auth, instance_url, obj_type_singular)
-    if 'data' in account:
-        if account['data'].get('last_activity_at', None):
-            get_normalized_data(account['data'], 'last_activity_at')
+    if 'data' in obj:
+        if 'last_activity_at' in fields and obj['data'].get('last_activity_at', None):
+            get_normalized_data(obj['data'], 'last_activity_at')
+        if 'close_date' in fields and obj['data'].get('close_date', None):
+            get_normalized_data(obj['data'], 'close_date')
         if not include_field_properties:
             datetime_fields = get_datetime_fields(properties_details, fields, custom_fields)
             for df in datetime_fields:
-                account['data'][df] = get_normalized_datetime(account['data'].get(df, None))
-            result['data'] = account['data']
+                obj['data'][df] = get_normalized_datetime(obj['data'].get(df, None))
+            result['data'] = obj['data']
         elif include_field_properties:
             properties_with_options = get_properties_with_options(auth, instance_url, obj_type_singular,
                                                                   properties_details,
@@ -113,31 +139,32 @@ def execute_get_object_by_id(auth, instance_url, obj_id, obj_type, fields, custo
             fields_properties = get_fields_properties(properties_with_options, fields, custom_fields)
             for p in fields_properties:
                 if p['field_type'] == 'datetime':
-                    account['data'][p['id']] = get_normalized_datetime(account['data'].get(p['id'], None))
-                if p['id'] == 'last_activity_at':
+                    obj['data'][p['id']] = get_normalized_datetime(obj['data'].get(p['id'], None))
+                if p['id'] == 'last_activity_at' or p['id'] == 'close_date':
                     p['field_type'] = 'datetime'
-                p['value'] = account['data'].get(p['id'], None)
-            result['data'] = account['data']
+                p['value'] = obj['data'].get(p['id'], None)
+            result['data'] = obj['data']
             result['field_properties'] = fields_properties
-    elif 'error' in account:
-        result['error'] = account['error']
+    elif 'error' in obj:
+        result['error'] = obj['error']
     return result
 
 
-def execute_get_objects(auth, instance_url, obj_type, fields, custom_fields, include_field_properties, owner_id,
+def execute_get_objects(auth, instance_url, obj_type_plural, obj_type_singular, fields, custom_fields,
+                        include_field_properties, owner_id,
                         created_before,
                         created_after, modified_before, modified_after, limit, cursor):
     properties = get_properties_from_model(fields, custom_fields)
-    obj_type_singular = capitalize_first_letter(obj_type[:-1])
+
     if not limit:
         limit = '100'
     url = instance_url + '/services/data/v57.0/graphql'
-    accounts = query_objects(auth, url, obj_type, obj_type_singular, properties, fields, custom_fields, owner_id,
-                             created_before,
-                             created_after, modified_before, modified_after, limit, cursor)
+    objects = query_objects(auth, url, obj_type_plural, obj_type_singular, properties, fields, custom_fields, owner_id,
+                            created_before,
+                            created_after, modified_before, modified_after, limit, cursor)
 
-    if 'error' in accounts:
-        return {'results': [], 'error': accounts['error']}
+    if 'error' in objects:
+        return {'results': [], 'error': objects['error']}
 
     properties_details = get_properties(auth, instance_url, obj_type_singular)
 
@@ -145,44 +172,47 @@ def execute_get_objects(auth, instance_url, obj_type, fields, custom_fields, inc
     if not include_field_properties:
         datetime_fields = get_datetime_fields(properties_details, fields, custom_fields)
 
-    for account in accounts['results']:
-        if account['data'].get('last_activity_at', None):
-            get_normalized_data(account['data'], 'last_activity_at')
+    for obj in objects['results']:
+        if 'last_activity_at' in fields and obj['data'].get('last_activity_at', None):
+            get_normalized_data(obj['data'], 'last_activity_at')
+        if 'close_date' in fields and obj['data'].get('close_date', None):
+            get_normalized_data(obj['data'], 'close_date')
         for df in datetime_fields:
-            account['data'][df] = get_normalized_datetime(account['data'].get(df, None))
+            obj['data'][df] = get_normalized_datetime(obj['data'].get(df, None))
 
     if include_field_properties:
         properties_with_options = get_properties_with_options(auth, instance_url, obj_type_singular,
                                                               properties_details,
                                                               properties)
         fields_properties = get_fields_properties(properties_with_options, fields, custom_fields)
-        for account in accounts['results']:
-            account['field_properties'] = copy.deepcopy(fields_properties)
-            for p in account['field_properties']:
+        for obj in objects['results']:
+            obj['field_properties'] = copy.deepcopy(fields_properties)
+            for p in obj['field_properties']:
                 if p['field_type'] == 'datetime':
-                    account['data'][p['id']] = get_normalized_datetime(account['data'].get(p['id'], None))
-                if p['id'] == 'last_activity_at':
+                    obj['data'][p['id']] = get_normalized_datetime(obj['data'].get(p['id'], None))
+                if p['id'] == 'last_activity_at' or p['id'] == 'close_date':
                     p['field_type'] = 'datetime'
-                p['value'] = account['data'].get(p['id'], None)
+                p['value'] = obj['data'].get(p['id'], None)
 
-    return accounts
+    return objects
 
 
-def execute_get_objects_by_ids(auth, instance_url, obj_ids: [], obj_type, fields, custom_fields,
+def execute_get_objects_by_ids(auth, instance_url, obj_ids: [], obj_type_plural, obj_type_singular, fields,
+                               custom_fields,
                                include_field_properties):
-    obj_type_singular = capitalize_first_letter(obj_type[:-1])
     url = instance_url + '/services/data/v57.0/graphql'
     properties = get_properties_from_model(fields, custom_fields)
     ids_url = ''
     for obj_id in obj_ids:
         ids_url += '\'' + obj_id + '\','
     ids_url = ids_url.rstrip(',')
-    url_params = '?q=SELECT+' + ','.join(properties) + '+from+' + obj_type + '+where+id in (' + ids_url + ')'
+    url_params = '?q=SELECT+' + ','.join(properties) + '+from+' + obj_type_plural + '+where+id in (' + ids_url + ')'
     url += url_params
 
-    accounts = query_object_by_ids(auth, url, obj_ids, obj_type, obj_type_singular, properties, fields, custom_fields)
-    if 'error' in accounts:
-        return {'results': [], 'error': accounts['error']}
+    objects = query_object_by_ids(auth, url, obj_ids, obj_type_plural, obj_type_singular, properties, fields,
+                                  custom_fields)
+    if 'error' in objects:
+        return {'results': [], 'error': objects['error']}
 
     properties_details = get_properties(auth, instance_url, obj_type_singular)
 
@@ -190,37 +220,37 @@ def execute_get_objects_by_ids(auth, instance_url, obj_ids: [], obj_type, fields
     if not include_field_properties:
         datetime_fields = get_datetime_fields(properties_details, fields, custom_fields)
 
-    for account in accounts['results']:
-        if account['data'].get('last_activity_at', None):
-            get_normalized_data(account['data'], 'last_activity_at')
+    for obj in objects['results']:
+        if 'last_activity_at' in obj and obj['data'].get('last_activity_at', None):
+            get_normalized_data(obj['data'], 'last_activity_at')
+        if 'close_date' in fields and obj['data'].get('close_date', None):
+            get_normalized_data(obj['data'], 'close_date')
         for df in datetime_fields:
-            account['data'][df] = get_normalized_datetime(account['data'].get(df, None))
+            obj['data'][df] = get_normalized_datetime(obj['data'].get(df, None))
 
     if include_field_properties:
         properties_with_options = get_properties_with_options(auth, instance_url, obj_type_singular,
                                                               properties_details,
                                                               properties)
         fields_properties = get_fields_properties(properties_with_options, fields, custom_fields)
-        for account in accounts['results']:
+        for account in objects['results']:
             account['field_properties'] = copy.deepcopy(fields_properties)
             for p in account['field_properties']:
                 if p['field_type'] == 'datetime':
                     account['data'][p['id']] = get_normalized_datetime(account['data'].get(p['id'], None))
-                if p['id'] == 'last_activity_at':
+                if p['id'] == 'last_activity_at' or p['id'] == 'close_date':
                     p['field_type'] = 'datetime'
                 p['value'] = account['data'].get(p['id'], None)
 
-    return accounts
+    return objects
 
 
-def execute_create_object(auth, instance_url, obj_type, input_dict, fields):
-    obj_type_singular = capitalize_first_letter(obj_type[:-1])
+def execute_create_object(auth, instance_url, obj_type_singular, input_dict, fields):
     url = instance_url + "/services/data/v57.0/sobjects/" + obj_type_singular
     return upsert_object(auth, url, input_dict, fields, None)
 
 
-def execute_update_object(auth, instance_url, obj_id, obj_type, input_dict, fields):
-    obj_type_singular = capitalize_first_letter(obj_type[:-1])
+def execute_update_object(auth, instance_url, obj_id, obj_type_singular, input_dict, fields):
     url = instance_url + "/services/data/v57.0/sobjects/" + obj_type_singular + "/" + obj_id
     return upsert_object(auth, url, input_dict, fields, obj_id)
 
@@ -324,7 +354,7 @@ def get_properties_from_model(common_model, custom_model):
                 for k in li:
                     if len(li[k]) == 0:
                         continue
-                    elif li[k][0] == '$':
+                    elif '$' in li[k]:
                         properties += util.get_params_keys(li[k])
 
                     else:
@@ -332,7 +362,7 @@ def get_properties_from_model(common_model, custom_model):
         else:
             if len(common_model[key]) == 0:
                 continue
-            elif common_model[key][0] == '$':
+            elif '$' in common_model[key]:
                 properties += util.get_params_keys(common_model[key])
             else:
                 properties.append(common_model[key])
@@ -445,7 +475,7 @@ def get_result_from_model(data, common_model, custom_model):
                 for k in li:
                     if len(li[k]) == 0:
                         item_dict[k] = None
-                    elif li[k][0] == '$':
+                    elif '$' in li[k]:
                         params_type, item_dict[k] = util.get_params_value(li[k], data)
                         if item_dict[k] and not params_type == 'constant':
                             empty_item = False
@@ -457,7 +487,7 @@ def get_result_from_model(data, common_model, custom_model):
                     result[key].append(item_dict)
         elif len(common_model[key]) == 0:
             result[key] = None
-        elif common_model[key][0] == '$':
+        elif '$' in common_model[key]:
             params_type, result[key] = util.get_params_value(common_model[key], data)
         elif common_model[key] in data:
             result[key] = data.get(common_model[key], None)
@@ -474,6 +504,8 @@ def get_normalized_data(data, key):
         return None
     match key:
         case 'last_activity_at':
+            data[key] = data[key] + 'T00:00:00Z'
+        case 'close_date':
             data[key] = data[key] + 'T00:00:00Z'
         case _:
             return data[key]
@@ -506,7 +538,7 @@ def get_datetime_fields(properties, common_models, custom_model):
 
 def get_properties(auth, instance_url, obj_type):
     url = instance_url + "/services/data/v57.0/query/"
-    url_params = '?q=Select Label, DataType, QualifiedApiName, Description from FieldDefinition where EntityDefinition.QualifiedApiName = \'' + obj_type + '\''
+    url_params = '?q=Select Label, DataType, QualifiedApiName, Description, IsNillable from FieldDefinition where EntityDefinition.QualifiedApiName = \'' + obj_type + '\''
     url += url_params
     result = ru.get_request_with_bearer(url, auth)
     records = []
@@ -545,6 +577,7 @@ def get_fields_properties(properties, common_models, custom_model):
             field_type, field_format = get_normalized_field_type(data_type)
             field_obj['field_type'] = field_type
             field_obj['field_format'] = field_format
+            field_obj['is_required'] = not property_obj['IsNillable']
             if 'field_choices' in property_obj:
                 field_obj['field_choices'] = property_obj['field_choices']
             field_properties.append(field_obj)
@@ -611,9 +644,11 @@ def query_objects(auth, url, obj_type_plural, obj_type_singular, properties, com
     for p in properties:
         node_query += p + " {value} "
 
-    limit_query = 'first:' + limit
+    limit_query = 'first : ' + limit
     if cursor:
-        limit_query += ', after:"' + cursor + '"'
+        limit_query += ', after : "' + cursor + '"'
+    else:
+        limit_query += ', after : null'
     if owner_id:
         limit_query += ' where: { OwnerId: { eq: "' + owner_id + '" } }'
     elif created_before:
@@ -652,6 +687,7 @@ def query_objects(auth, url, obj_type_plural, obj_type_singular, properties, com
         }}
     }}
     """
+
     result = ru.post_request_with_bearer(url, auth, {"query": query_string})
     error = get_normalized_error(result)
     if error:
@@ -714,3 +750,13 @@ def get_normalized_error(response):
         elif response.json_body:
             error_data['error']['message'] = response.json_body.get('message', response.json_body)
         return error_data
+
+
+def convert_datetime_to_date(datetime_string):
+    if not datetime_string:
+        return
+    try:
+        utc_dt = datetime.strptime(datetime_string, '%Y-%m-%dT%H:%M:%SZ').date()
+        return utc_dt.strftime('%Y-%m-%d')
+    except ValueError:
+        return None

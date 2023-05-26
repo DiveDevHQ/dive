@@ -1,0 +1,13 @@
+{
+  "name": "Name",
+  "description": "Description",
+  "amount": "Amount",
+  "owner_id": "OwnerId",
+  "stage_id": "StageName",
+  "status": "IF(${formula.IsClosed}, IF(${formula.IsWon}, WON, LOST), OPEN)",
+  "account_id": "AccountId",
+  "close_date": "CloseDate",
+  "last_activity_at": "LastActivityDate",
+  "created_at": "CreatedDate",
+  "updated_at": "LastModifiedDate"
+}
