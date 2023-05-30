@@ -1,5 +1,5 @@
 <p align="center">
-  <img alt="divelogo" src="https://docs.diveapi.co/images/logo_dark-d6a70afa.png">
+  <img alt="divelogo" src="https://docs.diveapi.co/images/logo_dark-1a726960.png">
 </p>
 
 <p align="center">
