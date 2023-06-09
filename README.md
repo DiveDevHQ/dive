@@ -51,9 +51,9 @@ pip install -r requirements.txt
 You can add .env file under dive folder with following:
 
 SECRET_KEY=YOUR Secret Key <br/>
-DEBUG=True<br/>
-ENVIRONMENT=test<br/>
-DOMAIN=http://localhost:8000/<br/>
+DEBUG=True <br/>
+ENVIRONMENT=test <br/>
+DOMAIN=http://localhost:8000/ <br/>
 ALLOWED_HOSTS=.localhost
 
 To connect with other database servers, add DATABASES json to your .env file, for example <br/>
