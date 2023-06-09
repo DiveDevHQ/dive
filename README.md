@@ -27,7 +27,7 @@ We believe **open-source** is the best way to solve every growth integrations pa
 
 ### Requirements
 
-- Python 3.10
+- Python 3.11
 - Django 4.2
 - Django REST Framework
 
