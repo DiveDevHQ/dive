@@ -1,5 +1,5 @@
 from rest_framework.views import exception_handler
-
+import re
 
 def custom_exception_handler(exc, context):
     # Call REST framework's default exception handler first,
@@ -23,3 +23,8 @@ def custom_exception_handler(exc, context):
             del response.data['detail']
 
     return response
+
+
+def get_params(text):
+    variables = re.findall(r'\{\{(.*?)\}\}', text)
+    return variables

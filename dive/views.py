@@ -12,7 +12,10 @@ from rest_framework.decorators import action, api_view
 from django.http import HttpResponse
 import json
 import environ
-
+import copy
+from dive.api.utils import get_params
+from time import sleep
+from dive.api import vector_utils
 
 env = environ.Env()
 environ.Env.read_env()
@@ -226,7 +229,7 @@ def get_or_patch_crm_data_by_id(request, obj_type, obj_id):
 
 
 @api_view(["GET", "POST"])
-def get_or_create_crm_data_by_ids(request, obj_type):
+def get_or_create_crm_data(request, obj_type):
     api = 'crm'
     if request.method == 'POST':
         input_data = request.data
@@ -336,3 +339,69 @@ def get_crm_field_properties(request, obj_type):
         return JsonResponse(data, status=data['error'].get('status_code', 400))
     return JsonResponse(data)
 
+
+@api_view(["POST"])
+def index_crm_data(request, obj_type):
+    api = 'crm'
+    input_data = request.data
+    instance_id = None
+    template = None
+    if input_data:
+        instance_id = input_data.get('instance_id', None)
+        template = input_data.get('template', None)
+    if not instance_id:
+        raise BadRequestException("Please include instance_id in the body parameter.")
+    if not template:
+        raise BadRequestException("Please include template in the body parameter.")
+    integration, token = auth.get_auth(instance_id)
+    if not token or not integration:
+        raise UnauthorizedException("You have not connected the app " + instance_id)
+    auth.update_last_sync(instance_id)
+    index_fields = get_params(template)
+    documents = []
+    load_crm_data_all(api, token, integration, obj_type, index_fields, template, documents, None)
+    vector_utils.index_documents(documents, instance_id, obj_type)
+    return HttpResponse(status=204)
+
+
+def load_crm_data_all(api, token, integration, obj_type, index_fields, template, documents, cursor):
+    package_name = "integrations.connectors." + integration.name + "." + api + ".request_data"
+    mod = importlib.import_module(package_name)
+    data = mod.get_objects(token, integration, obj_type, False, [], [], None,
+                           None,
+                           None, None, None, 100,
+                           cursor)
+    if 'error' in data:
+        if data['error']['status_code'] == 429:
+            sleep(15)
+            load_crm_data_all(api, token, integration, obj_type, index_fields, template, documents, cursor)
+    else:
+        for d in data['results']:
+            document = {'id': d['id']}
+            _template = copy.deepcopy(template)
+            for field in index_fields:
+                if field in d['data']:
+                    if not isinstance(d['data'][field], list):
+                        _template = _template.replace('{{' + field + '}}', d['data'][field])
+            document['text'] = _template
+            documents.append(document)
+        if 'next_cursor' in data:
+            cursor = data['next_cursor']
+            load_crm_data_all(api, token, integration, obj_type, index_fields, template, documents, cursor)
+
+
+@api_view(["GET"])
+def get_index_data(request):
+    url_params = request.GET.urlencode()
+    instance_id = None
+    query = None
+    if url_params:
+        url_params_dict = parse_qs(url_params)
+        if 'instance_id' in url_params_dict:
+            instance_id = url_params_dict['instance_id'][0]
+        if 'query' in url_params_dict:
+            query = url_params_dict['query'][0]
+    if not instance_id:
+        raise BadRequestException("Please include instance_id in the query parameter.")
+    results = vector_utils.query_documents(query, instance_id)
+    return JsonResponse(results)

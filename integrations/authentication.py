@@ -116,3 +116,11 @@ def request_token_with_code(url, grant_type, token_request: TokenRequest):
         if 'expires_in' in response.json_body:
             token_result.expires_in = response.json_body['expires_in']
     return token_result
+
+
+def update_last_sync(instance_id):
+    try:
+        integration = Integration.objects.get(instance_id=instance_id, enabled=True)
+        integration.last_sync_at=datetime.now(timezone.utc)
+    except Integration.DoesNotExist:
+        return

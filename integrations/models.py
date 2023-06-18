@@ -18,3 +18,4 @@ class Integration(models.Model):
     expire_at = models.DateTimeField(null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    last_sync_at = models.DateTimeField(null=True)
