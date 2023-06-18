@@ -2,6 +2,7 @@ import dive.api.request_utils as ru
 from integrations.models import Integration
 from datetime import datetime, timezone, timedelta
 from django.apps import apps as proj_apps
+import json
 
 
 class TokenRequest:
@@ -25,7 +26,7 @@ class TokenResult:
 
 
 def get_config(app):
-    return proj_apps.get_app_config('integrations').integration_config.get(app,None)
+    return proj_apps.get_app_config('integrations').integration_config.get(app, None)
 
 
 def get_auth(instance_id):
@@ -118,9 +119,36 @@ def request_token_with_code(url, grant_type, token_request: TokenRequest):
     return token_result
 
 
-def update_last_sync(instance_id):
+def update_last_sync_and_template(instance_id, obj_type, template):
     try:
         integration = Integration.objects.get(instance_id=instance_id, enabled=True)
-        integration.last_sync_at=datetime.now(timezone.utc)
+        sync_status = {}
+        if integration.sync_status:
+            sync_status = json.loads(integration.sync_status)
+        sync_status[obj_type] = {'sync_at': get_now_iso_format(), 'template': template}
+        integration.sync_status = json.dumps(sync_status)
+        integration.save()
     except Integration.DoesNotExist:
         return
+
+
+def update_last_sync(instance_id, obj_type):
+    try:
+        integration = Integration.objects.get(instance_id=instance_id, enabled=True)
+        sync_status = {}
+        if integration.sync_status:
+            sync_status = json.loads(integration.sync_status)
+        if obj_type in sync_status:
+            sync_status[obj_type]['sync_at'] = get_now_iso_format()
+        else:
+            sync_status[obj_type] = {'sync_at': get_now_iso_format()}
+        integration.sync_status = json.dumps(sync_status)
+        integration.save()
+    except Integration.DoesNotExist:
+        return
+
+
+def get_now_iso_format():
+    now = datetime.now()
+    iso_time = now.strftime("%Y-%m-%dT%H:%M:%SZ")
+    return iso_time

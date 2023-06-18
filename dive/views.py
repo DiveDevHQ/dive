@@ -26,6 +26,7 @@ environ.Env.read_env()
 def index(request):
     integrations = Integration.objects.filter(enabled=True)
     connectors = []
+    categories = {}
     apps = []
     for i in integrations:
         apps.append(i.name)
@@ -34,10 +35,12 @@ def index(request):
         config = auth.get_config(i)
         if not config:
             continue
-        apis = []
         for api in config['api']:
-            apis.append(api['schema'])
-        connectors.append({'name': i, 'apis': apis})
+            if not api['schema'] in categories:
+                categories[api['schema']] = []
+            categories[api['schema']].append(i)
+    for c in categories:
+        connectors.append({'name': c, 'apps': categories[c]})
     if len(connectors) == 0:
         return redirect('/integrations')
 
@@ -46,6 +49,32 @@ def index(request):
         "list": connectors
     }
     return render(request, "index.html", context)
+
+
+def sync_config(request, api):
+    context = {
+        "title": api + " template",
+        "api": api,
+        "template": ""
+    }
+    return render(request, "sync.html", context)
+
+
+def sync_data(request, api):
+    if request.method == 'POST':
+        obj_type = request.POST['obj_type']
+        template = request.POST['template']
+
+        integrations = Integration.objects.filter(enabled=True)
+        for i in integrations:
+            config = auth.get_config(i)
+            if not config:
+                continue
+            for a in config['api']:
+                if api == 'crm' and a['schema'] == 'crm':
+                    print(template)
+                    # index_crm_data_by_type(api, i.instance_id, obj_type, template)
+    return redirect('/')
 
 
 @api_view(["POST"])
@@ -341,41 +370,76 @@ def get_crm_field_properties(request, obj_type):
 
 
 @api_view(["POST"])
-def index_crm_data(request, obj_type):
-    api = 'crm'
+def index_data(request, api, obj_type):
     input_data = request.data
-    instance_id = None
     template = None
     if input_data:
-        instance_id = input_data.get('instance_id', None)
         template = input_data.get('template', None)
-    if not instance_id:
-        raise BadRequestException("Please include instance_id in the body parameter.")
     if not template:
         raise BadRequestException("Please include template in the body parameter.")
-    integration, token = auth.get_auth(instance_id)
-    if not token or not integration:
-        raise UnauthorizedException("You have not connected the app " + instance_id)
-    auth.update_last_sync(instance_id)
-    index_fields = get_params(template)
-    documents = []
-    load_crm_data_all(api, token, integration, obj_type, index_fields, template, documents, None)
-    vector_utils.index_documents(documents, instance_id, obj_type)
+    integrations = Integration.objects.filter(enabled=True)
+    for i in integrations:
+        config = auth.get_config(i.name)
+        if not config:
+            continue
+        for a in config['api']:
+            if a['schema'] == api:
+                index_data_reset(api, i.instance_id, obj_type, template)
     return HttpResponse(status=204)
 
 
-def load_crm_data_all(api, token, integration, obj_type, index_fields, template, documents, cursor):
+@api_view(["GET"])
+def reindex_data(request, api, obj_type):
+    integrations = Integration.objects.filter(enabled=True)
+    for i in integrations:
+        config = auth.get_config(i.name)
+        if not config:
+            continue
+        for a in config['api']:
+            if a['schema'] == api:
+                index_data_diff(api, i.instance_id, obj_type)
+    return HttpResponse(status=204)
+
+
+def index_data_reset(api, instance_id, obj_type, template):
+    integration, token = auth.get_auth(instance_id)
+    auth.update_last_sync_and_template(instance_id, obj_type, template)
+    index_fields = get_params(template)
+    documents = []
+    load_data(api, token, integration, obj_type, index_fields, template, documents, None, None)
+    vector_utils.index_documents(documents, integration.instance_id, obj_type)
+
+
+def index_data_diff(api, instance_id, obj_type):
+    integration, token = auth.get_auth(instance_id)
+    auth.update_last_sync(instance_id, obj_type)
+    template = ''
+    documents = []
+    last_sync_at = None
+    if integration.sync_status:
+        sync_status = json.loads(integration.sync_status)
+        if obj_type in sync_status:
+            last_sync_at = sync_status[obj_type]['sync_at']
+            template = sync_status[obj_type]['template']
+    index_fields = get_params(template)
+    load_data(api, token, integration, obj_type, index_fields, template, documents, None, last_sync_at)
+    vector_utils.index_documents(documents, integration.instance_id, obj_type)
+
+
+def load_data(api, token, integration, obj_type, index_fields, template, documents, cursor, last_sync_at):
     package_name = "integrations.connectors." + integration.name + "." + api + ".request_data"
     mod = importlib.import_module(package_name)
     data = mod.get_objects(token, integration, obj_type, False, [], [], None,
                            None,
-                           None, None, None, 100,
+                           None, None, last_sync_at, 100,
                            cursor)
     if 'error' in data:
         if data['error']['status_code'] == 429:
             sleep(15)
-            load_crm_data_all(api, token, integration, obj_type, index_fields, template, documents, cursor)
+            load_data(api, token, integration, obj_type, index_fields, template, documents, cursor,last_sync_at)
     else:
+        if len(data['results']) == 0:
+            return
         for d in data['results']:
             document = {'id': d['id']}
             _template = copy.deepcopy(template)
@@ -387,7 +451,7 @@ def load_crm_data_all(api, token, integration, obj_type, index_fields, template,
             documents.append(document)
         if 'next_cursor' in data:
             cursor = data['next_cursor']
-            load_crm_data_all(api, token, integration, obj_type, index_fields, template, documents, cursor)
+            load_data(api, token, integration, obj_type, index_fields, template, documents, cursor,last_sync_at)
 
 
 @api_view(["GET"])

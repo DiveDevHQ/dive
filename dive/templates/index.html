@@ -13,8 +13,12 @@
     <div class="page_title">{{title}}</div>
     {% for i in list %}
     {{i.name}}<br/>
-    {% for api in i.apis %}
-    <a href="https://docs.diveapi.co/#{{api}}">View {{api}} document</a><br/>
+    {% for app in i.apps %}
+    <ul>
+        <li>{{app}}</li>
+    </ul>
+    <a href="config/{{i.name}}">Set up {{i.name}} data template</a><br/><br/>
+    <a href="https://docs.diveapi.co/#{{i.name}}">View {{i.name}} document</a><br/>
     {% endfor %}
 
     <br/><br/>

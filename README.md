@@ -45,6 +45,10 @@ You can install all the required dependencies by running
 pip install -r requirements.txt
 ```
 
+If you have trouble install chromadb, you might need to run below command
+```
+export HNSWLIB_NO_NATIVE=1 
+```
 
 You can add .env file under dive folder with following:
 

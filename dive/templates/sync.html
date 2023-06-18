@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+  {% include "head.html" %}
+
+</head>
+<body>
+{% include "nav.html" %}
+
+
+<div class="main-page">
+  <div class="page_title">{{title}}</div>
+  <form action="/sync/{{api}}" method="post">
+    {% csrf_token %}
+
+
+  <label for="obj_type"><span style="color:red">*</span> Object Type:</label>
+  <input id="obj_type" type="text" name="obj_type" value="{{ obj_type }}" class="form-control"
+         style="max-width:300px">
+    <br/>
+    <label for="template"><span style="color:red">*</span> Template:</label>
+    <textarea id="template" cols="10" rows="5" name="template"  class="form-control"
+              style="max-width:300px">{{ template }}</textarea>
+    <br/>
+    <input class="btn" type="submit" value="Load Data"/>
+ </form>
+
+</div>
+
+</body>
+</html>
