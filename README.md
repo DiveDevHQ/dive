@@ -45,6 +45,10 @@ You can install all the required dependencies by running
 pip install -r requirements.txt
 ```
 
+If you have trouble install chromadb, you might need to run below command
+```
+export HNSWLIB_NO_NATIVE=1 
+```
 
 You can add .env file under dive folder with following:
 
@@ -53,9 +57,6 @@ DEBUG=True <br/>
 ENVIRONMENT=test <br/>
 DOMAIN=http://localhost:8000/ <br/>
 ALLOWED_HOSTS=.localhost
-
-To connect with other database servers, add DATABASES json to your .env file, for example <br/>
-DATABASES= {"default":{"ENGINE": "django.db.backends.postgresql","NAME": "postgres","USER":"postgres", "PASSWORD": "54321","HOST":"localhost","PORT":"5432"}}
 
 Then simply apply the migrations:
 ```
@@ -73,6 +74,7 @@ To <a href="https://docs.diveapi.co/#connect-your-instance" target="blank"> conn
 
 To connect with your customer's instances, follow the instructions on web app UI and <a href="https://docs.diveapi.co/#connect-multiple-instances"> API doc</a>.
 
+Once completed authentication, click "Set up crm data template" to index data to vector DB.
 
 ### Dive Cloud
 

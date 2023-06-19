@@ -1,4 +1,5 @@
 from integrations.models import Integration
+from integrations.models import Template
 from integrations import authentication as auth
 from django.shortcuts import render
 from django.shortcuts import redirect
@@ -12,7 +13,10 @@ from rest_framework.decorators import action, api_view
 from django.http import HttpResponse
 import json
 import environ
-
+import copy
+from dive.api.utils import get_params
+from time import sleep
+from dive.api import vector_utils
 
 env = environ.Env()
 environ.Env.read_env()
@@ -23,6 +27,7 @@ environ.Env.read_env()
 def index(request):
     integrations = Integration.objects.filter(enabled=True)
     connectors = []
+    categories = {}
     apps = []
     for i in integrations:
         apps.append(i.name)
@@ -31,10 +36,12 @@ def index(request):
         config = auth.get_config(i)
         if not config:
             continue
-        apis = []
         for api in config['api']:
-            apis.append(api['schema'])
-        connectors.append({'name': i, 'apis': apis})
+            if not api['schema'] in categories:
+                categories[api['schema']] = []
+            categories[api['schema']].append(i)
+    for c in categories:
+        connectors.append({'name': c, 'apps': categories[c]})
     if len(connectors) == 0:
         return redirect('/integrations')
 
@@ -43,6 +50,57 @@ def index(request):
         "list": connectors
     }
     return render(request, "index.html", context)
+
+
+def sync_config(request, schema):
+    templates = Template.objects.filter(schema=schema, deleted=False)
+    template_list = []
+    for template in templates:
+        template_list.append({'id': template.id, 'obj_type': template.obj_type, 'content': template.content})
+
+    context = {
+        "title": schema + " template",
+        "api": schema,
+        "list": template_list
+    }
+    return render(request, "sync.html", context)
+
+
+def sync_data(request, schema):
+    if request.method == 'POST':
+        obj_type = request.POST['obj_type']
+        template_text = request.POST['template']
+        template_id = request.POST['template_id']
+        if template_id and not obj_type and not template_text:
+            try:
+                template = Template.objects.get(id=template_id)
+                template.deleted = True
+                template.save()
+            except Template.DoesNotExist:
+                return redirect('/')
+            return redirect('/')
+        elif obj_type and template_text:
+            try:
+                template = Template.objects.get(schema=schema, obj_type=obj_type)
+                template.content = template_text
+                template.deleted = False
+                template.save()
+            except Template.DoesNotExist:
+                template = Template(schema=schema,
+                                    obj_type=obj_type,
+                                    content=template_text)
+                template.save()
+
+            integrations = Integration.objects.filter(enabled=True)
+            for i in integrations:
+                config = auth.get_config(i.name)
+                if not config:
+                    continue
+                for a in config['api']:
+                    if a['schema'] == schema:
+                        index_data_reset(schema, i.instance_id, obj_type, template_text)
+
+    return redirect('/')
 
 
 @api_view(["POST"])
@@ -226,7 +284,7 @@ def get_or_patch_crm_data_by_id(request, obj_type, obj_id):
 
 
 @api_view(["GET", "POST"])
-def get_or_create_crm_data_by_ids(request, obj_type):
+def get_or_create_crm_data(request, obj_type):
     api = 'crm'
     if request.method == 'POST':
         input_data = request.data
@@ -336,3 +394,93 @@ def get_crm_field_properties(request, obj_type):
         return JsonResponse(data, status=data['error'].get('status_code', 400))
     return JsonResponse(data)
 
+
+@api_view(["GET"])
+def reindex_data(request, schema):
+    integrations = Integration.objects.filter(enabled=True)
+    for i in integrations:
+        config = auth.get_config(i.name)
+        if not config:
+            continue
+        for a in config['api']:
+            if a['schema'] == schema:
+                templates = Template.objects.filter(schema=schema, deleted=False)
+                if len(templates) == 0:
+                    return redirect('/config/' + schema)
+                for template in templates:
+                    index_data_diff(schema, i.instance_id, template.obj_type)
+    return HttpResponse(status=204)
+
+
+def index_data_reset(api, instance_id, obj_type, template):
+    integration, token = auth.get_auth(instance_id)
+    auth.update_last_sync(instance_id, obj_type)
+    index_fields = get_params(template)
+    documents = []
+    load_data(api, token, integration, obj_type, index_fields, template, documents, None, None)
+    vector_utils.index_documents(documents, instance_id, obj_type)
+
+
+def index_data_diff(schema, instance_id, obj_type):
+    integration, token = auth.get_auth(instance_id)
+    auth.update_last_sync(instance_id, obj_type)
+    try:
+        _template = Template.objects.get(schema=schema, obj_type=obj_type)
+        template = _template.content
+    except Template.DoesNotExist:
+        return
+    documents = []
+    last_sync_at = None
+    if integration.sync_status:
+        sync_status = json.loads(integration.sync_status)
+        if obj_type in sync_status:
+            last_sync_at = sync_status[obj_type]['sync_at']
+    index_fields = get_params(template)
+    load_data(schema, token, integration, obj_type, index_fields, template, documents, None, last_sync_at)
+
+    vector_utils.index_documents(documents, integration.instance_id, obj_type)
+
+
+def load_data(schema, token, integration, obj_type, index_fields, template, documents, cursor, last_sync_at):
+    package_name = "integrations.connectors." + integration.name + "." + schema + ".request_data"
+    mod = importlib.import_module(package_name)
+    data = mod.get_objects(token, integration, obj_type, False, [], [], None,
+                           None,
+                           None, None, last_sync_at, 100,
+                           cursor)
+    if 'error' in data:
+        if data['error']['status_code'] == 429:
+            sleep(15)
+            load_data(schema, token, integration, obj_type, index_fields, template, documents, cursor, last_sync_at)
+    else:
+        if len(data['results']) == 0:
+            return
+        for d in data['results']:
+            document = {'id': d['id']}
+            _template = copy.deepcopy(template)
+            for field in index_fields:
+                if field in d['data']:
+                    if not isinstance(d['data'][field], list):
+                        _template = _template.replace('{{' + field + '}}', str(d['data'][field]))
+            document['text'] = _template
+            documents.append(document)
+        if 'next_cursor' in data:
+            cursor = data['next_cursor']
+            load_data(schema, token, integration, obj_type, index_fields, template, documents, cursor, last_sync_at)
+
+
+@api_view(["GET"])
+def get_index_data(request):
+    url_params = request.GET.urlencode()
+    instance_id = None
+    query = None
+    if url_params:
+        url_params_dict = parse_qs(url_params)
+        if 'instance_id' in url_params_dict:
+            instance_id = url_params_dict['instance_id'][0]
+        if 'query' in url_params_dict:
+            query = url_params_dict['query'][0]
+    if not instance_id:
+        raise BadRequestException("Please include instance_id in the query parameter.")
+    results = vector_utils.query_documents(query, instance_id)
+    return JsonResponse(results)

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+    {% include "head.html" %}
+
+</head>
+<body>
+{% include "nav.html" %}
+
+
+<div class="main-page">
+    <div class="page_title">{{title}}</div>
+    Each document is indexed using template. Use double curly braces for parameters. example: {% verbatim %}
+    {{ name }}
+    {% endverbatim %} is a good {{industry}}
+    <br/><br/>
+    {% for i in list %}
+    {{i.obj_type}} <a href="#" onclick="edit_template('{{i.id}}','{{i.obj_type}}','{{i.content}}');return false;">Edit</a>
+    {% endfor %}
+    <br/> <br/>
+    <form action="/sync/{{api}}" method="post">
+        {% csrf_token %}
+
+        <input id="template_id" type="text" name="template_id" value="{{ template_id }}" class="hide_element"
+               style="max-width:300px">
+
+        <label for="obj_type"><span style="color:red">*</span> Object Type:</label>
+        <input id="obj_type" type="text" name="obj_type" value="{{ obj_type }}" class="form-control"
+               style="max-width:300px">
+        <br/>
+        <label for="template"><span style="color:red">*</span> Template:</label>
+        <textarea id="template" cols="10" rows="5" name="template" class="form-control"
+                  style="max-width:300px">{{ template }}</textarea>
+        <br/>
+        <input class="btn" type="submit" value="Save and Sync Data" id="sync_btn"/>&nbsp;
+        <input class="btn" type="button" onclick="clear_data();" value="Delete"/>
+
+
+    </form>
+
+</div>
+
+</body>
+</html>
+
+<script>
+    function edit_template(id,obj_type,content){
+    document.getElementById("template_id").value=id;
+      document.getElementById("obj_type").value=obj_type;
+      document.getElementById("template").value=content;
+    }
+
+    function clear_data(){
+      document.getElementById("obj_type").value='';
+      document.getElementById("template").value='';
+      document.getElementById("sync_btn").click();
+    }
+</script>

@@ -13,10 +13,15 @@
     <div class="page_title">{{title}}</div>
     {% for i in list %}
     {{i.name}}<br/>
-    {% for api in i.apis %}
-    <a href="https://docs.diveapi.co/#{{api}}">View {{api}} document</a><br/>
-    {% endfor %}
+    {% for app in i.apps %}
+    <ul>
+        <li>{{app}}</li>
+    </ul>
 
+    {% endfor %}
+    <a href="config/{{i.name}}">Set up {{i.name}} data template</a><br/><br/>
+    <a href="api/v1/documents/sync/{{i.name}}">Sync {{i.name}} data</a><br/><br/>
+    <a href="https://docs.diveapi.co/#{{i.name}}">View {{i.name}} api document</a><br/>
     <br/><br/>
 
     {% endfor %}

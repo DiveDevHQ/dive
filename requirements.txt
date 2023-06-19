@@ -34,7 +34,8 @@ pyrsistent==0.19.3
 python-dateutil==2.8.2
 pytz==2023.3
 PyYAML==5.4.1
-requests==2.26.0
+requests==2.31.0
+chromadb==0.3.26
 semantic-version==2.8.5
 simplejson==3.19.1
 six==1.14.0
