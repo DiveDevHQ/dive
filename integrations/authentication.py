@@ -119,19 +119,6 @@ def request_token_with_code(url, grant_type, token_request: TokenRequest):
     return token_result
 
 
-def update_last_sync_and_template(instance_id, obj_type, template):
-    try:
-        integration = Integration.objects.get(instance_id=instance_id, enabled=True)
-        sync_status = {}
-        if integration.sync_status:
-            sync_status = json.loads(integration.sync_status)
-        sync_status[obj_type] = {'sync_at': get_now_iso_format(), 'template': template}
-        integration.sync_status = json.dumps(sync_status)
-        integration.save()
-    except Integration.DoesNotExist:
-        return
-
-
 def update_last_sync(instance_id, obj_type):
     try:
         integration = Integration.objects.get(instance_id=instance_id, enabled=True)

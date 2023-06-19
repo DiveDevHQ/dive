@@ -23,14 +23,14 @@ from . import views
 
 urlpatterns = [
     path("", views.index, name="index"),
-    path("config/<str:api>", views.sync_config, name="config"),
-    path("sync/<str:api>", views.sync_data, name="sync"),
+    path("config/<str:schema>", views.sync_config, name="config"),
+    path("sync/<str:schema>", views.sync_data, name="sync"),
     path("api/authorize/<str:app>", views.authorization_api, name="authorization_api"),
     path("api/callback", views.callback_api, name="callback_api"),
     path("api/crm/v1/<str:obj_type>/<str:obj_id>", views.get_or_patch_crm_data_by_id, name="get_or_patch_crm_data_by_id"),
     path("api/crm/v1/<str:obj_type>", views.get_or_create_crm_data, name="get_or_create_crm_data"),
     path("api/crm/v1/<str:obj_type>/meta/field-properties", views.get_crm_field_properties, name="get_crm_field_properties"),
-    path("api/v1/documents/sync/<str:api>/<str:obj_type>", views.reindex_data, name="reindex_data"),
+    path("api/v1/documents/sync/<str:schema>", views.reindex_data, name="reindex_data"),
     path("api/v1/documents/search", views.get_index_data, name="get_index_data"),
     path("integrations/", include("integrations.urls")),
     path('admin/', admin.site.urls),

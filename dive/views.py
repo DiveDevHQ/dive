@@ -1,4 +1,5 @@
 from integrations.models import Integration
+from integrations.models import Template
 from integrations import authentication as auth
 from django.shortcuts import render
 from django.shortcuts import redirect
@@ -51,29 +52,54 @@ def index(request):
     return render(request, "index.html", context)
 
 
-def sync_config(request, api):
+def sync_config(request, schema):
+    templates = Template.objects.filter(schema=schema, deleted=False)
+    template_list = []
+    for template in templates:
+        template_list.append({'id': template.id, 'obj_type': template.obj_type, 'content': template.content})
+
     context = {
-        "title": api + " template",
-        "api": api,
-        "template": ""
+        "title": schema + " template",
+        "api": schema,
+        "list": template_list
     }
     return render(request, "sync.html", context)
 
 
-def sync_data(request, api):
+def sync_data(request, schema):
     if request.method == 'POST':
         obj_type = request.POST['obj_type']
-        template = request.POST['template']
+        template_text = request.POST['template']
+        template_id = request.POST['template_id']
+        if template_id and not obj_type and not template_text:
+            try:
+                template = Template.objects.get(id=template_id)
+                template.deleted = True
+                template.save()
+            except Template.DoesNotExist:
+                return redirect('/')
+            return redirect('/')
+        elif obj_type and template_text:
+            try:
+                template = Template.objects.get(schema=schema, obj_type=obj_type)
+                template.content = template_text
+                template.deleted = False
+                template.save()
+            except Template.DoesNotExist:
+                template = Template(schema=schema,
+                                    obj_type=obj_type,
+                                    content=template_text)
+                template.save()
 
-        integrations = Integration.objects.filter(enabled=True)
-        for i in integrations:
-            config = auth.get_config(i)
-            if not config:
-                continue
-            for a in config['api']:
-                if api == 'crm' and a['schema'] == 'crm':
-                    print(template)
-                    # index_crm_data_by_type(api, i.instance_id, obj_type, template)
+            integrations = Integration.objects.filter(enabled=True)
+            for i in integrations:
+                config = auth.get_config(i.name)
+                if not config:
+                    continue
+                for a in config['api']:
+                    if a['schema'] == schema:
+                        index_data_reset(schema, i.instance_id, obj_type, template_text)
+
     return redirect('/')
 
 
@@ -369,65 +395,54 @@ def get_crm_field_properties(request, obj_type):
     return JsonResponse(data)
 
 
-@api_view(["POST"])
-def index_data(request, api, obj_type):
-    input_data = request.data
-    template = None
-    if input_data:
-        template = input_data.get('template', None)
-    if not template:
-        raise BadRequestException("Please include template in the body parameter.")
-    integrations = Integration.objects.filter(enabled=True)
-    for i in integrations:
-        config = auth.get_config(i.name)
-        if not config:
-            continue
-        for a in config['api']:
-            if a['schema'] == api:
-                index_data_reset(api, i.instance_id, obj_type, template)
-    return HttpResponse(status=204)
-
-
 @api_view(["GET"])
-def reindex_data(request, api, obj_type):
+def reindex_data(request, schema):
     integrations = Integration.objects.filter(enabled=True)
     for i in integrations:
         config = auth.get_config(i.name)
         if not config:
             continue
         for a in config['api']:
-            if a['schema'] == api:
-                index_data_diff(api, i.instance_id, obj_type)
+            if a['schema'] == schema:
+                templates = Template.objects.filter(schema=schema, deleted=False)
+                if len(templates) == 0:
+                    return redirect('/config/' + schema)
+                for template in templates:
+                    index_data_diff(schema, i.instance_id, template.obj_type)
     return HttpResponse(status=204)
 
 
 def index_data_reset(api, instance_id, obj_type, template):
     integration, token = auth.get_auth(instance_id)
-    auth.update_last_sync_and_template(instance_id, obj_type, template)
+    auth.update_last_sync(instance_id, obj_type)
     index_fields = get_params(template)
     documents = []
     load_data(api, token, integration, obj_type, index_fields, template, documents, None, None)
-    vector_utils.index_documents(documents, integration.instance_id, obj_type)
+    vector_utils.index_documents(documents, instance_id, obj_type)
 
 
-def index_data_diff(api, instance_id, obj_type):
+def index_data_diff(schema, instance_id, obj_type):
     integration, token = auth.get_auth(instance_id)
     auth.update_last_sync(instance_id, obj_type)
-    template = ''
+    try:
+        _template = Template.objects.get(schema=schema, obj_type=obj_type)
+        template = _template.content
+    except Template.DoesNotExist:
+        return
     documents = []
     last_sync_at = None
     if integration.sync_status:
         sync_status = json.loads(integration.sync_status)
         if obj_type in sync_status:
             last_sync_at = sync_status[obj_type]['sync_at']
-            template = sync_status[obj_type]['template']
     index_fields = get_params(template)
-    load_data(api, token, integration, obj_type, index_fields, template, documents, None, last_sync_at)
+    load_data(schema, token, integration, obj_type, index_fields, template, documents, None, last_sync_at)
+
     vector_utils.index_documents(documents, integration.instance_id, obj_type)
 
 
-def load_data(api, token, integration, obj_type, index_fields, template, documents, cursor, last_sync_at):
-    package_name = "integrations.connectors." + integration.name + "." + api + ".request_data"
+def load_data(schema, token, integration, obj_type, index_fields, template, documents, cursor, last_sync_at):
+    package_name = "integrations.connectors." + integration.name + "." + schema + ".request_data"
     mod = importlib.import_module(package_name)
     data = mod.get_objects(token, integration, obj_type, False, [], [], None,
                            None,
@@ -436,7 +451,7 @@ def load_data(api, token, integration, obj_type, index_fields, template, documen
     if 'error' in data:
         if data['error']['status_code'] == 429:
             sleep(15)
-            load_data(api, token, integration, obj_type, index_fields, template, documents, cursor,last_sync_at)
+            load_data(schema, token, integration, obj_type, index_fields, template, documents, cursor, last_sync_at)
     else:
         if len(data['results']) == 0:
             return
@@ -446,12 +461,12 @@ def load_data(api, token, integration, obj_type, index_fields, template, documen
             for field in index_fields:
                 if field in d['data']:
                     if not isinstance(d['data'][field], list):
-                        _template = _template.replace('{{' + field + '}}', d['data'][field])
+                        _template = _template.replace('{{' + field + '}}', str(d['data'][field]))
             document['text'] = _template
             documents.append(document)
         if 'next_cursor' in data:
             cursor = data['next_cursor']
-            load_data(api, token, integration, obj_type, index_fields, template, documents, cursor,last_sync_at)
+            load_data(schema, token, integration, obj_type, index_fields, template, documents, cursor, last_sync_at)
 
 
 @api_view(["GET"])

@@ -696,7 +696,7 @@ def query_objects(auth, url, obj_type_plural, obj_type_singular, properties, com
     for p in properties:
         node_query += p + " {value} "
 
-    limit_query = 'first : ' + limit
+    limit_query = 'first : ' + str(limit)
     if cursor:
         limit_query += ', after : "' + cursor + '"'
     else:

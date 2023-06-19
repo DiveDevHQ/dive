@@ -17,10 +17,11 @@
     <ul>
         <li>{{app}}</li>
     </ul>
-    <a href="config/{{i.name}}">Set up {{i.name}} data template</a><br/><br/>
-    <a href="https://docs.diveapi.co/#{{i.name}}">View {{i.name}} document</a><br/>
-    {% endfor %}
 
+    {% endfor %}
+    <a href="config/{{i.name}}">Set up {{i.name}} data template</a><br/><br/>
+    <a href="api/v1/documents/sync/{{i.name}}">Sync {{i.name}} data</a><br/><br/>
+    <a href="https://docs.diveapi.co/#{{i.name}}">View {{i.name}} api document</a><br/>
     <br/><br/>
 
     {% endfor %}
