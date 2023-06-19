@@ -437,17 +437,13 @@ def index_data_diff(schema, instance_id, obj_type):
             last_sync_at = sync_status[obj_type]['sync_at']
     index_fields = get_params(template)
     load_data(schema, token, integration, obj_type, index_fields, template, documents, None, last_sync_at)
-
     vector_utils.index_documents(documents, integration.instance_id, obj_type)
 
 
 def load_data(schema, token, integration, obj_type, index_fields, template, documents, cursor, last_sync_at):
     package_name = "integrations.connectors." + integration.name + "." + schema + ".request_data"
     mod = importlib.import_module(package_name)
-    data = mod.get_objects(token, integration, obj_type, False, [], [], None,
-                           None,
-                           None, None, last_sync_at, 100,
-                           cursor)
+    data = mod.load_objects(token, integration, obj_type, last_sync_at, cursor)
     if 'error' in data:
         if data['error']['status_code'] == 429:
             sleep(15)

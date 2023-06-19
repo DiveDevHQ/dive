@@ -91,6 +91,13 @@ def get_objects(auth, app, obj_type, include_field_properties, custom_fields, ob
                 return
 
 
+def load_objects(auth, app, obj_type, modified_after, cursor):
+    return get_objects(auth, app, obj_type, False, [], [], None,
+                       None,
+                       None, None, modified_after, 100,
+                       cursor)
+
+
 def create_object(auth, app, obj_type, input_data):
     base_path = Path(__file__).parent
     try:
