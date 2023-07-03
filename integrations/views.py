@@ -6,6 +6,8 @@ from integrations import authentication as auth
 from datetime import datetime, timezone, timedelta
 import urllib.parse
 from django.apps import apps as proj_apps
+from rest_framework.decorators import action, api_view
+from django.http import JsonResponse
 import environ
 import json
 
@@ -19,6 +21,15 @@ def index(request):
         "list": proj_apps.get_app_config('integrations').integration_config.keys()
     }
     return render(request, "integration.html", context)
+
+
+@api_view(["GET"])
+def connector(request):
+    apps = proj_apps.get_app_config('integrations').integration_config.keys()
+    results = []
+    for app in apps:
+        results.append({'name': app})
+    return JsonResponse(results, safe=False)
 
 
 def authorization(request, app):

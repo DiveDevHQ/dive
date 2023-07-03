@@ -6,16 +6,16 @@
   <a href="https://docs.diveapi.co/" target="blank">Dive API Docs</a>
 </p>
 
-## Dive is an open-source universal API for business integrations
+## Dive is an open-source unified data platform to build LLM customer support applications
 
 We believe **open-source** is the best way to solve every growth integrations pain, covering the **long tail of data sources**. 
 
 - Handling authentication for your integrations
-- Unified one API schema to exchange data with your or your customers' business apps
+- Unified data platform that syncs and indexes your or your customers' SaaS applications
 
-### Schema docs
+### Data sources
 
-[CRM](https://docs.diveapi.co/#crm), Marketing Automation, Accounting, HRIS, Ticketing, Recruiting ATS
+CRM, Ticketing, Documentations, Databases
 
 ## Table of Contents
 
@@ -50,13 +50,14 @@ If you have trouble install chromadb, you might need to run below command
 export HNSWLIB_NO_NATIVE=1 
 ```
 
-You can add .env file under dive folder with following:
+You can add .env file under "dive" folder with following:
 
 SECRET_KEY=YOUR Secret Key <br/>
 DEBUG=True <br/>
 ENVIRONMENT=test <br/>
 DOMAIN=http://localhost:8000/ <br/>
 ALLOWED_HOSTS=.localhost
+CORS_ORIGIN_WHITELIST=http://localhost:3000
 
 Then simply apply the migrations:
 ```
@@ -69,7 +70,14 @@ You can now run the development server:
 python manage.py runserver
 ```
 
-You can now open http://localhost:8000 to view the web app.
+Open your terminal and move into "frontend" folder, run the following command to set up the website
+
+```
+npm install
+npm start
+```
+
+You can now open http://localhost:3000 to view the web app.
 To <a href="https://docs.diveapi.co/#connect-your-instance" target="blank"> connect with your instance</a>, follow web app UI instructions.
 
 To connect with your customer's instances, follow the instructions on web app UI and <a href="https://docs.diveapi.co/#connect-multiple-instances"> API doc</a>.
@@ -85,7 +93,7 @@ Once completed authentication, click "Set up crm data template" to index data to
 ## Docs and support
 Read how to use Dive API in our <a href="https://docs.diveapi.co/" target="blank">documentation</a>
 
-Supported business apps can be found at integrations/config.yaml, or open http://localhost:8000/integrations   
+Supported business apps can be found at integrations/config.yaml
 
 <a href="mailto:sherry@diveapi.co">Ask questions, request integrations or give feedback</a>
 
