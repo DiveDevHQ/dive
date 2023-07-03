@@ -1239,6 +1239,42 @@ def get_deals_by_filter(auth, obj_type, fields, custom_fields, include_field_pro
     return result
 
 
+def get_notes_by_filter(auth, obj_type, fields, custom_fields, include_field_properties, owner_id, created_before,
+                        created_after, modified_before, modified_after, limit, cursor):
+    url = "https://api.hubapi.com/crm/v3/objects/notes/search"
+    properties = get_properties_from_model(fields, custom_fields)
+
+    filters = []
+    if owner_id:
+        f = {'filter_field': 'hubspot_owner_id', 'filter_operator': 'EQ', 'filter_value': owner_id}
+        filters.append(f)
+    elif created_before:
+        f = {'filter_field': 'createdate', 'filter_operator': 'LT', 'filter_value': int(created_before)}
+        filters.append(f)
+    elif created_after:
+        f = {'filter_field': 'createdate', 'filter_operator': 'GTE', 'filter_value': int(created_after)}
+        filters.append(f)
+    elif modified_before:
+        f = {'filter_field': 'hs_lastmodifieddate', 'filter_operator': 'LT',
+             'filter_value': int(modified_before)}
+        filters.append(f)
+    elif modified_after:
+        f = {'filter_field': 'hs_lastmodifieddate', 'filter_operator': 'GTE',
+             'filter_value': int(modified_after)}
+        filters.append(f)
+    if not limit:
+        limit = '100'
+    data = query_objects_by_filter(auth, url, properties, fields, custom_fields, filters, limit, cursor)
+    notes = data['results']
+
+    result = {'results': notes}
+    if 'error' in data:
+        result['error'] = data['error']
+    if 'next_cursor' in data:
+        result['next_cursor'] = data['next_cursor']
+    return result
+
+
 def get_stage_by_id(auth, obj_id, obj_type, fields, include_field_properties):
     result = get_pipelines(auth)
     data = {'id': obj_id}

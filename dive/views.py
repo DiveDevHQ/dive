@@ -25,31 +25,15 @@ environ.Env.read_env()
 # schema_view = get_swagger_view(title='Dive API')
 
 def index(request):
+    return redirect('http://localhost:3000')
+
+
+def get_connected_apps(request):
     integrations = Integration.objects.filter(enabled=True)
     connectors = []
-    categories = {}
-    apps = []
     for i in integrations:
-        apps.append(i.name)
-    apps = list(set(apps))
-    for i in apps:
-        config = auth.get_config(i)
-        if not config:
-            continue
-        for api in config['api']:
-            if not api['schema'] in categories:
-                categories[api['schema']] = []
-            categories[api['schema']].append(i)
-    for c in categories:
-        connectors.append({'name': c, 'apps': categories[c]})
-    if len(connectors) == 0:
-        return redirect('/integrations')
-
-    context = {
-        "title": "Your Apps",
-        "list": connectors
-    }
-    return render(request, "index.html", context)
+        connectors.append({'instance_id': i.instance_id, 'app': i.name, 'sync_status':i.sync_status})
+    return JsonResponse(connectors, safe=False)
 
 
 def sync_config(request, schema):
@@ -480,3 +464,4 @@ def get_index_data(request):
         raise BadRequestException("Please include instance_id in the query parameter.")
     results = vector_utils.query_documents(query, instance_id)
     return JsonResponse(results)
+

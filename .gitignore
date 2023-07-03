@@ -27,6 +27,7 @@ db/
 *.egg
 MANIFEST
 .idea
+node_modules
 
 # PyInstaller
 #  Usually these files are written by a python script from a template

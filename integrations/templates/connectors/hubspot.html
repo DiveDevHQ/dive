@@ -4,8 +4,11 @@
     {% include "head.html" %}
 </head>
 <body>
-{% include "nav.html" %}
+
 <div class="main-page">
+    <br/>
+    <a
+            href="/" >Back</a>
     <div class="page_title">{{title}}</div>
     <form action="/integrations/authorize/hubspot" method="post">
         {% csrf_token %}

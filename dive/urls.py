@@ -25,6 +25,7 @@ urlpatterns = [
     path("", views.index, name="index"),
     path("config/<str:schema>", views.sync_config, name="config"),
     path("sync/<str:schema>", views.sync_data, name="sync"),
+    path("apps", views.get_connected_apps, name="get_connected_apps"),
     path("api/authorize/<str:app>", views.authorization_api, name="authorization_api"),
     path("api/callback", views.callback_api, name="callback_api"),
     path("api/crm/v1/<str:obj_type>/<str:obj_id>", views.get_or_patch_crm_data_by_id, name="get_or_patch_crm_data_by_id"),
