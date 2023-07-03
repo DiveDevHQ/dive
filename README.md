@@ -11,7 +11,7 @@
 We believe **open-source** is the best way to solve every growth integrations pain, covering the **long tail of data sources**. 
 
 - Handling authentication for your integrations
-- Unified data platform that syncs and indexes your or your customers' SaaS applications
+- Unified data platform that syncs and indexes data from your or your customers' SaaS applications
 
 ### Data sources
 
@@ -56,7 +56,7 @@ SECRET_KEY=YOUR Secret Key <br/>
 DEBUG=True <br/>
 ENVIRONMENT=test <br/>
 DOMAIN=http://localhost:8000/ <br/>
-ALLOWED_HOSTS=.localhost
+ALLOWED_HOSTS=.localhost <br/>
 CORS_ORIGIN_WHITELIST=http://localhost:3000
 
 Then simply apply the migrations:
@@ -70,7 +70,7 @@ You can now run the development server:
 python manage.py runserver
 ```
 
-Open your terminal and move into "frontend" folder, run the following command to set up the website
+Setup frontend: open your terminal and cd into "frontend" folder, run the following command to set up the website
 
 ```
 npm install
