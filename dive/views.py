@@ -25,7 +25,7 @@ environ.Env.read_env()
 # schema_view = get_swagger_view(title='Dive API')
 
 def index(request):
-    return redirect('http://localhost:3000')
+    return redirect(env.str('HOME_URL',default='http://localhost:3000'))
 
 
 def get_connected_apps(request):
@@ -205,6 +205,7 @@ def callback_api(request):
             integration.save()
 
         else:
+            print(token_result.json_body)
             raise BadRequestException(token_result.json_body)
 
     except Integration.DoesNotExist:

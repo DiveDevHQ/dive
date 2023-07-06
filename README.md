@@ -6,14 +6,14 @@
   <a href="https://docs.diveapi.co/" target="blank">Dive API Docs</a>
 </p>
 
-## Dive is an open-source unified data platform to build LLM customer support applications
+## Dive is a managed data platform to build LLM customer support applications
 
 We believe **open-source** is the best way to solve every growth integrations pain, covering the **long tail of data sources**. 
 
 - Handling authentication for your integrations
 - Unified data platform that syncs and indexes data from your or your customers' SaaS applications
 
-### Data sources
+### Managed data sources
 
 CRM, Ticketing, Documentations, Databases
 
@@ -57,7 +57,8 @@ DEBUG=True <br/>
 ENVIRONMENT=test <br/>
 DOMAIN=http://localhost:8000/ <br/>
 ALLOWED_HOSTS=.localhost <br/>
-CORS_ORIGIN_WHITELIST=http://localhost:3000
+CORS_ORIGIN_WHITELIST=http://localhost:3000 <br/>
+HOME_URL=http://localhost:3000
 
 Then simply apply the migrations:
 ```

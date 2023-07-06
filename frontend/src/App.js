@@ -3,34 +3,33 @@ import './App.css';
 import React, { useEffect, useReducer, useState } from 'react';
 import Logo from './assets/images/logo.png';
 import axios from 'axios';
-import Badge from './control/Badge';
+import Badge from './controls/Badge';
+import Modal from 'react-modal';
+import Integration from './controls/Integration';
+import XIcon from './icons/XIcon';
+import { getApps, getConnectors } from './api';
 
 function App() {
   const [page, setPage] = useState(1);
   const [apps, setApps] = useState([]);
   const [connectors, setConnectors] = useState([]);
-  const API_URL = "http://localhost:8000"
+
 
   useEffect(() => {
     function loadConnectors() {
-      axios
-        .get(API_URL + "/integrations/connectors")
-        .then(res => { setConnectors(res.data); })
-        .catch(err => console.log(err));
+      getConnectors().then(data => {
+        setConnectors(data)
+      });
     }
 
 
     function loadApps() {
-      axios
-        .get(API_URL + "/apps")
-        .then(res => {
-          setApps(res.data);
-
-          if (res.data.length == 0) {
-            setPage(2);
-          }
-        })
-        .catch(err => console.log(err));
+      getApps().then(data => {
+        setApps(data);
+        if (data.length === 0) {
+          setPage(2);
+        }
+      });
     }
 
     loadConnectors();
@@ -38,6 +37,63 @@ function App() {
 
   }, []);
 
+
+
+  const [modalType, setModalType] = useState()
+  const [modalTitle, setModalTitle] = useState("")
+
+
+  const [modalStyle, setModalStyle] = useState({
+    content: {
+      top: '50%',
+      left: '50%',
+      right: 'auto',
+      bottom: 'auto',
+      marginRight: '-50%',
+      transform: 'translate(-50%, -50%)',
+    },
+
+  })
+
+  let subtitle;
+  const [modalIsOpen, setModalIsOpen] = React.useState(false);
+
+  function handleOpenModal(type, modalTitle, modalStyle) {
+
+    setModalType(type);
+    setModalTitle(modalTitle)
+    setModalStyle(modalStyle);
+    setModalIsOpen(true);
+  }
+
+  function afterOpenModal() {
+    // references are now sync'd and can be accessed.
+    subtitle.style.color = '#424242';
+  }
+
+
+  function openConnector(name) {
+
+    var modalStyle = {
+      content: {
+        top: '50%',
+        left: '50%',
+        right: 'auto',
+        bottom: 'auto',
+        marginRight: '-50%',
+        height: '700px',
+        width: '800px',
+        transform: 'translate(-50%, -50%)',
+      },
+    };
+    handleOpenModal(name, "Connect " + name, modalStyle);
+  }
+
+
+  function closeModal() {
+    setModalIsOpen(false);
+
+  }
 
 
   return (
@@ -57,13 +113,13 @@ function App() {
                   setPage(1)
                 } className="nav__link">
                   <i className='bx bx-compass nav__icon' ></i>
-                  <span className={page == 1 ? "nav__name cursor-pointer active-menu" : "nav__name cursor-pointer inactive-menu"}>Your Apps</span>
+                  <span className={page === 1 ? "nav__name cursor-pointer active-menu" : "nav__name cursor-pointer inactive-menu"}>Your Apps</span>
                 </a>
                 <a onClick={() =>
                   setPage(2)
                 } className="nav__link">
                   <i className='bx bx-compass nav__icon' ></i>
-                  <span className={page == 2 ? "nav__name cursor-pointer active-menu" : "nav__name cursor-pointer inactive-menu"}>Connectors</span>
+                  <span className={page === 2 ? "nav__name cursor-pointer active-menu" : "nav__name cursor-pointer inactive-menu"}>Connectors</span>
                 </a>
 
 
@@ -76,7 +132,7 @@ function App() {
       </div>
       <div className='main-content'>
 
-        {page && page == 1 && (
+        {page && page === 1 && (
           <div><h2>Your Apps</h2>
             {
               apps && apps.length > 0 && (
@@ -108,25 +164,18 @@ function App() {
                 </table>
               )
             }
-            {apps && apps.map(c => (
-              <div className='connector-block'>
 
-                <div className='row'>
-                  <div className='col-3'></div>
-                </div>
-              </div>
-            ))}
           </div>)}
-        {page && page == 2 && (
+        {page && page === 2 && (
           <div> <h2>Connectors</h2>
 
             <div className='d-flex flex-1 flex-wrap-wrap'>
               {connectors && connectors.map(c => (
-                <div className='connector-block'>
+                <div className='connector-block' key={c.name}>
 
                   <Badge
                     value={c.name} capitalize={true} /> <br />
-                  <button type="button" className="btn btn-grey" onClick={() => window.open(API_URL + "/integrations/connect/" + c.name)} >Connect</button>
+                  <button type="button" className="btn btn-grey" onClick={() => openConnector(c.name)} >Connect</button>
 
                 </div>
               ))}
@@ -135,6 +184,28 @@ function App() {
         )}
 
       </div>
+      <Modal
+        isOpen={modalIsOpen}
+        onAfterOpen={afterOpenModal}
+        onRequestClose={closeModal}
+        ariaHideApp={false}
+        contentLabel="Modal"
+        style={modalStyle}
+      >
+        <h2 ref={(_subtitle) => (subtitle = _subtitle)}>{modalTitle}
+          <span onClick={closeModal} className="svg-icon-sm svg-text cursor-pointer  fr">
+            <XIcon /> </span></h2>
+
+
+        <br />
+        {modalType && (
+          <div >
+            <Integration name={modalType}></Integration>
+          </div>
+
+        )}
+      </Modal>
+
     </div>
   );
 }
