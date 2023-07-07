@@ -4,16 +4,20 @@ from datetime import datetime
 from urllib.parse import urlparse
 import json
 import copy
+import os
 from pathlib import Path
 
 
-def get_object_by_id(auth, app, obj_type, obj_id, include_field_properties, custom_fields):
-    base_path = Path(__file__).parent
-    try:
-        with open(str(base_path) + '/' + obj_type + '.json') as f:
-            field_dict = json.load(f)
-    except FileNotFoundError:
-        return
+def get_object_by_id(auth, app, obj_type, obj_id, include_field_properties, custom_fields, schema):
+    if schema:
+        field_dict = json.load(schema)
+    else:
+        base_path = Path(__file__).parent
+        try:
+            with open(str(base_path) + '/schemas/' + obj_type + '.json') as f:
+                field_dict = json.load(f)
+        except FileNotFoundError:
+            return
 
     match obj_type:
         case 'contacts':
@@ -31,13 +35,17 @@ def get_object_by_id(auth, app, obj_type, obj_id, include_field_properties, cust
 
 
 def get_objects(auth, app, obj_type, include_field_properties, custom_fields, obj_ids: [], owner_id, created_before,
-                created_after, modified_before, modified_after, page_size, cursor):
-    base_path = Path(__file__).parent
-    try:
-        with open(str(base_path) + '/' + obj_type + '.json') as f:
-            field_dict = json.load(f)
-    except FileNotFoundError:
-        return
+                created_after, modified_before, modified_after, page_size, cursor, schema):
+    if schema:
+        field_dict = json.load(schema)
+    else:
+        base_path = Path(__file__).parent
+        try:
+            with open(str(base_path) + '/schemas/' + obj_type + '.json') as f:
+                field_dict = json.load(f)
+
+        except FileNotFoundError:
+            return
 
     if len(obj_ids) > 0:
         match obj_type:
@@ -91,17 +99,17 @@ def get_objects(auth, app, obj_type, include_field_properties, custom_fields, ob
                 return
 
 
-def load_objects(auth, app, obj_type, modified_after, cursor):
+def load_objects(auth, app, obj_type, modified_after, cursor, schema):
     return get_objects(auth, app, obj_type, False, [], [], None,
                        None,
                        None, None, modified_after, 100,
-                       cursor)
+                       cursor, schema)
 
 
 def create_object(auth, app, obj_type, input_data):
     base_path = Path(__file__).parent
     try:
-        with open(str(base_path) + '/' + obj_type + '.json') as f:
+        with open(str(base_path) + '/schemas/' + obj_type + '.json') as f:
             field_dict = json.load(f)
     except FileNotFoundError:
         return
@@ -120,7 +128,7 @@ def create_object(auth, app, obj_type, input_data):
 def update_object(auth, app, obj_id, obj_type, input_data):
     base_path = Path(__file__).parent
     try:
-        with open(str(base_path) + '/' + obj_type + '.json') as f:
+        with open(str(base_path) + '/schemas/' + obj_type + '.json') as f:
             field_dict = json.load(f)
     except FileNotFoundError:
         return
@@ -139,7 +147,7 @@ def update_object(auth, app, obj_id, obj_type, input_data):
 def get_field_properties(auth, app, obj_type):
     base_path = Path(__file__).parent
     try:
-        with open(str(base_path) + '/' + obj_type + '.json') as f:
+        with open(str(base_path) + '/schemas/' + obj_type + '.json') as f:
             field_dict = json.load(f)
     except FileNotFoundError:
         return
@@ -1444,3 +1452,14 @@ def execute_get_field_properties(auth, obj_type, fields):
     fields_properties = get_fields_properties(obj_type, properties_details, fields, [])
 
     return {'results': fields_properties}
+
+
+def get_all_schemas():
+    base_path = Path(__file__).parent
+    dir_list = os.listdir(str(base_path) + '/schemas/')
+    schemas = []
+    for path in dir_list:
+        with open(str(base_path) + '/schemas/' + path) as f:
+            field_dict = json.load(f)
+            schemas.append({'obj_type': os.path.splitext(path)[0], 'schema': field_dict})
+    return schemas

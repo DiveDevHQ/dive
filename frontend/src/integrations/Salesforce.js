@@ -59,8 +59,8 @@ To get "client id" and "client secret", please create a Salesforce developer acc
       <div>
       
         <span className='red-text'>Add</span>  "http://localhost:3000/oauth-callback/salesforce" to redirect_uri field in your developer account.
-        <br />  <br/>
-        <div className='row'>
+    
+        <div className='row mt-3'>
           <div className='col-6'>
             <label>
               <span className='red-text'>*</span>Client Id:  <input className='form-control-long' value={clientId || ""} onChange={e => setClientId(e.target.value)}

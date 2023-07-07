@@ -71,19 +71,16 @@ You can now run the development server:
 python manage.py runserver
 ```
 
-Setup frontend: open your terminal and cd into "frontend" folder, run the following command to set up the website
+Then setup frontend, open your terminal and cd into "frontend" folder, run the following command.
 
 ```
 npm install
 npm start
 ```
 
-You can now open http://localhost:3000 to view the web app.
-To <a href="https://docs.diveapi.co/#connect-your-instance" target="blank"> connect with your instance</a>, follow web app UI instructions.
+You can now open http://localhost:3000 to view the web app, and follow web app UI instructions to connect with your data sources.
 
-To connect with your customer's instances, follow the instructions on web app UI and <a href="https://docs.diveapi.co/#connect-multiple-instances"> API doc</a>.
-
-Once completed authentication, click "Set up crm data template" to index data to vector DB.
+Once authentication is completed, data with default format will be indexed into vector DB. 
 
 ### Dive Cloud
 
