@@ -1,5 +1,5 @@
 hubspot:
-  api:
+  module:
     - schema: crm
   auth_method: OAUTH2
   authorization_url: https://app.hubspot.com/oauth/authorize
@@ -17,7 +17,7 @@ hubspot:
     request_type: request_param
 
 salesforce:
-  api:
+  module:
     - schema: crm
   auth_method: OAUTH2
   authorization_url: https://login.salesforce.com/services/oauth2/authorize

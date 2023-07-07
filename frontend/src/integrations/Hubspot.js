@@ -16,8 +16,7 @@ export default function Hubspot() {
     { name: 'Contacts', value: 1, scope: 'crm.schemas.contacts.read crm.objects.contacts.read crm.objects.contacts.write', selected: true },
     { name: 'Companies', value: 2, scope: 'crm.schemas.companies.read crm.objects.companies.read crm.objects.companies.write', selected: true },
     { name: 'Deals', value: 3, scope: 'crm.schemas.deals.read crm.objects.deals.read crm.objects.deals.write', selected: true },
-    { name: 'Engagements', value: 4, scope: 'sales-email-read files', selected: true },
-    { name: 'Products', value: 5, scope: 'e-commerce', selected: false },
+    { name: 'Engagements', value: 4, scope: 'sales-email-read files', selected: true }
   ]);
 
 
@@ -114,9 +113,10 @@ export default function Hubspot() {
     <br /> <br />
     {instanceType === 1 && (
       <div>
+       
         <span className='red-text'>Add</span>  "http://localhost:3000/oauth-callback/hubspot" to redirect_uri field in your developer account.
-        <br />
-        <div className='row'>
+ 
+        <div className='row mt-3'>
           <div className='col-6'>
             <label>
               <span className='red-text'>*</span>Client Id:  <input className='form-control-long' value={clientId || ""} onChange={e => setClientId(e.target.value)}

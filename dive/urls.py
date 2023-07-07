@@ -23,16 +23,17 @@ from . import views
 
 urlpatterns = [
     path("", views.index, name="index"),
-    path("config/<str:schema>", views.sync_config, name="config"),
-    path("sync/<str:schema>", views.sync_data, name="sync"),
+    path("config/<str:module>", views.sync_config, name="config"),
     path("apps", views.get_connected_apps, name="get_connected_apps"),
     path("api/authorize/<str:app>", views.authorization_api, name="authorization_api"),
     path("api/callback", views.callback_api, name="callback_api"),
     path("api/crm/v1/<str:obj_type>/<str:obj_id>", views.get_or_patch_crm_data_by_id, name="get_or_patch_crm_data_by_id"),
     path("api/crm/v1/<str:obj_type>", views.get_or_create_crm_data, name="get_or_create_crm_data"),
     path("api/crm/v1/<str:obj_type>/meta/field-properties", views.get_crm_field_properties, name="get_crm_field_properties"),
-    path("api/v1/documents/sync/<str:schema>", views.reindex_data, name="reindex_data"),
+    path("api/v1/documents/sync/<str:module>", views.reindex_data, name="reindex_data"),
     path("api/v1/documents/search", views.get_index_data, name="get_index_data"),
+    path("schemas/<str:app>/<str:module>", views.get_obj_schemas, name="get_schemas"),
+    path("templates/<str:app>/<str:module>", views.get_obj_templates, name="get_templates"),
     path("integrations/", include("integrations.urls")),
     path('admin/', admin.site.urls),
 ]+ static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
