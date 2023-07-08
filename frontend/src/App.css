@@ -95,6 +95,12 @@
   font-size: 0.875rem;
 }
 
+.btn.btn-blue-short{
+  background-color: #2598d6;
+  color: white;
+  min-width: 120px;
+  font-size: 0.875rem;
+}
 
 /* Navbar expanded */
 .nav:hover {
@@ -260,8 +266,9 @@
 
 .main-content {
   margin: auto;
-  width: 50%;
+  width: 70%;
   margin-top: 60px;
+  margin-left:250px;
 }
 
 .active-menu{

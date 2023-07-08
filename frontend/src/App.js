@@ -8,7 +8,7 @@ import Modal from 'react-modal';
 import Integration from './controls/Integration';
 import Schema from './controls/Schema';
 import XIcon from './icons/XIcon';
-import { getApps, getConnectors } from './api';
+import { getApps, getConnectors, clearData, syncData } from './api';
 
 function App() {
   const [page, setPage] = useState(1);
@@ -16,23 +16,24 @@ function App() {
   const [connectors, setConnectors] = useState([]);
 
 
+  function loadConnectors() {
+    getConnectors().then(data => {
+      setConnectors(data)
+
+    });
+  }
+
+
+  function loadApps() {
+    getApps().then(data => {
+      setApps(data);
+      if (data.length === 0) {
+        setPage(2);
+      }
+    });
+  }
+
   useEffect(() => {
-    function loadConnectors() {
-      getConnectors().then(data => {
-        setConnectors(data)
-  
-      });
-    }
-
-
-    function loadApps() {
-      getApps().then(data => {
-        setApps(data);
-        if (data.length === 0) {
-          setPage(2);
-        }
-      });
-    }
 
     loadConnectors();
     loadApps();
@@ -40,6 +41,16 @@ function App() {
   }, []);
 
 
+  function runSyncData(app, instance_id) {
+    syncData(app, instance_id).then(data => {
+      loadApps();
+    });
+  }
+  function clearSyncData(app, instance_id) {
+    clearData(app, instance_id).then(data => {
+      loadApps();
+    });
+  }
 
   const [modalType, setModalType] = useState()
   const [modalParam, setModalParam] = useState()
@@ -90,7 +101,7 @@ function App() {
         transform: 'translate(-50%, -50%)',
       },
     };
-    handleOpenModal('integration',name, "Connect " + name, modalStyle);
+    handleOpenModal('integration', name, "Connect " + name, modalStyle);
   }
 
   function openSchema(app) {
@@ -107,8 +118,8 @@ function App() {
         transform: 'translate(-50%, -50%)',
       },
     };
-   
-    handleOpenModal('schema',app, "Schema " + app.name, modalStyle);
+
+    handleOpenModal('schema', app, "Schema " + app.name, modalStyle);
   }
 
   function closeModal() {
@@ -161,6 +172,8 @@ function App() {
                       <th scope="col">Instance Id</th>
                       <th scope="col">App</th>
                       <th scope="col">Status</th>
+                      <th scope="col">Sync</th>
+                      <th scope="col">Clear</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -172,7 +185,10 @@ function App() {
                         <td> <span> {a.instance_id} </span></td>
                         <td> <span> {a.app} </span></td>
                         <td> <span> {a.sync_status} </span></td>
-
+                        <td>    <button type="button" className="btn btn-blue-short ml-5"  onClick={() => runSyncData(a.app, a.instance_id)} >Sync now</button>
+                        </td>
+                        <td>       <button type="button" className="btn btn-blue-short ml-5" simple-title="Reindex data" onClick={() => clearSyncData(a.app, a.instance_id)} >Clear data</button>
+                        </td>
                       </tr>
 
 
@@ -193,7 +209,7 @@ function App() {
 
                   <Badge
                     value={c.name} capitalize={true} /> <br />
-                  <button type="button" className="btn btn-grey" onClick={() => openConnector(c.name)} >Connect</button><br/>
+                  <button type="button" className="btn btn-grey" onClick={() => openConnector(c.name)} >Connect</button><br />
                   <button type="button" className="btn btn-blue mt-3" onClick={() => openSchema(c)} >Schema</button>
 
                 </div>
@@ -223,7 +239,7 @@ function App() {
           </div>
 
         )}
-         {modalType == 'schema' && modalParam && (
+        {modalType == 'schema' && modalParam && (
           <div >
             <Schema config={modalParam}></Schema>
           </div>

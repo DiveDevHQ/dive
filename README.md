@@ -6,16 +6,23 @@
   <a href="https://docs.diveapi.co/" target="blank">Dive API Docs</a>
 </p>
 
-## Dive is a managed data platform to build LLM customer support applications
+## Dive is a managed data platform to build LLM fintech applications
 
 We believe **open-source** is the best way to solve every growth integrations pain, covering the **long tail of data sources**. 
 
 - Handling authentication for your integrations
-- Unified data platform that syncs and indexes data from your or your customers' SaaS applications
+- Unified data platform that syncs and indexes data from your or your customers' financial data source
+- Handle compliance and security
 
 ### Managed data sources
 
-CRM, Ticketing, Documentations, Databases
+CRM, Ticketing, Documentations, Payment, KYC, Databases
+
+### Demo
+<p align="center">
+  <img alt="divelogo" width="350" src="https://docs.diveapi.co/images/demo.png">
+</p>
+
 
 ## Table of Contents
 
@@ -29,6 +36,7 @@ CRM, Ticketing, Documentations, Databases
 
 - Python 3.11
 
+
 ### Run Dive locally
 
 ```
@@ -40,26 +48,26 @@ After you cloned the repository, you want to create a virtual environment, by ru
 python -m venv venv && source venv/bin/activate
 ```
 
-You can install all the required dependencies by running
+You can install all the required dependencies by running command
 ```
 pip install -r requirements.txt
 ```
 
-If you have trouble install chromadb, you might need to run below command
+If you have trouble install chromadb, you might need to run below command first
 ```
 export HNSWLIB_NO_NATIVE=1 
 ```
 
-You can add .env file under "dive" folder with following:
-
-SECRET_KEY=YOUR Secret Key <br/>
-DEBUG=True <br/>
-ENVIRONMENT=test <br/>
-DOMAIN=http://localhost:8000/ <br/>
-ALLOWED_HOSTS=.localhost <br/>
-CORS_ORIGIN_WHITELIST=http://localhost:3000 <br/>
-HOME_URL=http://localhost:3000
-
+You can add a **.env** file under "dive" folder with the following content:
+```
+SECRET_KEY=YOUR Secret Key  
+DEBUG=True  
+ENVIRONMENT=test 
+DOMAIN=http://localhost:8000/  
+ALLOWED_HOSTS=.localhost  
+CORS_ORIGIN_WHITELIST=http://localhost:3000  
+HOME_URL=http://localhost:3000  
+```
 Then simply apply the migrations:
 ```
 python manage.py migrate
@@ -71,14 +79,24 @@ You can now run the development server:
 python manage.py runserver
 ```
 
-Then setup frontend, open your terminal and cd into "frontend" folder, run the following command.
+
+Add a **.env** file under "frontend" folder with the following content:
+```
+REACT_APP_API_URL=http://localhost:8000 
+```
+Using terminal to navigate to "frontend" folder, then run the following command.
 
 ```
 npm install
+```
+
+You can now start the website:
+
+```
 npm start
 ```
 
-You can now open http://localhost:3000 to view the web app, and follow web app UI instructions to connect with your data sources.
+Open http://localhost:3000 and follow web app UI instructions to connect with your data sources.
 
 Once authentication is completed, data with default format will be indexed into vector DB. 
 
