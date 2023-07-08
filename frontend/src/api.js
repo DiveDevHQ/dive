@@ -1,8 +1,9 @@
 import axios from 'axios';
 
-const serviceUrl = "http://localhost:8000"
+const serviceUrl = process.env.REACT_APP_API_URL? process.env.REACT_APP_API_URL:"http://localhost:8000"
 
 export function getConnectors() {
+
     return axios
         .get(`${serviceUrl}/integrations/connectors`)
         .then(res => res.data)
@@ -70,3 +71,17 @@ export function deleteTemplate(template_id) {
         .then(res => res.data);
 }
 
+
+
+export function syncData(app, instance_id) {
+
+    return axios.put(`${serviceUrl}/sync/${app}/${instance_id}`)
+        .then(res => res.data);
+}
+
+
+export function clearData(app, instance_id) {
+
+    return axios.put(`${serviceUrl}/clear/${app}/${instance_id}`)
+        .then(res => res.data);
+}

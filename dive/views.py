@@ -38,20 +38,6 @@ def get_connected_apps(request):
     return JsonResponse(connectors, safe=False)
 
 
-def sync_config(request, module):
-    templates = Template.objects.filter(module=module, deleted=False)
-    template_list = []
-    for template in templates:
-        template_list.append({'id': template.id, 'obj_type': template.obj_type, 'content': template.content})
-
-    context = {
-        "title": module + " template",
-        "api": module,
-        "list": template_list
-    }
-    return render(request, "sync.html", context)
-
-
 @api_view(["POST"])
 def authorization_api(request, app):
     integration_config = auth.get_config(app)
@@ -170,7 +156,6 @@ def callback_api(request):
             integration.save()
 
         else:
-            print(token_result.json_body)
             raise BadRequestException(token_result.json_body)
 
     except Integration.DoesNotExist:
@@ -345,48 +330,33 @@ def get_crm_field_properties(request, obj_type):
     return JsonResponse(data)
 
 
-@api_view(["GET"])
-def reindex_data(request, module):
-    integrations = Integration.objects.filter(enabled=True)
-    for i in integrations:
-        config = auth.get_config(i.name)
-        if not config:
-            continue
-        for a in config['module']:
-            if a['schema'] == module:
-                templates = Template.objects.filter(module=module, deleted=False)
-                if len(templates) == 0:
-                    return redirect('/config/' + module)
-                for template in templates:
-                    index_data_diff(module, i.instance_id, template.obj_type)
+@api_view(["PUT"])
+def sync_instance_data(request, app, instance_id):
+    templates = Template.objects.filter(app=app, deleted=False)
+    if len(templates) == 0:
+        auth.update_sync_error(instance_id, {'id': 'Missing data schema', 'status_code': 400,
+                                             'message': 'Please add schema from Connectors tab'})
+    for template in templates:
+        index_data(template.module, instance_id, template.obj_type, template.schema, False)
     return HttpResponse(status=204)
 
 
-def index_data_reset(api, instance_id, obj_type, schema):
+@api_view(["PUT"])
+def clear_instance_data(request, app, instance_id):
+    auth.clear_sync_status(instance_id)
+    return HttpResponse(status=204)
+
+
+def index_data(module, instance_id, obj_type, schema, reload):
     integration, token = auth.get_auth(instance_id)
+    obj_last_sync_at = None
+    if not reload:
+        obj_last_sync_at = auth.get_last_sync_at(instance_id, obj_type)
+
     auth.update_last_sync(instance_id, obj_type)
     documents = []
-    load_data(api, token, integration, obj_type, schema, documents, None, None)
+    load_data(module, token, integration, obj_type, schema, documents, None, obj_last_sync_at)
     vector_utils.index_documents(documents, instance_id, obj_type)
-
-
-def index_data_diff(module, instance_id, obj_type):
-    integration, token = auth.get_auth(instance_id)
-    auth.update_last_sync(instance_id, obj_type)
-    try:
-        _template = Template.objects.get(module=module, obj_type=obj_type)
-        template = _template.schema
-    except Template.DoesNotExist:
-        return
-    documents = []
-    last_sync_at = None
-    if integration.sync_status:
-        sync_status = json.loads(integration.sync_status)
-        if obj_type in sync_status:
-            last_sync_at = sync_status[obj_type]['sync_at']
-    index_fields = get_params(template)
-    load_data(module, token, integration, obj_type, index_fields, template, documents, None, last_sync_at)
-    vector_utils.index_documents(documents, integration.instance_id, obj_type)
 
 
 def load_data(module, token, integration, obj_type, schema, documents, cursor, last_sync_at):

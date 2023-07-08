@@ -119,17 +119,56 @@ def request_token_with_code(url, grant_type, token_request: TokenRequest):
     return token_result
 
 
+def get_last_sync_at(instance_id, obj_type):
+    try:
+        integration = Integration.objects.get(instance_id=instance_id, enabled=True)
+        if integration.sync_status:
+            sync_status = json.loads(integration.sync_status)
+            if 'obj_status' in sync_status and obj_type in sync_status['obj_status']:
+                return sync_status['obj_status'][obj_type].get('sync_at',None)
+    except Integration.DoesNotExist:
+        return
+    return
+
+
 def update_last_sync(instance_id, obj_type):
     try:
         integration = Integration.objects.get(instance_id=instance_id, enabled=True)
-        sync_status = {}
+        sync_status = {'obj_status': {}}
         if integration.sync_status:
             sync_status = json.loads(integration.sync_status)
-        if obj_type in sync_status:
-            sync_status[obj_type]['sync_at'] = get_now_iso_format()
+            if 'error' in integration.sync_status:
+                del sync_status['error']
+            if 'obj_status' not in integration.sync_status:
+                sync_status['obj_status'] = {}
+
+        if obj_type in sync_status['obj_status']:
+            sync_status['obj_status'][obj_type] = {'sync_at': get_now_iso_format()}
         else:
-            sync_status[obj_type] = {'sync_at': get_now_iso_format()}
+            sync_status['obj_status'][obj_type] = {'sync_at': get_now_iso_format()}
         integration.sync_status = json.dumps(sync_status)
+        integration.save()
+    except Integration.DoesNotExist:
+        return
+
+
+def update_sync_error(instance_id, error):
+    try:
+        integration = Integration.objects.get(instance_id=instance_id, enabled=True)
+        sync_status = {'error': {}}
+        if integration.sync_status:
+            sync_status = json.loads(integration.sync_status)
+        sync_status['error'] = error
+        integration.sync_status = json.dumps(sync_status)
+        integration.save()
+    except Integration.DoesNotExist:
+        return
+
+
+def clear_sync_status(instance_id):
+    try:
+        integration = Integration.objects.get(instance_id=instance_id, enabled=True)
+        integration.sync_status = None
         integration.save()
     except Integration.DoesNotExist:
         return

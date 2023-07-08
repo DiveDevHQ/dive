@@ -101,7 +101,7 @@ export default function Schema({ config }) {
     return (
         <div>
             {templates && templates.length > 0 && (<fieldset>
-                <legend>Your data schema for index:</legend>
+                <legend>Your data schema to index</legend>
                 {templates && templates.map(a => (
 
                     <div key={a.template_id}>
@@ -139,7 +139,7 @@ export default function Schema({ config }) {
                                 <Plus />
                             </span>}
 
-                        <button type="button" className="btn btn-blue ml-5" onClick={() => addSchema(a)} >Add Schema</button>
+                        <button type="button" className="btn btn-blue ml-5" onClick={() => addSchema(a)} >Select Schema</button>
                         {checkShowSchema(a.obj_type) &&
                             (<pre className='json-copy mt-3'>{JSON.stringify(a.schema, null, 2)}</pre>)}
 

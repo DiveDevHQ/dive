@@ -3,7 +3,7 @@ from chromadb.config import Settings
 
 
 def index_documents(documents, instance_id, obj_type):
-    if len(documents)==0:
+    if len(documents) == 0:
         return
     persist_directory = "db"
     client = chromadb.Client(
@@ -19,9 +19,10 @@ def index_documents(documents, instance_id, obj_type):
     _document_ids = []
     _object_types = []
     for document in documents:
+        print(document)
         _documents.append(document['text'])
         _document_ids.append(document['id'])
-        _object_types.append({'instance_id':instance_id,'obj_type': obj_type})
+        _object_types.append({'instance_id': instance_id, 'obj_type': obj_type})
     collection.add(
         documents=_documents,
         # we handle tokenization, embedding, and indexing automatically. You can skip that and add your own embeddings as well
@@ -41,7 +42,7 @@ def query_documents(query, instance_id):
         )
     )
     collection_name = "peristed_collection"
-# Load the collection
+    # Load the collection
     collection = client.get_collection(collection_name)
     results = collection.query(
         query_texts=query,

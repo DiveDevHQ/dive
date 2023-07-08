@@ -10,7 +10,7 @@ from pathlib import Path
 
 def get_object_by_id(auth, app, obj_type, obj_id, include_field_properties, custom_fields, schema):
     if schema:
-        field_dict = json.load(schema)
+        field_dict = json.loads(schema)
     else:
         base_path = Path(__file__).parent
         try:
@@ -37,7 +37,7 @@ def get_object_by_id(auth, app, obj_type, obj_id, include_field_properties, cust
 def get_objects(auth, app, obj_type, include_field_properties, custom_fields, obj_ids: [], owner_id, created_before,
                 created_after, modified_before, modified_after, page_size, cursor, schema):
     if schema:
-        field_dict = json.load(schema)
+        field_dict = json.loads(schema)
     else:
         base_path = Path(__file__).parent
         try:
