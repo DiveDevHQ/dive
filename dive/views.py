@@ -17,6 +17,8 @@ import copy
 from dive.api.utils import get_params
 from time import sleep
 from dive.api import vector_utils
+import os
+from pathlib import Path
 
 env = environ.Env()
 environ.Env.read_env()
@@ -32,7 +34,7 @@ def get_connected_apps(request):
     integrations = Integration.objects.filter(enabled=True)
     connectors = []
     for i in integrations:
-        connectors.append({'instance_id': i.instance_id, 'app': i.name, 'sync_status':i.sync_status})
+        connectors.append({'instance_id': i.instance_id, 'app': i.name, 'sync_status': i.sync_status})
     return JsonResponse(connectors, safe=False)
 
 
@@ -425,10 +427,15 @@ def get_index_data(request):
 
 @api_view(["GET"])
 def get_obj_schemas(request, app, module):
-    package_name = "integrations.connectors." + app + "." + module + ".request_data"
-    mod = importlib.import_module(package_name)
-    data = mod.get_all_schemas()
-    return JsonResponse(data, safe=False)
+    base_path = Path(__file__).parent.parent
+    folder_path = str(base_path) + '/integrations/connectors/' + app + '/' + module + '/schemas/'
+    dir_list = os.listdir(folder_path)
+    schemas = []
+    for path in dir_list:
+        with open(folder_path + path) as f:
+            field_dict = json.load(f)
+            schemas.append({'app': app, 'module': module, 'obj_type': os.path.splitext(path)[0], 'schema': field_dict})
+    return JsonResponse(schemas, safe=False)
 
 
 @api_view(["GET"])
@@ -436,5 +443,44 @@ def get_obj_templates(request, app, module):
     templates = Template.objects.filter(module=module, app=app, deleted=False)
     schemas = []
     for template in templates:
-        schemas.append({'obj_type': template.obj_type, 'schema': template.schema})
+        schemas.append({'template_id': template.id, 'app': app, 'module': module, 'obj_type': template.obj_type,
+                        'schema': json.loads(template.schema)})
     return JsonResponse(schemas, safe=False)
+
+
+@api_view(["POST"])
+def add_obj_template(request):
+    app = request.data.get('app', '')
+    module = request.data.get('module', '')
+    obj_type = request.data.get('obj_type', '')
+    schema = json.dumps(request.data.get('schema', ''))
+    result = {'app': app, 'module': module, 'obj_type': obj_type,
+              'schema': json.loads(schema)}
+    try:
+        template = Template.objects.get(module=module, app=app, obj_type=obj_type)
+        template.schema = schema
+        template.deleted = False
+        template.save()
+        result['template_id'] = template.id
+
+    except Template.DoesNotExist:
+        template = Template(app=app,
+                            module=module,
+                            obj_type=obj_type,
+                            schema=schema)
+        template.save()
+
+        result['template_id'] = Template.objects.last().id
+
+    return JsonResponse(result, safe=False)
+
+
+@api_view(["DELETE"])
+def delete_obj_templates(request, template_id):
+    try:
+        template = Template.objects.get(id=template_id)
+        template.deleted = True
+        template.save()
+    except Template.DoesNotExist:
+        return HttpResponse(status=404)
+    return HttpResponse(status=204)

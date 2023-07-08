@@ -88,6 +88,13 @@
 }
 
 
+.btn.btn-blue{
+  background-color: #2598d6;
+  color: white;
+
+  font-size: 0.875rem;
+}
+
 
 /* Navbar expanded */
 .nav:hover {
@@ -369,4 +376,37 @@
 
 .text-copy{
   background-color: #eeeeee;
+}
+
+.json-copy{
+  background-color: #eeeeee;
+  padding: 5px;
+}
+
+
+[simple-title]:hover:after {
+  opacity: 1;
+  transition: all 0.1s ease 0.5s;
+  visibility: visible;
+}
+
+[simple-title]:after {
+  content: attr(simple-title);
+  background-color: #424242;
+  color: white;
+  font-size: 85%;
+  position: absolute;
+  padding: 1px 1px 1px 1px;
+  bottom: -2.0em;
+  left: 0%;
+  white-space: nowrap;
+  /*box-shadow: 1px 1px 1px #222222;*/
+  opacity: 0;
+  border: 1px solid #111111;
+  z-index: 99999;
+  visibility: hidden;
+}
+
+[simple-title] {
+  position: relative;
 }

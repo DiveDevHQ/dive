@@ -900,14 +900,3 @@ def execute_get_field_properties(auth, instance_url, obj_type_plural, obj_type_s
     fields_properties = get_fields_properties(obj_type_plural, properties_with_options, fields, [])
 
     return {'results': fields_properties}
-
-
-def get_all_schemas():
-    base_path = Path(__file__).parent
-    dir_list = os.listdir(str(base_path) + '/schemas/')
-    schemas = []
-    for path in dir_list:
-        with open(str(base_path) + '/schemas/' + path) as f:
-            field_dict = json.load(f)
-            schemas.append({'obj_type': os.path.splitext(path)[0], 'schema': field_dict})
-    return schemas
