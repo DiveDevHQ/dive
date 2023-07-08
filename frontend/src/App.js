@@ -6,6 +6,7 @@ import axios from 'axios';
 import Badge from './controls/Badge';
 import Modal from 'react-modal';
 import Integration from './controls/Integration';
+import Schema from './controls/Schema';
 import XIcon from './icons/XIcon';
 import { getApps, getConnectors } from './api';
 
@@ -19,6 +20,7 @@ function App() {
     function loadConnectors() {
       getConnectors().then(data => {
         setConnectors(data)
+  
       });
     }
 
@@ -40,6 +42,7 @@ function App() {
 
 
   const [modalType, setModalType] = useState()
+  const [modalParam, setModalParam] = useState()
   const [modalTitle, setModalTitle] = useState("")
 
 
@@ -58,9 +61,10 @@ function App() {
   let subtitle;
   const [modalIsOpen, setModalIsOpen] = React.useState(false);
 
-  function handleOpenModal(type, modalTitle, modalStyle) {
+  function handleOpenModal(type, param, modalTitle, modalStyle) {
 
     setModalType(type);
+    setModalParam(param);
     setModalTitle(modalTitle)
     setModalStyle(modalStyle);
     setModalIsOpen(true);
@@ -86,9 +90,26 @@ function App() {
         transform: 'translate(-50%, -50%)',
       },
     };
-    handleOpenModal(name, "Connect " + name, modalStyle);
+    handleOpenModal('integration',name, "Connect " + name, modalStyle);
   }
 
+  function openSchema(app) {
+
+    var modalStyle = {
+      content: {
+        top: '50%',
+        left: '50%',
+        right: 'auto',
+        bottom: 'auto',
+        marginRight: '-50%',
+        height: '700px',
+        width: '800px',
+        transform: 'translate(-50%, -50%)',
+      },
+    };
+   
+    handleOpenModal('schema',app, "Schema " + app.name, modalStyle);
+  }
 
   function closeModal() {
     setModalIsOpen(false);
@@ -121,9 +142,6 @@ function App() {
                   <i className='bx bx-compass nav__icon' ></i>
                   <span className={page === 2 ? "nav__name cursor-pointer active-menu" : "nav__name cursor-pointer inactive-menu"}>Connectors</span>
                 </a>
-
-
-
               </div>
             </div>
           </div>
@@ -175,7 +193,8 @@ function App() {
 
                   <Badge
                     value={c.name} capitalize={true} /> <br />
-                  <button type="button" className="btn btn-grey" onClick={() => openConnector(c.name)} >Connect</button>
+                  <button type="button" className="btn btn-grey" onClick={() => openConnector(c.name)} >Connect</button><br/>
+                  <button type="button" className="btn btn-blue mt-3" onClick={() => openSchema(c)} >Schema</button>
 
                 </div>
               ))}
@@ -198,9 +217,15 @@ function App() {
 
 
         <br />
-        {modalType && (
+        {modalType == 'integration' && modalParam && (
           <div >
-            <Integration name={modalType}></Integration>
+            <Integration name={modalParam}></Integration>
+          </div>
+
+        )}
+         {modalType == 'schema' && modalParam && (
+          <div >
+            <Schema config={modalParam}></Schema>
           </div>
 
         )}
