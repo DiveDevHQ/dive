@@ -20,7 +20,7 @@ CRM, Ticketing, Documentations, Payment, KYC, Databases
 
 ### Demo
 <p align="center">
-  <img alt="divelogo" width="350" src="https://docs.diveapi.co/images/demo.png">
+  <img alt="divelogo" width="600" src="https://docs.diveapi.co/images/demo.png">
 </p>
 
 

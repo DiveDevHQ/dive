@@ -12,7 +12,7 @@ class Integration(models.Model):
     access_token = models.TextField(blank=True, null=True)
     refresh_token = models.TextField(blank=True, null=True)
     api_key = models.CharField(max_length=200, blank=True, null=True)
-    instance_id = models.CharField(max_length=200, blank=True)
+    connector_id = models.CharField(max_length=200, blank=True)
     auth_json = models.TextField(blank=True, null=True)
     enabled = models.BooleanField(default=False)
     expire_at = models.DateTimeField(null=True)
