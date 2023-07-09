@@ -45,14 +45,14 @@ export function getSchemas(app, module) {
 
 
 export function authWithOAuth2(app, client_id, client_secret, object_scopes) {
-    const auth = { 'client_id': client_id, 'client_secret': client_secret, 'redirect_uri': window.location.protocol + '//' + window.location.host + '/oauth-callback/' + app, 'object_scopes': object_scopes, 'instance_id': app };
+    const auth = { 'client_id': client_id, 'client_secret': client_secret, 'redirect_uri': window.location.protocol + '//' + window.location.host + '/oauth-callback/' + app, 'object_scopes': object_scopes, 'connector_id': app };
     return axios.post(`${serviceUrl}/api/authorize/${app}`, auth)
         .then(res => res.data);
 
 }
 
 export function callbackWithOAuth2(app, code) {
-    const callback = { 'code': code, 'instance_id': app };
+    const callback = { 'code': code, 'connector_id': app };
     return axios.post(`${serviceUrl}/api/callback`, callback)
         .then(res => res.data);
 
@@ -73,15 +73,15 @@ export function deleteTemplate(template_id) {
 
 
 
-export function syncData(app, instance_id) {
+export function syncData(app, connector_id) {
 
-    return axios.put(`${serviceUrl}/sync/${app}/${instance_id}`)
+    return axios.put(`${serviceUrl}/sync/${app}/${connector_id}`)
         .then(res => res.data);
 }
 
 
-export function clearData(app, instance_id) {
+export function clearData(app, connector_id) {
 
-    return axios.put(`${serviceUrl}/clear/${app}/${instance_id}`)
+    return axios.put(`${serviceUrl}/clear/${app}/${connector_id}`)
         .then(res => res.data);
 }

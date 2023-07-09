@@ -41,13 +41,13 @@ function App() {
   }, []);
 
 
-  function runSyncData(app, instance_id) {
-    syncData(app, instance_id).then(data => {
+  function runSyncData(app, connector_id) {
+    syncData(app, connector_id).then(data => {
       loadApps();
     });
   }
-  function clearSyncData(app, instance_id) {
-    clearData(app, instance_id).then(data => {
+  function clearSyncData(app, connector_id) {
+    clearData(app, connector_id).then(data => {
       loadApps();
     });
   }
@@ -169,7 +169,7 @@ function App() {
                   <thead  >
                     <tr>
 
-                      <th scope="col">Instance Id</th>
+                      <th scope="col">Connector Id</th>
                       <th scope="col">App</th>
                       <th scope="col">Status</th>
                       <th scope="col">Sync</th>
@@ -181,13 +181,13 @@ function App() {
 
                     {apps && apps.map(a => (
 
-                      <tr key={a.instance_id}>
-                        <td> <span> {a.instance_id} </span></td>
+                      <tr key={a.connector_id}>
+                        <td> <span> {a.connector_id} </span></td>
                         <td> <span> {a.app} </span></td>
                         <td> <span> {a.sync_status} </span></td>
-                        <td>    <button type="button" className="btn btn-blue-short ml-5"  onClick={() => runSyncData(a.app, a.instance_id)} >Sync now</button>
+                        <td>    <button type="button" className="btn btn-blue-short ml-5"  onClick={() => runSyncData(a.app, a.connector_id)} >Sync now</button>
                         </td>
-                        <td>       <button type="button" className="btn btn-blue-short ml-5" simple-title="Reindex data" onClick={() => clearSyncData(a.app, a.instance_id)} >Clear data</button>
+                        <td>       <button type="button" className="btn btn-blue-short ml-5" simple-title="Reindex data" onClick={() => clearSyncData(a.app, a.connector_id)} >Clear data</button>
                         </td>
                       </tr>
 

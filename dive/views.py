@@ -16,7 +16,6 @@ import environ
 import copy
 from dive.api.utils import get_params
 from time import sleep
-from dive.api import vector_utils
 import os
 from pathlib import Path
 
@@ -34,7 +33,7 @@ def get_connected_apps(request):
     integrations = Integration.objects.filter(enabled=True)
     connectors = []
     for i in integrations:
-        connectors.append({'instance_id': i.instance_id, 'app': i.name, 'sync_status': i.sync_status})
+        connectors.append({'connector_id': i.connector_id, 'app': i.name, 'sync_status': i.sync_status})
     return JsonResponse(connectors, safe=False)
 
 
@@ -43,9 +42,9 @@ def authorization_api(request, app):
     integration_config = auth.get_config(app)
     if not integration_config:
         raise BadRequestException('provider ' + app + ' is not supported')
-    instance_id = request.data.get('instance_id', '')
-    if not instance_id:
-        raise BadRequestException('instance_id is required')
+    connector_id = request.data.get('connector_id', '')
+    if not connector_id:
+        raise BadRequestException('connector_id is required')
     redirect_uri = request.data.get('redirect_uri', '')
     if not redirect_uri:
         raise BadRequestException('redirect_uri is required')
@@ -77,12 +76,12 @@ def authorization_api(request, app):
             url_dict['scope'] = scope_str
 
         try:
-            integration = Integration.objects.get(name=app, instance_id=instance_id)
+            integration = Integration.objects.get(name=app, connector_id=connector_id)
             integration.client_id = client_id
             integration.client_secret = client_secret
             integration.scope = scope_str
             integration.redirect_uri = redirect_uri
-            integration.instance_id = instance_id
+            integration.connector_id = connector_id
             integration.save()
 
         except Integration.DoesNotExist:
@@ -91,7 +90,7 @@ def authorization_api(request, app):
                                       client_secret=client_secret,
                                       scope=scope_str,
                                       redirect_uri=redirect_uri,
-                                      instance_id=instance_id)
+                                      connector_id=connector_id)
             integration.save()
 
         url_encoding = urlencode(url_dict)
@@ -102,15 +101,15 @@ def authorization_api(request, app):
         if not api_key:
             raise BadRequestException('api_key is required')
         try:
-            integration = Integration.objects.get(name=app, instance_id=instance_id)
+            integration = Integration.objects.get(name=app, connector_id=connector_id)
             integration.api_key = api_key
             integration.enabled = True
-            integration.instance_id = instance_id
+            integration.connector_id = connector_id
             integration.redirect_uri = redirect_uri
             integration.save()
         except Integration.DoesNotExist:
             integration = Integration(name=app,
-                                      api_key=api_key, enabled=True, instance_id=instance_id,
+                                      api_key=api_key, enabled=True, connector_id=connector_id,
                                       redirect_uri=redirect_uri)
 
             integration.save()
@@ -120,13 +119,13 @@ def authorization_api(request, app):
 @api_view(["POST"])
 def callback_api(request):
     authorization_code = request.data.get('code', '')
-    instance_id = request.data.get('instance_id', '')
+    connector_id = request.data.get('connector_id', '')
     if not authorization_code:
         raise BadRequestException("code is required")
-    if not instance_id:
-        raise BadRequestException("instance_id is required")
+    if not connector_id:
+        raise BadRequestException("connector_id is required")
     try:
-        integration = Integration.objects.get(instance_id=instance_id)
+        integration = Integration.objects.get(connector_id=connector_id)
         integration_config = auth.get_config(integration.name)
         if not integration_config:
             raise BadRequestException('provider ' + integration.name + ' is not supported')
@@ -171,13 +170,13 @@ def get_or_patch_crm_data_by_id(request, obj_type, obj_id):
         input_data = request.data
         if 'model' not in input_data:
             raise BadRequestException("Please include model object in the request body.")
-        if 'instance_id' not in input_data:
-            raise BadRequestException("Please include instance_id in the request body.")
+        if 'connector_id' not in input_data:
+            raise BadRequestException("Please include connector_id in the request body.")
         if input_data:
-            instance_id = input_data.get('instance_id', None)
-        integration, token = auth.get_auth(instance_id)
+            connector_id = input_data.get('connector_id', None)
+        integration, token = auth.get_auth(connector_id)
         if not token or not integration:
-            raise UnauthorizedException("You have not connected the app " + instance_id)
+            raise UnauthorizedException("You have not connected the app " + connector_id)
         package_name = "integrations.connectors." + integration.name + "." + module + ".request_data"
         mod = importlib.import_module(package_name)
         data = mod.update_object(token, integration, obj_id, obj_type, input_data['model'])
@@ -191,7 +190,7 @@ def get_or_patch_crm_data_by_id(request, obj_type, obj_id):
         url_params = request.GET.urlencode()
         custom_fields = []
         include_field_properties = False
-        instance_id = None
+        connector_id = None
         if url_params:
             url_params_dict = parse_qs(url_params)
             if 'include_field_properties' in url_params_dict and url_params_dict['include_field_properties'][
@@ -199,13 +198,13 @@ def get_or_patch_crm_data_by_id(request, obj_type, obj_id):
                 include_field_properties = True
             if 'fields' in url_params_dict:
                 custom_fields = url_params_dict['fields']
-            if 'instance_id' in url_params_dict:
-                instance_id = url_params_dict['instance_id'][0]
-        if not instance_id:
-            raise BadRequestException("Please include instance_id in the query parameter.")
-        integration, token = auth.get_auth(instance_id)
+            if 'connector_id' in url_params_dict:
+                connector_id = url_params_dict['connector_id'][0]
+        if not connector_id:
+            raise BadRequestException("Please include connector_id in the query parameter.")
+        integration, token = auth.get_auth(connector_id)
         if not integration or not token:
-            raise UnauthorizedException("You have not connected the app " + instance_id)
+            raise UnauthorizedException("You have not connected the app " + connector_id)
 
         package_name = "integrations.connectors." + integration.name + "." + module + ".request_data"
         mod = importlib.import_module(package_name)
@@ -225,14 +224,14 @@ def get_or_create_crm_data(request, obj_type):
         input_data = request.data
         if 'model' not in input_data:
             raise BadRequestException("Please include model object in request body.")
-        if 'instance_id' not in input_data:
-            raise BadRequestException("Please include instance_id in the request body.")
-        instance_id = None
+        if 'connector_id' not in input_data:
+            raise BadRequestException("Please include connector_id in the request body.")
+        connector_id = None
         if input_data:
-            instance_id = input_data.get('instance_id', None)
-        integration, token = auth.get_auth(instance_id)
+            connector_id = input_data.get('connector_id', None)
+        integration, token = auth.get_auth(connector_id)
         if not token or not integration:
-            raise UnauthorizedException("You have not connected the app " + instance_id)
+            raise UnauthorizedException("You have not connected the app " + connector_id)
         package_name = "integrations.connectors." + integration.name + "." + module + ".request_data"
         mod = importlib.import_module(package_name)
         data = mod.create_object(token, integration, obj_type, input_data['model'])
@@ -248,7 +247,7 @@ def get_or_create_crm_data(request, obj_type):
         custom_fields = []
         obj_ids = []
         include_field_properties = False
-        instance_id = None
+        connector_id = None
         owner_id = None
         page_size = None
         cursor = None
@@ -263,8 +262,8 @@ def get_or_create_crm_data(request, obj_type):
                 include_field_properties = True
             if 'fields' in url_params_dict:
                 custom_fields = url_params_dict['fields']
-            if 'instance_id' in url_params_dict:
-                instance_id = url_params_dict['instance_id'][0]
+            if 'connector_id' in url_params_dict:
+                connector_id = url_params_dict['connector_id'][0]
             if 'ids' in url_params_dict:
                 obj_ids = url_params_dict['ids']
                 if len(obj_ids) > 100:
@@ -285,11 +284,11 @@ def get_or_create_crm_data(request, obj_type):
                 modified_before = url_params_dict['modified_before'][0]
             if 'modified_after' in url_params_dict:
                 modified_after = url_params_dict['modified_after'][0]
-        if not instance_id:
-            raise BadRequestException("Please include instance_id in the query parameter.")
-        integration, token = auth.get_auth(instance_id)
+        if not connector_id:
+            raise BadRequestException("Please include connector_id in the query parameter.")
+        integration, token = auth.get_auth(connector_id)
         if not token or not integration:
-            raise UnauthorizedException("You have not connected the app " + instance_id)
+            raise UnauthorizedException("You have not connected the app " + connector_id)
         package_name = "integrations.connectors." + integration.name + "." + module + ".request_data"
         mod = importlib.import_module(package_name)
         data = mod.get_objects(token, integration, obj_type, include_field_properties, custom_fields, obj_ids, owner_id,
@@ -308,17 +307,17 @@ def get_or_create_crm_data(request, obj_type):
 def get_crm_field_properties(request, obj_type):
     module = 'crm'
     url_params = request.GET.urlencode()
-    instance_id = None
+    connector_id = None
     if url_params:
         url_params_dict = parse_qs(url_params)
-        if 'instance_id' in url_params_dict:
-            instance_id = url_params_dict['instance_id'][0]
+        if 'connector_id' in url_params_dict:
+            connector_id = url_params_dict['connector_id'][0]
 
-    if not instance_id:
-        raise BadRequestException("Please include instance_id in the query parameter.")
-    integration, token = auth.get_auth(instance_id)
+    if not connector_id:
+        raise BadRequestException("Please include connector_id in the query parameter.")
+    integration, token = auth.get_auth(connector_id)
     if not token or not integration:
-        raise UnauthorizedException("You have not connected the app " + instance_id)
+        raise UnauthorizedException("You have not connected the app " + connector_id)
     package_name = "integrations.connectors." + integration.name + "." + module + ".request_data"
     mod = importlib.import_module(package_name)
     data = mod.get_field_properties(token, integration, obj_type)
@@ -331,32 +330,37 @@ def get_crm_field_properties(request, obj_type):
 
 
 @api_view(["PUT"])
-def sync_instance_data(request, app, instance_id):
+def sync_instance_data(request, app, connector_id):
     templates = Template.objects.filter(app=app, deleted=False)
     if len(templates) == 0:
-        auth.update_sync_error(instance_id, {'id': 'Missing data schema', 'status_code': 400,
+        auth.update_sync_error(connector_id, {'id': 'Missing data schema', 'status_code': 400,
                                              'message': 'Please add schema from Connectors tab'})
     for template in templates:
-        index_data(template.module, instance_id, template.obj_type, template.schema, False)
+        index_data(template.module, connector_id, template.obj_type, template.schema, False)
     return HttpResponse(status=204)
 
 
 @api_view(["PUT"])
-def clear_instance_data(request, app, instance_id):
-    auth.clear_sync_status(instance_id)
+def clear_instance_data(request, app, connector_id):
+    auth.clear_sync_status(connector_id)
+    package_name = "dive.vector-db." + env.str('VECTOR_DB', default='chroma') + ".vector_data"
+    mod = importlib.import_module(package_name)
+    mod.delete_documents_by_connector_id(connector_id)
     return HttpResponse(status=204)
 
 
-def index_data(module, instance_id, obj_type, schema, reload):
-    integration, token = auth.get_auth(instance_id)
+def index_data(module, connector_id, obj_type, schema, reload):
+    integration, token = auth.get_auth(connector_id)
     obj_last_sync_at = None
     if not reload:
-        obj_last_sync_at = auth.get_last_sync_at(instance_id, obj_type)
+        obj_last_sync_at = auth.get_last_sync_at(connector_id, obj_type)
 
-    auth.update_last_sync(instance_id, obj_type)
+    auth.update_last_sync(connector_id, obj_type)
     documents = []
     load_data(module, token, integration, obj_type, schema, documents, None, obj_last_sync_at)
-    vector_utils.index_documents(documents, instance_id, obj_type)
+    package_name = "dive.vector-db." + env.str('VECTOR_DB', default='chroma') + ".vector_data"
+    mod = importlib.import_module(package_name)
+    mod.index_documents(documents, connector_id, obj_type)
 
 
 def load_data(module, token, integration, obj_type, schema, documents, cursor, last_sync_at):
@@ -381,18 +385,23 @@ def load_data(module, token, integration, obj_type, schema, documents, cursor, l
 @api_view(["GET"])
 def get_index_data(request):
     url_params = request.GET.urlencode()
-    instance_id = None
+    connector_id = None
     query = None
     if url_params:
         url_params_dict = parse_qs(url_params)
-        if 'instance_id' in url_params_dict:
-            instance_id = url_params_dict['instance_id'][0]
+        if 'connector_id' in url_params_dict:
+            connector_id = url_params_dict['connector_id'][0]
         if 'query' in url_params_dict:
             query = url_params_dict['query'][0]
-    if not instance_id:
-        raise BadRequestException("Please include instance_id in the query parameter.")
-    results = vector_utils.query_documents(query, instance_id)
-    return JsonResponse(results)
+    if not connector_id:
+        raise BadRequestException("Please include connector_id in the query parameter.")
+    package_name = "dive.vector-db." + env.str('VECTOR_DB', default='chroma') + ".vector_data"
+    mod = importlib.import_module(package_name)
+    data = mod.query_documents(query, connector_id)
+    if 'error' in data:
+        return JsonResponse(data, status=data['error'].get('status_code', 410), safe=False)
+
+    return JsonResponse(data)
 
 
 @api_view(["GET"])
