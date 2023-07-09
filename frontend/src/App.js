@@ -168,7 +168,7 @@ function App() {
                 <table className="table table-striped">
                   <thead  >
                     <tr>
-
+                      <th scope="col">Account Id</th>
                       <th scope="col">Connector Id</th>
                       <th scope="col">App</th>
                       <th scope="col">Status</th>
@@ -182,6 +182,7 @@ function App() {
                     {apps && apps.map(a => (
 
                       <tr key={a.connector_id}>
+                        <td> <span> {a.account_id} </span></td>
                         <td> <span> {a.connector_id} </span></td>
                         <td> <span> {a.app} </span></td>
                         <td> <span> {a.sync_status} </span></td>

@@ -33,7 +33,7 @@ def get_connected_apps(request):
     integrations = Integration.objects.filter(enabled=True)
     connectors = []
     for i in integrations:
-        connectors.append({'connector_id': i.connector_id, 'app': i.name, 'sync_status': i.sync_status})
+        connectors.append({'account_id':i.account_id, 'connector_id': i.connector_id, 'app': i.name, 'sync_status': i.sync_status})
     return JsonResponse(connectors, safe=False)
 
 
@@ -45,6 +45,9 @@ def authorization_api(request, app):
     connector_id = request.data.get('connector_id', '')
     if not connector_id:
         raise BadRequestException('connector_id is required')
+    account_id = request.data.get('account_id', '')
+    if not account_id:
+        raise BadRequestException('account_id is required')
     redirect_uri = request.data.get('redirect_uri', '')
     if not redirect_uri:
         raise BadRequestException('redirect_uri is required')
@@ -82,6 +85,7 @@ def authorization_api(request, app):
             integration.scope = scope_str
             integration.redirect_uri = redirect_uri
             integration.connector_id = connector_id
+            integration.account_id = account_id
             integration.save()
 
         except Integration.DoesNotExist:
@@ -90,7 +94,8 @@ def authorization_api(request, app):
                                       client_secret=client_secret,
                                       scope=scope_str,
                                       redirect_uri=redirect_uri,
-                                      connector_id=connector_id)
+                                      connector_id=connector_id,
+                                      account_id = account_id)
             integration.save()
 
         url_encoding = urlencode(url_dict)
@@ -345,7 +350,7 @@ def clear_instance_data(request, app, connector_id):
     auth.clear_sync_status(connector_id)
     package_name = "dive.vector-db." + env.str('VECTOR_DB', default='chroma') + ".vector_data"
     mod = importlib.import_module(package_name)
-    mod.delete_documents_by_connector_id(connector_id)
+    mod.delete_documents_by_connection(connector_id)
     return HttpResponse(status=204)
 
 
@@ -360,7 +365,7 @@ def index_data(module, connector_id, obj_type, schema, reload):
     load_data(module, token, integration, obj_type, schema, documents, None, obj_last_sync_at)
     package_name = "dive.vector-db." + env.str('VECTOR_DB', default='chroma') + ".vector_data"
     mod = importlib.import_module(package_name)
-    mod.index_documents(documents, connector_id, obj_type)
+    mod.index_documents(documents, integration.account_id, connector_id, obj_type)
 
 
 def load_data(module, token, integration, obj_type, schema, documents, cursor, last_sync_at):
@@ -386,18 +391,24 @@ def load_data(module, token, integration, obj_type, schema, documents, cursor, l
 def get_index_data(request):
     url_params = request.GET.urlencode()
     connector_id = None
+    account_id = None
     query = None
     if url_params:
         url_params_dict = parse_qs(url_params)
         if 'connector_id' in url_params_dict:
             connector_id = url_params_dict['connector_id'][0]
+        if 'account_id' in url_params_dict:
+            account_id = url_params_dict['account_id'][0]
         if 'query' in url_params_dict:
             query = url_params_dict['query'][0]
-    if not connector_id:
-        raise BadRequestException("Please include connector_id in the query parameter.")
+    if not connector_id and not account_id:
+        raise BadRequestException("Please include either connector_id or account_id in the query parameter.")
     package_name = "dive.vector-db." + env.str('VECTOR_DB', default='chroma') + ".vector_data"
     mod = importlib.import_module(package_name)
-    data = mod.query_documents(query, connector_id)
+    if connector_id:
+        data = mod.query_documents_by_connection(query, connector_id)
+    else:
+        data = mod.query_documents_by_account(query, account_id)
     if 'error' in data:
         return JsonResponse(data, status=data['error'].get('status_code', 410), safe=False)
 
