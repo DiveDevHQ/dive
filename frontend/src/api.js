@@ -45,14 +45,14 @@ export function getSchemas(app, module) {
 
 
 export function authWithOAuth2(app, client_id, client_secret, object_scopes) {
-    const auth = { 'client_id': client_id, 'client_secret': client_secret, 'redirect_uri': window.location.protocol + '//' + window.location.host + '/oauth-callback/' + app, 'object_scopes': object_scopes, 'connector_id': app };
+    const auth = { 'client_id': client_id, 'client_secret': client_secret, 'redirect_uri': window.location.protocol + '//' + window.location.host + '/oauth-callback/' + app, 'object_scopes': object_scopes, 'connector_id': app, 'account_id':'self' };
     return axios.post(`${serviceUrl}/api/authorize/${app}`, auth)
         .then(res => res.data);
 
 }
 
 export function callbackWithOAuth2(app, code) {
-    const callback = { 'code': code, 'connector_id': app };
+    const callback = { 'code': code,  'connector_id': app };
     return axios.post(`${serviceUrl}/api/callback`, callback)
         .then(res => res.data);
 

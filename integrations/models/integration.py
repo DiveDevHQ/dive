@@ -13,6 +13,7 @@ class Integration(models.Model):
     refresh_token = models.TextField(blank=True, null=True)
     api_key = models.CharField(max_length=200, blank=True, null=True)
     connector_id = models.CharField(max_length=200, blank=True)
+    account_id = models.CharField(max_length=200, blank=True)
     auth_json = models.TextField(blank=True, null=True)
     enabled = models.BooleanField(default=False)
     expire_at = models.DateTimeField(null=True)
