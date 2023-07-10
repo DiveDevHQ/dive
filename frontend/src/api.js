@@ -51,6 +51,14 @@ export function authWithOAuth2(app, client_id, client_secret, object_scopes) {
 
 }
 
+export function authWithApiKey(app, api_key) {
+    const auth = { 'redirect_uri': window.location.protocol + '//' + window.location.host , 'api_key': api_key, 'connector_id': app, 'account_id':'self' };
+    return axios.post(`${serviceUrl}/api/authorize/${app}`, auth)
+        .then(res => res.data);
+
+}
+
+
 export function callbackWithOAuth2(app, code) {
     const callback = { 'code': code,  'connector_id': app };
     return axios.post(`${serviceUrl}/api/callback`, callback)
@@ -83,5 +91,11 @@ export function syncData(app, connector_id) {
 export function clearData(app, connector_id) {
 
     return axios.put(`${serviceUrl}/clear/${app}/${connector_id}`)
+        .then(res => res.data);
+}
+
+export function queryData(account_id, connector_id,query_text) {
+
+    return axios.get(`${serviceUrl}/api/v1/documents/search?query_text=${query_text}&account_id=${account_id}&connector_id=${connector_id}`)
         .then(res => res.data);
 }

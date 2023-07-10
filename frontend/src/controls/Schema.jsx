@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { addTemplate, deleteTemplate, getSchemas, getTemplates } from '../api';
-import Plus from '../icons/Plus';
-import Minus from '../icons/Minus';
+import ShowIcon from '../icons/ShowIcon';
+import HideIcon from '../icons/HideIcon';
 import EditIcon from '../icons/EditIcon';
 import RemoveIcon from '../icons/RemoveIcon';
 
@@ -133,10 +133,10 @@ export default function Schema({ config }) {
                         <span>{a.obj_type}</span>
                         {checkShowSchema(a.obj_type) ?
                             <span className="ml-5 svg-icon-sm svg-text cursor-pointer" simple-title='Hide schema' onClick={() => applyShowSchema(a.obj_type)}>
-                                <Minus />
+                                <HideIcon />
                             </span>
                             : <span className="ml-5 svg-icon-sm svg-text cursor-pointer" simple-title='Show schema' onClick={() => applyShowSchema(a.obj_type)}>
-                                <Plus />
+                                <ShowIcon />
                             </span>}
 
                         <button type="button" className="btn btn-blue ml-5" onClick={() => addSchema(a)} >Select Schema</button>

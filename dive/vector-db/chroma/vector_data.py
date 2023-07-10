@@ -2,7 +2,7 @@ import chromadb
 from chromadb.config import Settings
 
 db_directory = "db"
-vector_collection_name="peristed_collection"
+vector_collection_name = "peristed_collection"
 
 
 def index_documents(documents, account_id, connector_id, obj_type):
@@ -52,8 +52,7 @@ def delete_documents_by_connection(connector_id):
     collection.delete(where={"connector_id": connector_id})
 
 
-def query_documents_by_connection(query, connector_id):
-
+def query_documents(query, account_id, connector_id):
     client = chromadb.Client(
         Settings(
             persist_directory=db_directory,
@@ -70,47 +69,16 @@ def query_documents_by_connection(query, connector_id):
         error_data['error']['status_code'] = 410
         return error_data
 
-    try:
-        results = collection.query(
-            query_texts=query,
-            where={"connector_id": connector_id},
-            n_results=2,
-            # where={"metadata_field": "is_equal_to_this"}, # optional filter
-            # where_document={"$contains":"search_string"}  # optional filter
-        )
-        return results
-    except Exception as e:
-        error_data = {'error': {}}
-        error_data['error']['id'] = 'Bad request'
-        error_data['error']['status_code'] = 400
-        error_data['error']['message'] = str(e)
-        return error_data
-
-    return None
-
-
-def query_documents_by_account(query, account_id):
-
-    client = chromadb.Client(
-        Settings(
-            persist_directory=db_directory,
-            chroma_db_impl="duckdb+parquet",
-        )
-    )
-    # Load the collection
-    try:
-        collection = client.get_collection(vector_collection_name)
-    except ValueError:
-        error_data = {'error': {}}
-        error_data['error']['id'] = 'Resources Gone'
-        error_data['error']['message'] = 'Requested vector collection does not exist'
-        error_data['error']['status_code'] = 410
-        return error_data
+    docs_filter = {}
+    if connector_id:
+        docs_filter['connector_id'] = connector_id
+    elif account_id:
+        docs_filter['account_id'] = account_id
 
     try:
         results = collection.query(
             query_texts=query,
-            where={"account_id": account_id},
+            where=docs_filter,
             n_results=2,
             # where={"metadata_field": "is_equal_to_this"}, # optional filter
             # where_document={"$contains":"search_string"}  # optional filter

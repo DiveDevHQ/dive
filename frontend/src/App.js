@@ -8,18 +8,25 @@ import Modal from 'react-modal';
 import Integration from './controls/Integration';
 import Schema from './controls/Schema';
 import XIcon from './icons/XIcon';
-import { getApps, getConnectors, clearData, syncData } from './api';
+import SelectCtrl from './controls/SelectCtrl';
+
+import { getApps, getConnectors, clearData, syncData, queryData } from './api';
 
 function App() {
   const [page, setPage] = useState(1);
   const [apps, setApps] = useState([]);
   const [connectors, setConnectors] = useState([]);
-
+  const [accountIds, setAccountIds] = useState([]);
+  const [connectIds, setConnectIds] = useState([]);
+  const [selectAccountId, setSelectAccountId] = useState();
+  const [selectConnectorId, setSelectConnectorId] = useState();
+  const [queryResult, setQueryResult] = useState();
+  const [queryText, setQueryText] = useState();
+  const [error, setError] = useState();
 
   function loadConnectors() {
     getConnectors().then(data => {
       setConnectors(data)
-
     });
   }
 
@@ -29,6 +36,26 @@ function App() {
       setApps(data);
       if (data.length === 0) {
         setPage(2);
+      }
+      else {
+        var _connectIds = [];
+        var _accountIds = [];
+        for (var i = 0; i < data.length; i++) {
+          _connectIds.push(
+            { 'label': data[i].connector_id, 'value': data[i].connector_id }
+          );
+
+          const accountIndex = _accountIds.findIndex(
+            item => item.value === data[i].account_id
+          );
+          if (accountIndex === -1) {
+
+            _accountIds.push(
+              { 'label': data[i].account_id, 'value': data[i].account_id });
+          }
+        }
+        setConnectIds([..._connectIds]);
+        setAccountIds([..._accountIds]);
       }
     });
   }
@@ -50,6 +77,10 @@ function App() {
     clearData(app, connector_id).then(data => {
       loadApps();
     });
+  }
+
+  function openSearchApiDoc() {
+    window.open('https://docs.diveapi.co/#search', "_blank");
   }
 
   const [modalType, setModalType] = useState()
@@ -127,6 +158,31 @@ function App() {
 
   }
 
+  function handleSelectAccountChange(id, text, value) {
+    setSelectAccountId(value);
+
+  }
+
+  function handleSelectConnectorChange(id, text, value) {
+    setSelectConnectorId(value);
+
+  }
+
+  function queryDocuments() {
+    setError('');
+    if (!selectAccountId && !selectConnectorId){
+      setError('Please select either accountId, or connectorId to search.');
+      return;
+    }
+    if (!queryText){
+      setError('Please enter query text to search.');
+      return;
+    }
+
+    queryData(selectAccountId ? selectAccountId : "", selectConnectorId ? selectConnectorId : "",queryText).then(data => {
+      setQueryResult(data);
+    });
+  }
 
   return (
     <div>
@@ -152,6 +208,12 @@ function App() {
                 } className="nav__link">
                   <i className='bx bx-compass nav__icon' ></i>
                   <span className={page === 2 ? "nav__name cursor-pointer active-menu" : "nav__name cursor-pointer inactive-menu"}>Connectors</span>
+                </a>
+                <a onClick={() =>
+                  setPage(3)
+                } className="nav__link">
+                  <i className='bx bx-compass nav__icon' ></i>
+                  <span className={page === 3 ? "nav__name cursor-pointer active-menu" : "nav__name cursor-pointer inactive-menu"}>Search</span>
                 </a>
               </div>
             </div>
@@ -186,7 +248,7 @@ function App() {
                         <td> <span> {a.connector_id} </span></td>
                         <td> <span> {a.app} </span></td>
                         <td> <span> {a.sync_status} </span></td>
-                        <td>    <button type="button" className="btn btn-blue-short ml-5"  onClick={() => runSyncData(a.app, a.connector_id)} >Sync now</button>
+                        <td>    <button type="button" className="btn btn-blue-short ml-5" onClick={() => runSyncData(a.app, a.connector_id)} >Sync now</button>
                         </td>
                         <td>       <button type="button" className="btn btn-blue-short ml-5" simple-title="Reindex data" onClick={() => clearSyncData(a.app, a.connector_id)} >Clear data</button>
                         </td>
@@ -216,6 +278,31 @@ function App() {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+        {page && page === 3 && (
+          <div> <h2>Search</h2>
+            <button type="button" className="btn btn-grey" onClick={() => openSearchApiDoc()} >Open Api Doc</button><br />
+            <br />
+            <div className='row'>
+              <div className='col-6'>     <SelectCtrl dataSource={accountIds} onSelectChange={handleSelectAccountChange} label={"Select accountId"} />
+
+              </div>
+
+              <div className='col-6'>     <SelectCtrl dataSource={connectIds} onSelectChange={handleSelectConnectorChange} label={"Select connectorId"} />
+              </div>
+            </div>
+            <br />
+            <h4>Search query</h4>
+            <br />
+            <textarea rows="5" cols="50" value={queryText || ""} onChange={e => setQueryText(e.target.value)}></textarea>
+            <br />
+            <div className='red-text'>{error}</div>
+            <br />
+            <button type="button" className="btn btn-grey mr-3" onClick={() => queryDocuments()} >Search</button>
+            <br />
+            {queryResult && (<pre className='json-copy mt-3'>{JSON.stringify(queryResult, null, 2)}</pre>)}
+            
           </div>
         )}
 

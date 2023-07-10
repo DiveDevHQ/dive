@@ -33,7 +33,8 @@ def get_connected_apps(request):
     integrations = Integration.objects.filter(enabled=True)
     connectors = []
     for i in integrations:
-        connectors.append({'account_id':i.account_id, 'connector_id': i.connector_id, 'app': i.name, 'sync_status': i.sync_status})
+        connectors.append(
+            {'account_id': i.account_id, 'connector_id': i.connector_id, 'app': i.name, 'sync_status': i.sync_status})
     return JsonResponse(connectors, safe=False)
 
 
@@ -95,7 +96,7 @@ def authorization_api(request, app):
                                       scope=scope_str,
                                       redirect_uri=redirect_uri,
                                       connector_id=connector_id,
-                                      account_id = account_id)
+                                      account_id=account_id)
             integration.save()
 
         url_encoding = urlencode(url_dict)
@@ -110,12 +111,13 @@ def authorization_api(request, app):
             integration.api_key = api_key
             integration.enabled = True
             integration.connector_id = connector_id
+            integration.account_id = account_id
             integration.redirect_uri = redirect_uri
             integration.save()
         except Integration.DoesNotExist:
             integration = Integration(name=app,
                                       api_key=api_key, enabled=True, connector_id=connector_id,
-                                      redirect_uri=redirect_uri)
+                                      redirect_uri=redirect_uri, account_id=account_id)
 
             integration.save()
         return JsonResponse({'redirect': redirect_uri})
@@ -339,7 +341,7 @@ def sync_instance_data(request, app, connector_id):
     templates = Template.objects.filter(app=app, deleted=False)
     if len(templates) == 0:
         auth.update_sync_error(connector_id, {'id': 'Missing data schema', 'status_code': 400,
-                                             'message': 'Please add schema from Connectors tab'})
+                                              'message': 'Please add schema from Connectors tab'})
     for template in templates:
         index_data(template.module, connector_id, template.obj_type, template.schema, False)
     return HttpResponse(status=204)
@@ -395,20 +397,19 @@ def get_index_data(request):
     query = None
     if url_params:
         url_params_dict = parse_qs(url_params)
-        if 'connector_id' in url_params_dict:
+        if 'connector_id' in url_params_dict and url_params_dict['connector_id'][0]:
             connector_id = url_params_dict['connector_id'][0]
-        if 'account_id' in url_params_dict:
+        if 'account_id' in url_params_dict and url_params_dict['account_id'][0]:
             account_id = url_params_dict['account_id'][0]
-        if 'query' in url_params_dict:
-            query = url_params_dict['query'][0]
+        if 'query_text' in url_params_dict:
+            query = url_params_dict['query_text'][0]
     if not connector_id and not account_id:
         raise BadRequestException("Please include either connector_id or account_id in the query parameter.")
+    if not query:
+        raise BadRequestException("Please include query_text in query parameter.")
     package_name = "dive.vector-db." + env.str('VECTOR_DB', default='chroma') + ".vector_data"
     mod = importlib.import_module(package_name)
-    if connector_id:
-        data = mod.query_documents_by_connection(query, connector_id)
-    else:
-        data = mod.query_documents_by_account(query, account_id)
+    data = mod.query_documents(query, account_id,connector_id)
     if 'error' in data:
         return JsonResponse(data, status=data['error'].get('status_code', 410), safe=False)
 

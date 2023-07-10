@@ -95,6 +95,7 @@
   font-size: 0.875rem;
 }
 
+
 .btn.btn-blue-short{
   background-color: #2598d6;
   color: white;
@@ -416,4 +417,96 @@
 
 [simple-title] {
   position: relative;
+}
+
+.small-grey-text {
+
+  color: #7F7F7F;
+
+  font-size: 0.875rem;
+
+}
+
+.text-placeholder {
+  color: #757575 !important;
+}
+
+.svg-light-gray svg {
+  stroke: #a79a9a;
+}
+
+.shadow-5 {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.12),
+    0 4px 6px rgba(0, 0, 0, 0.12), 0 8px 16px rgba(0, 0, 0, 0.12),
+    0 16px 32px rgba(0, 0, 0, 0.12);
+}
+
+.bg-white {
+  background-color: white;
+}
+
+.border-radius-md {
+  border-radius: 5px;
+}
+
+.option-input {
+  width: 100%;
+  font-size: 1rem;
+  border: none;
+  color: #757575;
+  background-color: transparent;
+}
+
+
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 100%;
+  width: 100%;
+  z-index: 2;
+  overflow: hidden;
+}
+
+
+.svg-icon-xm svg {
+  position: relative;
+  height: 1em;
+  width: 1em;
+}
+
+
+.filter-select {
+  white-space: pre-wrap;
+  border: 1px solid #9e9e9e;
+  padding: 0.5rem;
+  cursor: pointer;
+  font-size: 1rem;
+  border-radius: 4px;
+  max-width: 275px;
+
+  resize: none;
+  background-color: white;
+  box-sizing: border-box;
+  flex: 1 1 auto;
+}
+
+
+.list-search-input {
+  width: 180px;
+  height: 30px;
+  font-size: 1rem;
+  border: 0px;
+  background-color: #eeeeee;
+  border-radius: 5px;
+  display: inline;
+  white-space: pre-wrap;
+
+  padding: 0.5rem;
+  resize: none;
+  background-color: white;
+  box-sizing: border-box;
+  flex: 1 1 auto;
 }
