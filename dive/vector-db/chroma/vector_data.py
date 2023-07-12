@@ -25,8 +25,9 @@ def index_documents(documents, account_id, connector_id, obj_type):
         _documents.append(document['text'])
         _document_ids.append(document['id'])
         _metadata = {'account_id': account_id, 'connector_id': connector_id, 'obj_type': obj_type}
-        if 'metadata' in document['metadata']:
+        if 'metadata' in document:
             _metadata.update(document['metadata'])
+
         _metadatas.append(_metadata)
 
     collection.upsert(
@@ -91,7 +92,7 @@ def query_documents(query, account_id, connector_id):
         error_data = {'error': {}}
         error_data['error']['id'] = 'Bad request'
         error_data['error']['status_code'] = 400
-        error_data['error']['message'] = str(e)
+        error_data['error']['message'] = 'Index data is missing, please sync data source'
         return error_data
 
     return None

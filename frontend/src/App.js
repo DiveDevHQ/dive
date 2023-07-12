@@ -178,11 +178,17 @@ function App() {
       setError('Please enter query text to search.');
       return;
     }
-
+    
     queryData(selectAccountId ? selectAccountId : "", selectConnectorId ? selectConnectorId : "",queryText).then(data => {
+ 
       setQueryResult(data);
     
-    });
+    }).catch(function (error) {
+      if (error.response) {
+        setQueryResult(error.response.data);   
+      } 
+     
+    });;
   }
 
   return (
@@ -283,14 +289,14 @@ function App() {
         )}
         {page && page === 3 && (
           <div> <h2>Search</h2>
-            <button type="button" className="btn btn-grey" onClick={() => openSearchApiDoc()} >Open Api Doc</button><br />
+            <button type="button" className="btn btn-grey" onClick={() => openSearchApiDoc()} >Open API Doc</button><br />
             <br />
             <div className='row'>
-              <div className='col-6'>     <SelectCtrl dataSource={accountIds} onSelectChange={handleSelectAccountChange} label={"Select accountId"} />
+              <div className='col-6'>     <SelectCtrl dataSource={accountIds} onSelectChange={handleSelectAccountChange} label={"Select accountId"} selectedValue={selectAccountId}/>
 
               </div>
 
-              <div className='col-6'>     <SelectCtrl dataSource={connectIds} onSelectChange={handleSelectConnectorChange} label={"Select connectorId"} />
+              <div className='col-6'>     <SelectCtrl dataSource={connectIds} onSelectChange={handleSelectConnectorChange} label={"Select connectorId"}  selectedValue={selectConnectorId}/>
               </div>
             </div>
             <br />
