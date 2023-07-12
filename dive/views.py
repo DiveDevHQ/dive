@@ -383,6 +383,8 @@ def load_data(module, token, integration, obj_type, schema, documents, cursor, l
             return
         for d in data['results']:
             document = {'id': d['id'], 'text': str(d['data'])}
+            if 'metadata' in d:
+                document['metadata'] = d['metadata']
             documents.append(document)
         if 'next_cursor' in data:
             cursor = data['next_cursor']
@@ -409,7 +411,7 @@ def get_index_data(request):
         raise BadRequestException("Please include query_text in query parameter.")
     package_name = "dive.vector-db." + env.str('VECTOR_DB', default='chroma') + ".vector_data"
     mod = importlib.import_module(package_name)
-    data = mod.query_documents(query, account_id,connector_id)
+    data = mod.query_documents(query, account_id, connector_id)
     if 'error' in data:
         return JsonResponse(data, status=data['error'].get('status_code', 410), safe=False)
 

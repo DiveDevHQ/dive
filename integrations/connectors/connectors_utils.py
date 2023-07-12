@@ -2,6 +2,9 @@ import copy
 from collections import ChainMap
 import re
 from datetime import datetime
+from io import BytesIO
+import pypdf
+import requests
 
 
 def get_params_value(text, data):
@@ -42,9 +45,9 @@ def get_value_from_formula(text):
             ifs = re.findall('IF\(([^)]+)\)', result_text)
             if len(ifs) == 2:
                 if eval(eval_text.strip()):
-                    return get_value_from_formula('IF('+ifs[0]+')')
+                    return get_value_from_formula('IF(' + ifs[0] + ')')
                 else:
-                    return get_value_from_formula('IF('+ifs[1]+')')
+                    return get_value_from_formula('IF(' + ifs[1] + ')')
             elif len(ifs) == 1:
                 coma_index = result_text.find(",")
                 if_index = result_text.find("IF")
@@ -53,10 +56,10 @@ def get_value_from_formula(text):
                     if eval(eval_text.strip()):
                         return result_text.split(',')[0].strip()
                     else:
-                        return get_value_from_formula('IF('+ifs[0]+')')
+                        return get_value_from_formula('IF(' + ifs[0] + ')')
                 else:
                     if eval(eval_text.strip()):
-                        return get_value_from_formula('IF('+ifs[0]+')')
+                        return get_value_from_formula('IF(' + ifs[0] + ')')
                     else:
                         return result_text.split(',')[-1].strip()
         else:
@@ -95,3 +98,21 @@ def get_params_keys(text):
             if parts[0] == 'reference' or parts[0] == 'formula':
                 keys.append(parts[1])
     return keys
+
+
+def pdf_load_from_url(doc_id, file_name, file_url, extra_info):
+    r = requests.get(file_url)
+    with BytesIO(r.content) as data:
+        docs = []
+        read_pdf = pypdf.PdfReader(data)
+        part = 0
+        for page in range(len(read_pdf.pages)):
+            page_text = read_pdf.pages[page].extract_text()
+            page_label = read_pdf.page_labels[page]
+            metadata = {"page_label": page_label, "file_name": file_name}
+            if extra_info is not None:
+                metadata.update(extra_info)
+            docs.append({'id': f"{str(doc_id)}_part_{part}", 'data': page_text, 'metadata': metadata})
+            part += 1
+        return docs
+

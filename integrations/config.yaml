@@ -1,3 +1,11 @@
+example:
+  module:
+    - schema: filestorage
+  auth_method: APIKEY
+  key_params:
+    key_name: api_key
+    request_type: request_body
+
 hubspot:
   module:
     - schema: crm
@@ -31,11 +39,3 @@ salesforce:
     expire_in: 7200
   refresh_params:
     grant_type: refresh_token
-
-example:
-  module:
-    - schema: filestorage
-  auth_method: APIKEY
-  key_params:
-    key_name: api_key
-    request_type: request_body

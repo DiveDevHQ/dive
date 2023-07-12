@@ -79,12 +79,15 @@ You can now run the development server:
 python manage.py runserver
 ```
 
-
+Open a new terminal and navigate to "frontend" folder:
+```
+cd frontend
+```
 Add a **.env** file under "frontend" folder with the following content:
 ```
 REACT_APP_API_URL=http://localhost:8000 
 ```
-Using terminal to navigate to "frontend" folder, then run the following command.
+Install reactjs with the following command:
 
 ```
 npm install
