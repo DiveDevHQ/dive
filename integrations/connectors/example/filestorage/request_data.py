@@ -1,8 +1,6 @@
 import json
 from pathlib import Path
 import integrations.connectors.connectors_utils as util
-import requests, PyPDF2
-from io import BytesIO
 
 
 def get_objects(auth, app, obj_type, schema):
@@ -17,16 +15,8 @@ def get_objects(auth, app, obj_type, schema):
         except FileNotFoundError:
             return
 
-    r = requests.get(field_dict['file_url'])
-    my_raw_data = r.content
-    contents = ""
-    with BytesIO(my_raw_data) as data:
-        read_pdf = PyPDF2.PdfReader(data)
-        for page in range(len(read_pdf.pages)):
-            contents += read_pdf.pages[page].extract_text()+'\n'
-
-    data = {'results': [{'id': field_dict["name"], 'data': {'content': contents}}]}
-    return data
+    data = util.pdf_load_from_url(field_dict["name"],field_dict["name"],field_dict['file_url'], None)
+    return {'results': data}
 
 
 def load_objects(auth, app, obj_type, modified_after, cursor, schema):

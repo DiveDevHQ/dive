@@ -24,7 +24,10 @@ def index_documents(documents, account_id, connector_id, obj_type):
     for document in documents:
         _documents.append(document['text'])
         _document_ids.append(document['id'])
-        _metadatas.append({'account_id': account_id, 'connector_id': connector_id, 'obj_type': obj_type})
+        _metadata = {'account_id': account_id, 'connector_id': connector_id, 'obj_type': obj_type}
+        if 'metadata' in document['metadata']:
+            _metadata.update(document['metadata'])
+        _metadatas.append(_metadata)
 
     collection.upsert(
         documents=_documents,

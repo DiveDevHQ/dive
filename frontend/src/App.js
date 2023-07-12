@@ -181,6 +181,7 @@ function App() {
 
     queryData(selectAccountId ? selectAccountId : "", selectConnectorId ? selectConnectorId : "",queryText).then(data => {
       setQueryResult(data);
+    
     });
   }
 
