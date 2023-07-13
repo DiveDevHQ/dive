@@ -48,3 +48,4 @@ urllib3==1.26.15
 wcwidth==0.1.9
 websocket-client==0.59.0
 pypdf==3.12.1
+sentence-transformers==2.2.2
