@@ -350,7 +350,7 @@ def sync_instance_data(request, app, connector_id):
 @api_view(["PUT"])
 def clear_instance_data(request, app, connector_id):
     auth.clear_sync_status(connector_id)
-    package_name = "dive.vector-db." + env.str('VECTOR_DB', default='chroma') + ".vector_data"
+    package_name = "dive.vector_db." + env.str('VECTOR_DB', default='chroma') + ".vector_data"
     mod = importlib.import_module(package_name)
     mod.delete_documents_by_connection(connector_id)
     return HttpResponse(status=204)
@@ -365,9 +365,9 @@ def index_data(module, connector_id, obj_type, schema, reload):
     auth.update_last_sync(connector_id, obj_type)
     documents = []
     load_data(module, token, integration, obj_type, schema, documents, None, obj_last_sync_at)
-    package_name = "dive.vector-db." + env.str('VECTOR_DB', default='chroma') + ".vector_data"
+    package_name = "dive.vector_db." + env.str('VECTOR_DB', default='chroma') + ".vector_data"
     mod = importlib.import_module(package_name)
-    mod.index_documents(documents, integration.account_id, connector_id, obj_type)
+    mod.index_documents(documents, integration.account_id, connector_id, obj_type, None)
 
 
 def load_data(module, token, integration, obj_type, schema, documents, cursor, last_sync_at):
@@ -409,9 +409,9 @@ def get_index_data(request):
         raise BadRequestException("Please include either connector_id or account_id in the query parameter.")
     if not query:
         raise BadRequestException("Please include query_text in query parameter.")
-    package_name = "dive.vector-db." + env.str('VECTOR_DB', default='chroma') + ".vector_data"
+    package_name = "dive.vector_db." + env.str('VECTOR_DB', default='chroma') + ".vector_data"
     mod = importlib.import_module(package_name)
-    data = mod.query_documents(query, account_id, connector_id)
+    data = mod.query_documents(query, account_id, connector_id, None)
     if 'error' in data:
         return JsonResponse(data, status=data['error'].get('status_code', 410), safe=False)
 
