@@ -37,12 +37,12 @@ def degree_centrality_scores(
     return scores
 
 
-def get_text_summarization(text_list, llm_model):
+def get_text_summarization(text_list, llm):
     text = ''
     for t in text_list:
         text += t + '\n'
 
-    model = SentenceTransformer(llm_model or 'all-MiniLM-L6-v2')
+    model = SentenceTransformer(llm or 'all-MiniLM-L6-v2')
 
     sentences = nltk.sent_tokenize(text)
     sentences = [sentence.strip() for sentence in sentences]
