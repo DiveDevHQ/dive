@@ -19,6 +19,7 @@ function App() {
   const [accountIds, setAccountIds] = useState([]);
   const [connectIds, setConnectIds] = useState([]);
   const [selectAccountId, setSelectAccountId] = useState();
+  const [chunkSize, setChunkSize] = useState();
   const [selectConnectorId, setSelectConnectorId] = useState();
   const [queryResult, setQueryResult] = useState();
   const [queryText, setQueryText] = useState();
@@ -179,7 +180,7 @@ function App() {
       return;
     }
     
-    queryData(selectAccountId ? selectAccountId : "", selectConnectorId ? selectConnectorId : "",queryText).then(data => {
+    queryData(selectAccountId ? selectAccountId : "", selectConnectorId ? selectConnectorId : "",queryText, chunkSize?chunkSize:"").then(data => {
  
       setQueryResult(data);
     
@@ -292,11 +293,15 @@ function App() {
             <button type="button" className="btn btn-grey" onClick={() => openSearchApiDoc()} >Open API Doc</button><br />
             <br />
             <div className='row'>
-              <div className='col-6'>     <SelectCtrl dataSource={accountIds} onSelectChange={handleSelectAccountChange} label={"Select accountId"} selectedValue={selectAccountId}/>
+              <div className='col-4'>     <SelectCtrl dataSource={accountIds} onSelectChange={handleSelectAccountChange} label={"Select accountId"} selectedValue={selectAccountId}/>
 
               </div>
 
-              <div className='col-6'>     <SelectCtrl dataSource={connectIds} onSelectChange={handleSelectConnectorChange} label={"Select connectorId"}  selectedValue={selectConnectorId}/>
+              <div className='col-4'>     <SelectCtrl dataSource={connectIds} onSelectChange={handleSelectConnectorChange} label={"Select connectorId"}  selectedValue={selectConnectorId}/>
+              </div>
+              <div className='col-4'>
+              Chunk size: <input className='form-control-short' value={chunkSize || "2"} onChange={e => setChunkSize(e.target.value)}
+                        type="text" />
               </div>
             </div>
             <br />

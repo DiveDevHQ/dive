@@ -80,6 +80,12 @@ export function deleteTemplate(template_id) {
 }
 
 
+export function updateTemplate(template_id, chunking_type) {
+    const template = { 'chunking_type': chunking_type };
+    return axios.patch(`${serviceUrl}/template/${template_id}`, template)
+        .then(res => res.data);
+}
+
 
 export function syncData(app, connector_id) {
 
@@ -94,8 +100,8 @@ export function clearData(app, connector_id) {
         .then(res => res.data);
 }
 
-export function queryData(account_id, connector_id,query_text) {
+export function queryData(account_id, connector_id,query_text, chunk_size) {
 
-    return axios.get(`${serviceUrl}/api/v1/documents/search?query_text=${query_text}&account_id=${account_id}&connector_id=${connector_id}`)
+    return axios.get(`${serviceUrl}/api/v1/documents/search?query_text=${query_text}&account_id=${account_id}&connector_id=${connector_id}&chunk_size=${chunk_size}`)
         .then(res => res.data);
 }

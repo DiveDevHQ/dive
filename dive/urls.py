@@ -34,7 +34,7 @@ urlpatterns = [
     path("api/v1/documents/search", views.get_index_data, name="get_index_data"),
     path("schemas/<str:app>/<str:module>", views.get_obj_schemas, name="get_schemas"),
     path("templates/<str:app>/<str:module>", views.get_obj_templates, name="get_templates"),
-    path("template/<str:template_id>", views.delete_obj_templates, name="delete_templates"),
+    path("template/<str:template_id>", views.patch_or_delete_template, name="patch_or_delete_template"),
     path("template", views.add_obj_template, name="add_template"),
     path("integrations/", include("integrations.urls")),
     path('admin/', admin.site.urls),

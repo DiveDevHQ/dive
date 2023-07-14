@@ -6,4 +6,5 @@ class Template(models.Model):
     app = models.CharField(max_length=200, blank=True, null=True)
     obj_type = models.CharField(max_length=200, blank=True)
     schema = models.TextField(blank=True, null=True)
+    chunking_type = models.TextField(blank=True, null=True)
     deleted = models.BooleanField(default=False)

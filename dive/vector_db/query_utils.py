@@ -42,7 +42,7 @@ def get_text_summarization(text_list, llm):
     for t in text_list:
         text += t + '\n'
 
-    model = SentenceTransformer(llm or 'all-MiniLM-L6-v2')
+    model = llm or SentenceTransformer('all-MiniLM-L6-v2')
 
     sentences = nltk.sent_tokenize(text)
     sentences = [sentence.strip() for sentence in sentences]
