@@ -342,8 +342,18 @@ def sync_instance_data(request, app, connector_id):
     if len(templates) == 0:
         auth.update_sync_error(connector_id, {'id': 'Missing data schema', 'status_code': 400,
                                               'message': 'Please add schema from Connectors tab'})
+
     for template in templates:
-        index_data(template.module, connector_id, template.obj_type, template.schema, False)
+        chunking_type = None
+        chunk_size = None
+        chunk_overlap = None
+        if template.chunking_type:
+            ct = json.loads(template.chunking_type)
+            chunking_type = ct.get('chunking_type', None)
+            chunk_size = ct.get('chunk_size', None)
+            chunk_overlap = ct.get('chunk_overlap', None)
+        index_data(template.module, connector_id, template.obj_type, template.schema, False, chunking_type, chunk_size,
+                   chunk_overlap)
     return HttpResponse(status=204)
 
 
@@ -356,7 +366,8 @@ def clear_instance_data(request, app, connector_id):
     return HttpResponse(status=204)
 
 
-def index_data(module, connector_id, obj_type, schema, reload):
+def index_data(module, connector_id, obj_type, schema, reload, chunking_type, chunk_size,
+               chunk_overlap):
     integration, token = auth.get_auth(connector_id)
     obj_last_sync_at = None
     if not reload:
@@ -367,7 +378,10 @@ def index_data(module, connector_id, obj_type, schema, reload):
     load_data(module, token, integration, obj_type, schema, documents, None, obj_last_sync_at)
     package_name = "dive.vector_db." + env.str('VECTOR_DB', default='chroma') + ".vector_data"
     mod = importlib.import_module(package_name)
-    mod.index_documents(documents, integration.account_id, connector_id, obj_type, None)
+    metadata = {'account_id': integration.account_id, 'connector_id': connector_id,
+                'obj_type': obj_type}
+    mod.index_documents(documents, metadata, chunking_type, chunk_size,
+                        chunk_overlap, None)
 
 
 def load_data(module, token, integration, obj_type, schema, documents, cursor, last_sync_at):
@@ -397,6 +411,7 @@ def get_index_data(request):
     connector_id = None
     account_id = None
     query = None
+    chunk_size = None
     if url_params:
         url_params_dict = parse_qs(url_params)
         if 'connector_id' in url_params_dict and url_params_dict['connector_id'][0]:
@@ -405,13 +420,17 @@ def get_index_data(request):
             account_id = url_params_dict['account_id'][0]
         if 'query_text' in url_params_dict:
             query = url_params_dict['query_text'][0]
+        if 'chunk_size' in url_params_dict:
+            chunk_size = url_params_dict['chunk_size'][0]
     if not connector_id and not account_id:
         raise BadRequestException("Please include either connector_id or account_id in the query parameter.")
     if not query:
         raise BadRequestException("Please include query_text in query parameter.")
     package_name = "dive.vector_db." + env.str('VECTOR_DB', default='chroma') + ".vector_data"
     mod = importlib.import_module(package_name)
-    data = mod.query_documents(query, account_id, connector_id, None)
+    if chunk_size:
+        chunk_size = int(chunk_size)
+    data = mod.query_documents(query, account_id, connector_id, chunk_size, None)
     if 'error' in data:
         return JsonResponse(data, status=data['error'].get('status_code', 410), safe=False)
 
@@ -437,7 +456,8 @@ def get_obj_templates(request, app, module):
     schemas = []
     for template in templates:
         schemas.append({'template_id': template.id, 'app': app, 'module': module, 'obj_type': template.obj_type,
-                        'schema': json.loads(template.schema)})
+                        'schema': json.loads(template.schema) if template.schema else None,
+                        'chunking_type': json.loads(template.chunking_type) if template.chunking_type else None})
     return JsonResponse(schemas, safe=False)
 
 
@@ -447,11 +467,13 @@ def add_obj_template(request):
     module = request.data.get('module', '')
     obj_type = request.data.get('obj_type', '')
     schema = json.dumps(request.data.get('schema', ''))
+    chunking_type = json.dumps(request.data.get('chunking_type', None))
     result = {'app': app, 'module': module, 'obj_type': obj_type,
               'schema': json.loads(schema)}
     try:
         template = Template.objects.get(module=module, app=app, obj_type=obj_type)
         template.schema = schema
+        template.chunking_type = chunking_type
         template.deleted = False
         template.save()
         result['template_id'] = template.id
@@ -460,7 +482,8 @@ def add_obj_template(request):
         template = Template(app=app,
                             module=module,
                             obj_type=obj_type,
-                            schema=schema)
+                            schema=schema,
+                            chunking_type=chunking_type)
         template.save()
 
         result['template_id'] = Template.objects.last().id
@@ -468,12 +491,22 @@ def add_obj_template(request):
     return JsonResponse(result, safe=False)
 
 
-@api_view(["DELETE"])
-def delete_obj_templates(request, template_id):
-    try:
-        template = Template.objects.get(id=template_id)
-        template.deleted = True
-        template.save()
-    except Template.DoesNotExist:
-        return HttpResponse(status=404)
+@api_view(["DELETE", "PATCH"])
+def patch_or_delete_template(request, template_id):
+    if request.method == 'PATCH':
+        try:
+            template = Template.objects.get(id=template_id)
+            template.chunking_type = json.dumps(request.data.get('chunking_type', None))
+
+            template.save()
+
+        except Template.DoesNotExist:
+            return HttpResponse(status=404)
+    elif request.method == 'DELETE':
+        try:
+            template = Template.objects.get(id=template_id)
+            template.deleted = True
+            template.save()
+        except Template.DoesNotExist:
+            return HttpResponse(status=404)
     return HttpResponse(status=204)

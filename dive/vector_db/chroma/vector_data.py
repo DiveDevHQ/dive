@@ -1,12 +1,22 @@
 import chromadb
+import tiktoken
 from chromadb.config import Settings
 from dive.vector_db import query_utils
+from dive.vector_db import llama_data_transformer
+from llama_index.langchain_helpers.text_splitter import SentenceSplitter
+from llama_index import Document
+from llama_index.utils import globals_helper
+import uuid
+import requests
+from io import BytesIO
+import pypdf
 
 db_directory = "db"
 vector_collection_name = "peristed_collection"
 
 
-def index_documents(documents, account_id, connector_id, obj_type, llm_model):
+def index_documents(documents, metadata, chunking_type, chunk_size,
+                    chunk_overlap, embeddings):
     if len(documents) == 0:
         return
     persist_directory = db_directory
@@ -18,26 +28,47 @@ def index_documents(documents, account_id, connector_id, obj_type, llm_model):
     )
 
     collection = client.get_or_create_collection(name=vector_collection_name)
+    documents = llama_data_transformer.get_documents(documents, metadata)
 
+    enc = tiktoken.get_encoding("gpt2")
+    tokenizer = lambda text: enc.encode(text, allowed_special={"<|endoftext|>"})
     _documents = []
     _document_ids = []
     _metadatas = []
-    for document in documents:
-        _documents.append(document['text'])
-        _document_ids.append(document['id'])
-        _metadata = {'account_id': account_id, 'connector_id': connector_id, 'obj_type': obj_type}
-        if 'metadata' in document:
-            _metadata.update(document['metadata'])
+    if chunking_type == 'custom':
+        sentence_splitter_default = SentenceSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap, tokenizer=tokenizer)
+        for document in documents:
+            sentence_chunks = sentence_splitter_default.split_text(document.text)
+            doc_chunks = [Document(text=t) for t in sentence_chunks]
+            for i, d in enumerate(doc_chunks):
+                _documents.append(d.text)
+                _document_ids.append(document.id_+"_chunk_"+str(i))
+                _metadatas.append(document.metadata)
 
-        _metadatas.append(_metadata)
+    else:
+        for document in documents:
+            _documents.append(document.text)
+            _document_ids.append(document.id_)
+            _metadata = metadata
+            if 'metadata' in document:
+                _metadata.update(document.metadata)
+            _metadatas.append(_metadata)
 
-    collection.upsert(
-        documents=_documents,
-        # we handle tokenization, embedding, and indexing automatically. You can skip that and add your own embeddings as well
-        metadatas=_metadatas,  # filter on these!
-        ids=_document_ids,  # unique for each doc
-    )
-
+    if embeddings:
+        collection.upsert(
+            documents=_documents,
+            embeddings=embeddings,
+            # we handle tokenization, embedding, and indexing automatically. You can skip that and add your own embeddings as well
+            metadatas=_metadatas,  # filter on these!
+            ids=_document_ids,  # unique for each doc
+        )
+    else:
+        collection.upsert(
+            documents=_documents,
+            # we handle tokenization, embedding, and indexing automatically. You can skip that and add your own embeddings as well
+            metadatas=_metadatas,  # filter on these!
+            ids=_document_ids,  # unique for each doc
+        )
     client.persist()
 
 
@@ -57,7 +88,7 @@ def delete_documents_by_connection(connector_id):
     collection.delete(where={"connector_id": connector_id})
 
 
-def query_documents(query, account_id, connector_id, llm_model):
+def query_documents(query, account_id, connector_id, chunk_size, llm):
     client = chromadb.Client(
         Settings(
             persist_directory=db_directory,
@@ -74,6 +105,7 @@ def query_documents(query, account_id, connector_id, llm_model):
         error_data['error']['status_code'] = 410
         return error_data
 
+
     docs_filter = {}
     if connector_id:
         docs_filter['connector_id'] = connector_id
@@ -82,12 +114,12 @@ def query_documents(query, account_id, connector_id, llm_model):
 
     try:
         results = collection.query(
-                query_texts=query,
-                where=docs_filter,
-                n_results=2,
-                # where={"metadata_field": "is_equal_to_this"}, # optional filter
-                # where_document={"$contains":"search_string"}  # optional filter
-            )
+            query_texts=query,
+            where=docs_filter,
+            n_results=chunk_size or 2,
+            # where={"metadata_field": "is_equal_to_this"}, # optional filter
+            # where_document={"$contains":"search_string"}  # optional filter
+        )
 
         document_list = []
         item_list = []
@@ -117,15 +149,14 @@ def query_documents(query, account_id, connector_id, llm_model):
                     item_list.append({})
                 item_list[i]['distance'] = distance
 
-        summary_list = query_utils.get_text_summarization(document_list, llm_model)
+        summary_list = query_utils.get_text_summarization(document_list, llm)
 
-        return {'documents':item_list,'summary':summary_list}
+        return {'documents': item_list, 'summary': summary_list}
     except Exception as e:
         error_data = {'error': {}}
         error_data['error']['id'] = 'Bad request'
         error_data['error']['status_code'] = 400
-        error_data['error']['message'] = str(e)  # 'Index data is missing, please sync data source'
+        error_data['error']['message'] = str(e) #'Index data is missing, please sync data source'
         return error_data
 
-    
     return None

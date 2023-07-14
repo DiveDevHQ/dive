@@ -5,10 +5,19 @@ import HideIcon from '../icons/HideIcon';
 import EditIcon from '../icons/EditIcon';
 import RemoveIcon from '../icons/RemoveIcon';
 
+import SchemaEditor from './SchemaEditor';
+
 export default function Schema({ config }) {
     const [schemas, setSchemas] = useState();
     const [templates, setTemplates] = useState();
     const [showSchemas, setShowSchemas] = useState([]);
+    const [chunkingTypes, setChunkingTypes] = useState([
+        { 'label': 'Per document', 'value': 'document' },
+        { 'label': 'Per page', 'value': 'page' },
+        { 'label': 'Per paragraph', 'value': 'paragraph' },
+        { 'label': 'Per sentence', 'value': 'sentence' },
+        { 'label': 'Custom', 'value': 'custom' }
+    ]);
 
     function loadSchemaTemplates() {
         for (var i = 0; i < config['modules'].length; i++) {
@@ -98,14 +107,27 @@ export default function Schema({ config }) {
 
     }
 
+    function getChunkingTypeLabel(type) {
+        for (var i = 0; i < chunkingTypes.length; i++) {
+            if (chunkingTypes[i].value === type) {
+                return chunkingTypes[i].label;
+            }
+        }
+        return "chuking - per document";
+    }
+
+  
     return (
         <div>
+            <div className='red-text'>If you make changes to schema settings, you will need to reindex your data to reflect the changes.</div>
+            <br/>
             {templates && templates.length > 0 && (<fieldset>
                 <legend>Your data schema to index</legend>
                 {templates && templates.map(a => (
 
                     <div key={a.template_id}>
                         <span>{a.obj_type}</span>
+                        <span className='ml-5 small-font color-grey-600'>{getChunkingTypeLabel(a)}</span>
                         <span className="ml-5 svg-icon-sm svg-text cursor-pointer" simple-title='Edit schema' onClick={() => applyShowSchema(a.template_id)}>
                             <EditIcon />
                         </span>
@@ -113,17 +135,24 @@ export default function Schema({ config }) {
                         <span className="ml-5 svg-icon-sm svg-text cursor-pointer" simple-title='Delete schema' onClick={() => deleteSchema(a.template_id)}>
                             <RemoveIcon />
                         </span>
-                        {checkShowSchema(a.template_id) &&
-                            (<pre className='json-copy mt-3'>{JSON.stringify(a.schema, null, 2)}</pre>)}
 
-                        <br /><br />
+
+
+                        {checkShowSchema(a.template_id) &&
+                            (
+                                <>
+                                    <SchemaEditor item={a} />
+
+                                </>)}
+
+                        <br />      <br />
                     </div>
 
                 ))}
             </fieldset>
             )}
 
-
+            <br />
             <fieldset>
                 <legend>Available data schema</legend>
 
