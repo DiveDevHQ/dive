@@ -4,16 +4,13 @@ import SelectCtrl from '../controls/SelectCtrl';
 import { updateTemplate } from '../api';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { ChunkingTypes } from '../references';
 
 export default function SchemaEditor({ item }) {
 
     const [chunkSize, setChunkSize] = useState();
     const [chunkOverlap, setChunkOverlap] = useState();
-
-    const [chunkingTypes, setChunkingTypes] = useState([
-        { 'label': 'Per document', 'value': 'document' },
-        { 'label': 'Custom', 'value': 'custom' }
-    ]);
+  
     const [chukingType, setChunkingType] = useState();
 
     function handleChunkingTypeChange(id, text, value) {
@@ -68,7 +65,7 @@ export default function SchemaEditor({ item }) {
 
                 <div className='col-4'>
                     Chunking type:
-                    <SelectCtrl dataSource={chunkingTypes} onSelectChange={handleChunkingTypeChange} label={"Select chunking type"} selectedValue={item.chunking_type ? item.chunking_type.chunking_type : 'document'} />
+                    <SelectCtrl dataSource={ChunkingTypes} onSelectChange={handleChunkingTypeChange} label={"Select chunking type"} selectedValue={item.chunking_type ? item.chunking_type.chunking_type : 'document'} />
                 </div>
 
                 <div className='col-3'>
