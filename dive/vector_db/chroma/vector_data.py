@@ -5,11 +5,6 @@ from dive.vector_db import query_utils
 from dive.vector_db import llama_data_transformer
 from llama_index.langchain_helpers.text_splitter import SentenceSplitter
 from llama_index import Document
-from llama_index.utils import globals_helper
-import uuid
-import requests
-from io import BytesIO
-import pypdf
 
 db_directory = "db"
 vector_collection_name = "peristed_collection"

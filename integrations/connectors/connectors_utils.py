@@ -2,9 +2,10 @@ import copy
 from collections import ChainMap
 import re
 from datetime import datetime
-from io import BytesIO
-import pypdf
-import requests
+from typing import Dict, Type
+from integrations.connectors.files_reader import BaseReader
+from integrations.connectors.files_reader import PDFReader
+from integrations.connectors.files_reader import TxtReader
 
 
 def get_params_value(text, data):
@@ -100,23 +101,16 @@ def get_params_keys(text):
     return keys
 
 
-def pdf_load_from_url(doc_id, file_name, file_url, extra_info):
-    r = requests.get(file_url)
-    with BytesIO(r.content) as data:
-        docs = []
-        read_pdf = pypdf.PdfReader(data)
-        part = 0
-        for page in range(len(read_pdf.pages)):
-            page_text = read_pdf.pages[page].extract_text()
-            page_label = read_pdf.page_labels[page]
-            metadata = {"page_label": page_label, "file_name": file_name}
-            if extra_info is not None:
-                metadata.update(extra_info)
-            docs.append({'id': f"{str(doc_id)}_part_{part}", 'data': page_text, 'metadata': metadata})
-            part += 1
-        return docs
+DEFAULT_FILE_READER_CLS: Dict[str, Type[BaseReader]] = {
+    "pdf": PDFReader,
+    "txt": TxtReader
+}
 
 
-
-
-
+def load_file_from_url(doc_id, file_name, file_url, mime_type, extra_info):
+    supported_suffix = list(DEFAULT_FILE_READER_CLS.keys())
+    docs = []
+    if mime_type in supported_suffix:
+        reader = DEFAULT_FILE_READER_CLS[mime_type]()
+        docs = reader.load_data(doc_id, file_name, file_url, extra_info)
+    return docs

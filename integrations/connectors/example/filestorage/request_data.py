@@ -15,7 +15,7 @@ def get_objects(auth, app, obj_type, schema):
         except FileNotFoundError:
             return
 
-    data = util.pdf_load_from_url(field_dict["name"], field_dict["name"], field_dict['file_url'], None)
+    data = util.load_file_from_url(field_dict["name"], field_dict["name"], field_dict['file_url'],field_dict['mime_type'], None)
     return {'results': data}
 
 

@@ -19,7 +19,7 @@ function App() {
   const [accountIds, setAccountIds] = useState([]);
   const [connectIds, setConnectIds] = useState([]);
   const [selectAccountId, setSelectAccountId] = useState();
-  const [chunkSize, setChunkSize] = useState();
+  const [chunkSize, setChunkSize] = useState(2);
   const [selectConnectorId, setSelectConnectorId] = useState();
   const [queryResult, setQueryResult] = useState();
   const [queryText, setQueryText] = useState();
@@ -300,7 +300,7 @@ function App() {
               <div className='col-4'>     <SelectCtrl dataSource={connectIds} onSelectChange={handleSelectConnectorChange} label={"Select connectorId"}  selectedValue={selectConnectorId}/>
               </div>
               <div className='col-4'>
-              Chunk size: <input className='form-control-short' value={chunkSize || "2"} onChange={e => setChunkSize(e.target.value)}
+              Chunk size: <input className='form-control-short' value={chunkSize || ""} onChange={e => setChunkSize(e.target.value)}
                         type="text" />
               </div>
             </div>
