@@ -6,18 +6,16 @@ import EditIcon from '../icons/EditIcon';
 import RemoveIcon from '../icons/RemoveIcon';
 
 import SchemaEditor from './SchemaEditor';
+import { ChunkingTypes } from '../references';
 
 export default function Schema({ config }) {
     const [schemas, setSchemas] = useState();
     const [templates, setTemplates] = useState();
     const [showSchemas, setShowSchemas] = useState([]);
-    const [chunkingTypes, setChunkingTypes] = useState([
+    /*const [chunkingTypes, setChunkingTypes] = useState([
         { 'label': 'Per document', 'value': 'document' },
-        { 'label': 'Per page', 'value': 'page' },
-        { 'label': 'Per paragraph', 'value': 'paragraph' },
-        { 'label': 'Per sentence', 'value': 'sentence' },
         { 'label': 'Custom', 'value': 'custom' }
-    ]);
+    ]);*/
 
     function loadSchemaTemplates() {
         for (var i = 0; i < config['modules'].length; i++) {
@@ -108,19 +106,30 @@ export default function Schema({ config }) {
     }
 
     function getChunkingTypeLabel(type) {
-        for (var i = 0; i < chunkingTypes.length; i++) {
-            if (chunkingTypes[i].value === type) {
-                return chunkingTypes[i].label;
+        var chunking_type = type.chunking_type ? type.chunking_type.chunking_type : null;
+        if (!chunking_type) {
+            return "chuking - Per document";
+        }
+        var chunk_size = type.chunking_type ? type.chunking_type.chunk_size : null;
+        var chunk_overlap = type.chunking_type ? type.chunking_type.chunk_overlap : null;
+
+        for (var i = 0; i < ChunkingTypes.length; i++) {
+            if (ChunkingTypes[i].value === chunking_type) {
+                var chunking_label = "chuking - " + ChunkingTypes[i].label;
+                if (chunking_type == 'custom') {
+                    chunking_label += ", chunk size: " + chunk_size + ", chunk overlap: " + chunk_overlap;
+                }
+                return chunking_label;
             }
         }
-        return "chuking - per document";
+        return "chuking - Per document";
     }
 
-  
+
     return (
         <div>
             <div className='red-text'>If you make changes to schema settings, you will need to reindex your data to reflect the changes.</div>
-            <br/>
+            <br />
             {templates && templates.length > 0 && (<fieldset>
                 <legend>Your data schema to index</legend>
                 {templates && templates.map(a => (
