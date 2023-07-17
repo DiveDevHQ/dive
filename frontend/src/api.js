@@ -58,6 +58,12 @@ export function authWithApiKey(app, api_key) {
 
 }
 
+export function authWithPublicData(app) {
+    const auth = { 'redirect_uri': window.location.protocol + '//' + window.location.host , 'connector_id': app, 'account_id':'self' };
+    return axios.post(`${serviceUrl}/api/authorize/${app}`, auth)
+        .then(res => res.data);
+
+}
 
 export function callbackWithOAuth2(app, code) {
     const callback = { 'code': code,  'connector_id': app };

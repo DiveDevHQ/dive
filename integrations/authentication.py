@@ -37,6 +37,8 @@ def get_auth(connector_id):
             return None, None
         if integration_config['auth_method'] == 'APIKEY':
             return integration, integration.api_key
+        elif integration_config['auth_method'] == 'NOAUTH':
+            return integration, None
         elif integration_config['auth_method'] == 'OAUTH2':
             if not integration.expire_at:
                 return integration, integration.access_token

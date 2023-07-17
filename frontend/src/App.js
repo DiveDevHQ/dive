@@ -8,6 +8,7 @@ import Modal from 'react-modal';
 import Integration from './controls/Integration';
 import Schema from './controls/Schema';
 import XIcon from './icons/XIcon';
+import InfoIcon from './icons/InfoIcon';
 import SelectCtrl from './controls/SelectCtrl';
 
 import { getApps, getConnectors, clearData, syncData, queryData } from './api';
@@ -171,24 +172,38 @@ function App() {
 
   function queryDocuments() {
     setError('');
-    if (!selectAccountId && !selectConnectorId){
+    if (!selectAccountId && !selectConnectorId) {
       setError('Please select either accountId, or connectorId to search.');
       return;
     }
-    if (!queryText){
+    if (!queryText) {
       setError('Please enter query text to search.');
       return;
     }
-    
-    queryData(selectAccountId ? selectAccountId : "", selectConnectorId ? selectConnectorId : "",queryText, chunkSize?chunkSize:"").then(data => {
- 
+    if (!chunkSize) {
+      setError('Please enter chunk size between 2 to 10.');
+      return;
+    }
+
+    var _chunkSize = parseInt(chunkSize);
+    if (_chunkSize >= 2  && _chunkSize <= 10) {
+
+    }
+    else{
+      setError('Please enter chunk size between 2 to 10.');
+      return;
+    }
+
+
+    queryData(selectAccountId ? selectAccountId : "", selectConnectorId ? selectConnectorId : "", queryText, chunkSize ? chunkSize : "").then(data => {
+
       setQueryResult(data);
-    
+
     }).catch(function (error) {
       if (error.response) {
-        setQueryResult(error.response.data);   
-      } 
-     
+        setQueryResult(error.response.data);
+      }
+
     });;
   }
 
@@ -293,15 +308,18 @@ function App() {
             <button type="button" className="btn btn-grey" onClick={() => openSearchApiDoc()} >Open API Doc</button><br />
             <br />
             <div className='row'>
-              <div className='col-4'>     <SelectCtrl dataSource={accountIds} onSelectChange={handleSelectAccountChange} label={"Select accountId"} selectedValue={selectAccountId}/>
+              <div className='col-4'>     <SelectCtrl dataSource={accountIds} onSelectChange={handleSelectAccountChange} label={"Select accountId"} selectedValue={selectAccountId} />
 
               </div>
 
-              <div className='col-4'>     <SelectCtrl dataSource={connectIds} onSelectChange={handleSelectConnectorChange} label={"Select connectorId"}  selectedValue={selectConnectorId}/>
+              <div className='col-4'>     <SelectCtrl dataSource={connectIds} onSelectChange={handleSelectConnectorChange} label={"Select connectorId"} selectedValue={selectConnectorId} />
               </div>
               <div className='col-4'>
-              Chunk size: <input className='form-control-short' value={chunkSize || ""} onChange={e => setChunkSize(e.target.value)}
-                        type="text" />
+                <span className="svg-icon-sm svg-text cursor-pointer" simple-title='Top K chunks from the result, K between 2 to 10' >
+                  <InfoIcon />
+                </span> Chunk size:<input className='form-control-short' value={chunkSize || ""} onChange={e => setChunkSize(e.target.value)}
+                  type="text" />
+
               </div>
             </div>
             <br />
@@ -314,7 +332,7 @@ function App() {
             <button type="button" className="btn btn-grey mr-3" onClick={() => queryDocuments()} >Search</button>
             <br />
             {queryResult && (<pre className='json-copy mt-3'>{JSON.stringify(queryResult, null, 2)}</pre>)}
-            
+
           </div>
         )}
 
