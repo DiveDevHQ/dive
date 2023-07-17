@@ -31,7 +31,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = env.str('SECRET_KEY',default=DEFAULT_SECRET_KEY)
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env.bool('DEBUG', default=False)
-ALLOWED_HOSTS = env.str('ALLOWED_HOSTS', default='*').split(' ')
+ALLOWED_HOSTS = list(filter(None, env.str('ALLOWED_HOSTS', default='*').split(' ')))
 
 
 # Application definition
@@ -49,7 +49,7 @@ INSTALLED_APPS = [
 
 ]
 
-CORS_ORIGIN_WHITELIST = env.str('CORS_ORIGIN_WHITELIST', default='http://localhost:3000').split(' ')
+CORS_ORIGIN_WHITELIST = list(filter(None, env.str('CORS_ORIGIN_WHITELIST', default='http://localhost:3000').split(' ')))
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

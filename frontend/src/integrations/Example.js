@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { authWithApiKey, getConfig } from '../api';
+import { authWithPublicData, getConfig } from '../api';
 
 export default function Example() {
     const app = 'example';
-    const [apiKey, setApiKey] = useState('12345');
+ 
 
     function connect() {
-        authWithApiKey(app, apiKey).then(data => {
+        authWithPublicData(app).then(data => {
             window.open(data.redirect, "_self");
         })
     }
@@ -15,8 +15,7 @@ export default function Example() {
         <div className='row mt-3'>
             <div className='col-6'>
                 <label>
-                    <span className='red-text'>*</span>Api Key:  <input className='form-control-long' value={apiKey || ""} onChange={e => setApiKey(e.target.value)}
-                        type="text" />
+                Connect with public datasources 
                 </label>
             </div>
 

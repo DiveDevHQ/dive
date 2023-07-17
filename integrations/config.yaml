@@ -1,10 +1,7 @@
 example:
   module:
     - schema: filestorage
-  auth_method: APIKEY
-  key_params:
-    key_name: api_key
-    request_type: request_body
+  auth_method: NOAUTH
 
 hubspot:
   module:

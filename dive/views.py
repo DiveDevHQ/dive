@@ -120,6 +120,19 @@ def authorization_api(request, app):
                                       redirect_uri=redirect_uri, account_id=account_id)
 
             integration.save()
+    if integration_config['auth_method'] == 'NOAUTH':
+        try:
+            integration = Integration.objects.get(name=app, connector_id=connector_id)
+            integration.enabled = True
+            integration.connector_id = connector_id
+            integration.account_id = account_id
+            integration.redirect_uri = redirect_uri
+            integration.save()
+        except Integration.DoesNotExist:
+            integration = Integration(name=app,
+                                      enabled=True, connector_id=connector_id,
+                                      redirect_uri=redirect_uri, account_id=account_id)
+            integration.save()
         return JsonResponse({'redirect': redirect_uri})
 
 
@@ -352,6 +365,10 @@ def sync_instance_data(request, app, connector_id):
             chunking_type = ct.get('chunking_type', None)
             chunk_size = ct.get('chunk_size', None)
             chunk_overlap = ct.get('chunk_overlap', None)
+            if chunk_size:
+                chunk_size = int(chunk_size)
+            if chunk_overlap:
+                chunk_overlap = int(chunk_overlap)
         index_data(template.module, connector_id, template.obj_type, template.schema, False, chunking_type, chunk_size,
                    chunk_overlap)
     return HttpResponse(status=204)

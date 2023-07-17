@@ -2,9 +2,7 @@ import chromadb
 import tiktoken
 from chromadb.config import Settings
 from dive.vector_db import query_utils
-from dive.vector_db import llama_data_transformer
-from llama_index.langchain_helpers.text_splitter import SentenceSplitter
-from llama_index import Document
+from dive.vector_db.text_splitter import SentenceSplitter
 
 db_directory = "db"
 vector_collection_name = "peristed_collection"
@@ -23,7 +21,6 @@ def index_documents(documents, metadata, chunking_type, chunk_size,
     )
 
     collection = client.get_or_create_collection(name=vector_collection_name)
-    documents = llama_data_transformer.get_documents(documents, metadata)
 
     enc = tiktoken.get_encoding("gpt2")
     tokenizer = lambda text: enc.encode(text, allowed_special={"<|endoftext|>"})
@@ -33,20 +30,22 @@ def index_documents(documents, metadata, chunking_type, chunk_size,
     if chunking_type == 'custom':
         sentence_splitter_default = SentenceSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap, tokenizer=tokenizer)
         for document in documents:
-            sentence_chunks = sentence_splitter_default.split_text(document.text)
-            doc_chunks = [Document(text=t) for t in sentence_chunks]
-            for i, d in enumerate(doc_chunks):
-                _documents.append(d.text)
-                _document_ids.append(document.id_+"_chunk_"+str(i))
-                _metadatas.append(document.metadata)
+            sentence_chunks = sentence_splitter_default.split_text(document['text'])
+            for i, d in enumerate(sentence_chunks):
+                _documents.append(d)
+                _document_ids.append(document['id']+"_chunk_"+str(i))
+                _metadata = metadata
+                if 'metadata' in document:
+                    _metadata.update(document['metadata'])
+                _metadatas.append(_metadata)
 
     else:
         for document in documents:
-            _documents.append(document.text)
-            _document_ids.append(document.id_)
+            _documents.append(document['text'])
+            _document_ids.append(document['id'])
             _metadata = metadata
             if 'metadata' in document:
-                _metadata.update(document.metadata)
+                _metadata.update(document['metadata'])
             _metadatas.append(_metadata)
 
     if embeddings:

@@ -42,7 +42,6 @@ class TxtReader(BaseReader):
         r = requests.get(file_url)
         docs = []
         with BytesIO(r.content) as data:
-            print(r.content)
             metadata = {"file_name": file_name}
             if extra_info is not None:
                 metadata.update(extra_info)
