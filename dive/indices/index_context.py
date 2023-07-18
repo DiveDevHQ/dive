@@ -1,13 +1,12 @@
 from dive.indices.service_context import ServiceContext
 from dive.storages.storage_context import StorageContext
-from typing import Optional, List, Any, Dict
+from typing import Optional, Any, Dict
 from dive.constants import DEFAULT_CHUNKING_TYPE
-from dive.vector_db.text_splitter import SentenceSplitter
+from dive.util.text_splitter import SentenceSplitter
 from dataclasses import dataclass
 from langchain.schema import Document
 from langchain.embeddings import SentenceTransformerEmbeddings
 from langchain.embeddings.base import Embeddings
-
 import tiktoken
 
 
@@ -72,8 +71,6 @@ class IndexContext:
                                                                   persist_directory=self.storage_context.persist_dir,
                                                                   embedding=self.embeddings)
             db.persist()
-            data = db.similarity_search(query="What did the author do growing up?",k=4,filter={'connector_id': "example"})
-            print(data)
 
     def delete(self, where: Dict):
         result=self.storage_context.vector_store.get(where=where)

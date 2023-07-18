@@ -474,12 +474,13 @@ def get_index_data(request):
         error_data['error']['message'] = 'Requested vector data does not exist'
         error_data['error']['status_code'] = 404
         return JsonResponse(error_data, safe=False)
-    summary = ""
-    print(data)
-    '''for sentence in data.summary:
-        summary += sentence + "\n"
-        '''
-    return JsonResponse({'summary': summary}, safe=False)
+
+    summary_list = query_context.summarization(documents=data)
+    summary_text = ''
+    for sentence in summary_list:
+        summary_text += sentence + "\n"
+
+    return JsonResponse({'summary': summary_text}, safe=False)
 
 
 @api_view(["GET"])

@@ -36,15 +36,15 @@ def query_example_data(chunk_size):
     query_context = QueryContext.from_documents()
     print(query_context)
     data = query_context.query(query=query_text,k=chunk_size,filter={'connector_id': "example"})
-    print(data)
+    summary=query_context.summarization(documents=data)
     print('------------top documents -----------------')
     for d in data:
         print(d.page_content)
     print('------------top summary -----------------')
-    '''for s in data.summary:
-        print(s)'''
+    for s in summary:
+        print(s)
 
 
-#index_example_data(256,20)
+index_example_data(256,20)
 '''wait 1 min to run query method'''
-query_example_data(4)
+#query_example_data(4)
