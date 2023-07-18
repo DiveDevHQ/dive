@@ -1,10 +1,12 @@
 from dive.indices.service_context import ServiceContext
 from dive.storages.storage_context import StorageContext
-from dive.types import EmbeddingResult
-from typing import Optional, List, Any, Dict
+from typing import Optional, Any, Dict
 from dive.constants import DEFAULT_CHUNKING_TYPE
-from dive.vector_db.text_splitter import SentenceSplitter
+from dive.util.text_splitter import SentenceSplitter
 from dataclasses import dataclass
+from langchain.schema import Document
+from langchain.embeddings import SentenceTransformerEmbeddings
+from langchain.embeddings.base import Embeddings
 import tiktoken
 
 
@@ -12,12 +14,16 @@ import tiktoken
 class IndexContext:
     service_context: ServiceContext
     storage_context: StorageContext
-    documents: [EmbeddingResult]
+    documents: [Document]
+    embeddings: Optional[Embeddings]
+    ids: [str]
 
     @classmethod
     def from_documents(
             cls,
-            documents: List[EmbeddingResult],
+            documents: [Document] = None,
+            ids: [str] = None,
+            embeddings: Optional[Embeddings] = None,
             storage_context: Optional[StorageContext] = None,
             service_context: Optional[ServiceContext] = None,
             **kwargs: Any,
@@ -27,53 +33,45 @@ class IndexContext:
             storage_context = StorageContext.from_defaults()
         if not service_context:
             service_context = ServiceContext.from_defaults()
-
+        if not embeddings:
+            embeddings = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
         return cls(storage_context=storage_context,
                    service_context=service_context,
                    documents=documents,
+                   ids=ids,
+                   embeddings=embeddings,
                    **kwargs, )
 
-    def insert(self)->[]:
-        if not self.service_context.embed_model.chunking_type or self.service_context.embed_model.chunking_type == DEFAULT_CHUNKING_TYPE:
-            return self.storage_context.vector_store.add(embedding_results=self.documents)
-
-        else:
-            sentence_splitter_default = SentenceSplitter(chunk_size=self.service_context.embed_model.chunk_size,
-                                                         chunk_overlap=self.service_context.embed_model.chunk_overlap,
-                                                         tokenizer=self.service_context.embed_model.tokenizer)
-
-            _documents = [EmbeddingResult]
-            for document in self.documents:
-                sentence_chunks = sentence_splitter_default.split_text(document.text)
-                for i, d in enumerate(sentence_chunks):
-                    _document = EmbeddingResult(id=document.id + "_chunk_" + str(i), metadata=document.metadata,
-                                                text=document.text)
-                    _documents.append(d)
-            return self.storage_context.vector_store.add(embedding_results=_documents)
-
-
-
-    def upsert(self)->[]:
+    def upsert(self):
 
         if not self.service_context.embed_model.chunking_type or self.service_context.embed_model.chunking_type == DEFAULT_CHUNKING_TYPE:
-            return self.storage_context.vector_store.upsert(embedding_results=self.documents)
+            db = self.storage_context.vector_store.from_documents(documents=self.documents, ids=self.ids,
+                                                                  embedding=self.embeddings,
+                                                                  persist_directory=self.storage_context.persist_dir
+                                                                  )
+            db.persist()
 
         else:
             _tokenizer = lambda text: tiktoken.get_encoding("gpt2").encode(text, allowed_special={"<|endoftext|>"})
             sentence_splitter_default = SentenceSplitter(chunk_size=self.service_context.embed_model.chunk_size,
-                                                             chunk_overlap=self.service_context.embed_model.chunk_overlap,
-                                                             tokenizer=self.service_context.embed_model.tokenizer or _tokenizer)
+                                                         chunk_overlap=self.service_context.embed_model.chunk_overlap,
+                                                         tokenizer=self.service_context.embed_model.tokenizer or _tokenizer)
 
             _documents = []
-
-            for document in self.documents:
-                sentence_chunks = sentence_splitter_default.split_text(document.text)
-                for i, d in enumerate(sentence_chunks):
-                    _document = EmbeddingResult(id=document.id + "_chunk_" + str(i), metadata=document.metadata,
-                                                    text=d)
+            _ids = []
+            for i, document in enumerate(self.documents):
+                sentence_chunks = sentence_splitter_default.split_text(document.page_content)
+                for j, d in enumerate(sentence_chunks):
+                    _document = Document(metadata=document.metadata,
+                                         page_content=d)
                     _documents.append(_document)
-            return self.storage_context.vector_store.upsert(embedding_results=_documents)
+                    _ids.append(self.ids[i] + "_chunk_" + str(j))
 
+            db = self.storage_context.vector_store.from_documents(documents=_documents, ids=_ids,
+                                                                  persist_directory=self.storage_context.persist_dir,
+                                                                  embedding=self.embeddings)
+            db.persist()
 
     def delete(self, where: Dict):
-        self.storage_context.vector_store.delete_query(where)
+        result=self.storage_context.vector_store.get(where=where)
+        self.storage_context.vector_store.delete(ids=result['ids'])
