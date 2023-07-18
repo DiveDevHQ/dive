@@ -50,7 +50,6 @@ class IndexContext:
                                                                   persist_directory=self.storage_context.persist_dir
                                                                   )
             db.persist()
-
         else:
             _tokenizer = lambda text: tiktoken.get_encoding("gpt2").encode(text, allowed_special={"<|endoftext|>"})
             sentence_splitter_default = SentenceSplitter(chunk_size=self.service_context.embed_model.chunk_size,
@@ -71,6 +70,7 @@ class IndexContext:
                                                                   persist_directory=self.storage_context.persist_dir,
                                                                   embedding=self.embeddings)
             db.persist()
+
 
     def delete(self, where: Dict):
         result=self.storage_context.vector_store.get(where=where)

@@ -4,7 +4,7 @@ from dive.indices.index_context import IndexContext
 from dive.types import EmbeddingModel
 from langchain.schema import Document
 import importlib
-
+import time
 
 def index_example_data(chunk_size, chunk_overlap):
     package_name = "integrations.connectors.example.filestorage.request_data"
@@ -47,4 +47,5 @@ def query_example_data(chunk_size):
 
 index_example_data(256,20)
 '''wait 1 min to run query method'''
-#query_example_data(4)
+time.sleep(60)
+query_example_data(4)
