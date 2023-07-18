@@ -1,7 +1,6 @@
 from integrations.models import Integration
 from integrations.models import Template
 from integrations import authentication as auth
-from django.shortcuts import render
 from django.shortcuts import redirect
 from django.http import JsonResponse
 from datetime import datetime, timezone, timedelta
@@ -11,6 +10,10 @@ from dive.api.exceptions import BadRequestException
 from urllib.parse import parse_qs, urlencode
 from rest_framework.decorators import action, api_view
 from django.http import HttpResponse
+from dive.indices.service_context import ServiceContext
+from dive.retrievers.query_context import QueryContext
+from dive.indices.index_context import IndexContext
+from dive.types import EmbeddingResult, EmbeddingModel, VectorStoreQuery
 import json
 import environ
 import copy
@@ -377,9 +380,8 @@ def sync_instance_data(request, app, connector_id):
 @api_view(["PUT"])
 def clear_instance_data(request, app, connector_id):
     auth.clear_sync_status(connector_id)
-    package_name = "dive.vector_db." + env.str('VECTOR_DB', default='chroma') + ".vector_data"
-    mod = importlib.import_module(package_name)
-    mod.delete_documents_by_connection(connector_id)
+    index_context = IndexContext.from_documents(documents=[])
+    index_context.delete({'connector_id':connector_id})
     return HttpResponse(status=204)
 
 
@@ -392,34 +394,41 @@ def index_data(module, connector_id, obj_type, schema, reload, chunking_type, ch
 
     auth.update_last_sync(connector_id, obj_type)
     documents = []
-    load_data(module, token, integration, obj_type, schema, documents, None, obj_last_sync_at)
-    package_name = "dive.vector_db." + env.str('VECTOR_DB', default='chroma') + ".vector_data"
-    mod = importlib.import_module(package_name)
     metadata = {'account_id': integration.account_id, 'connector_id': connector_id,
                 'obj_type': obj_type}
-    mod.index_documents(documents, metadata, chunking_type, chunk_size,
-                        chunk_overlap, None)
+    load_data(module, token, integration, obj_type, schema, documents, None, obj_last_sync_at, metadata)
+    for document in documents:
+        document.metadata.update(metadata)
+
+    embedding_model = EmbeddingModel()
+    embedding_model.chunking_type = chunking_type
+    embedding_model.chunk_size = chunk_size
+    embedding_model.chunk_overlap = chunk_overlap
+    service_context = ServiceContext.from_defaults(embed_model=embedding_model)
+    index_context = IndexContext.from_documents(documents=documents, service_context=service_context)
+    ids = index_context.upsert()
 
 
-def load_data(module, token, integration, obj_type, schema, documents, cursor, last_sync_at):
+def load_data(module, token, integration, obj_type, schema, documents, cursor, last_sync_at, metadata):
     package_name = "integrations.connectors." + integration.name + "." + module + ".request_data"
     mod = importlib.import_module(package_name)
     data = mod.load_objects(token, integration, obj_type, last_sync_at, cursor, schema)
     if 'error' in data:
         if data['error']['status_code'] == 429:
             sleep(15)
-            load_data(module, token, integration, obj_type, schema, documents, cursor, last_sync_at)
+            load_data(module, token, integration, obj_type, schema, documents, cursor, last_sync_at, metadata)
     else:
         if len(data['results']) == 0:
             return
         for d in data['results']:
-            document = {'id': d['id'], 'text': str(d['data'])}
+            _metadata = metadata
             if 'metadata' in d:
-                document['metadata'] = d['metadata']
+                _metadata.update(d['metadata'])
+            document = EmbeddingResult(id=d['id'], text=str(d['data']), metadata=_metadata)
             documents.append(document)
         if 'next_cursor' in data:
             cursor = data['next_cursor']
-            load_data(module, token, integration, obj_type, schema, documents, cursor, last_sync_at)
+            load_data(module, token, integration, obj_type, schema, documents, cursor, last_sync_at, metadata)
 
 
 @api_view(["GET"])
@@ -443,15 +452,30 @@ def get_index_data(request):
         raise BadRequestException("Please include either connector_id or account_id in the query parameter.")
     if not query:
         raise BadRequestException("Please include query_text in query parameter.")
-    package_name = "dive.vector_db." + env.str('VECTOR_DB', default='chroma') + ".vector_data"
-    mod = importlib.import_module(package_name)
-    if chunk_size:
-        chunk_size = int(chunk_size)
-    data = mod.query_documents(query, account_id, connector_id, chunk_size, None)
-    if 'error' in data:
-        return JsonResponse(data, status=data['error'].get('status_code', 410), safe=False)
 
-    return JsonResponse(data)
+    query_context = QueryContext.from_documents()
+    vector_store_query = VectorStoreQuery()
+    vector_store_query.text = query
+    vector_store_query.llm = None
+    if chunk_size:
+        vector_store_query.chunk_size = int(chunk_size)
+    if connector_id:
+        vector_store_query.where = {'connector_id': connector_id}
+    elif account_id:
+        vector_store_query.where = {'account_id': account_id}
+
+    data = query_context.query(query=vector_store_query)
+
+    if not data:
+        error_data = {'error': {}}
+        error_data['error']['id'] = 'Not Found'
+        error_data['error']['message'] = 'Requested vector data does not exist'
+        error_data['error']['status_code'] = 404
+        return JsonResponse(error_data, safe=False)
+    summary = ""
+    for sentence in data.summary:
+        summary += sentence + "\n"
+    return JsonResponse({'summary': summary}, safe=False)
 
 
 @api_view(["GET"])
