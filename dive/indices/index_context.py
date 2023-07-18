@@ -1,5 +1,5 @@
 from dive.indices.service_context import ServiceContext
-from dive.storage.storage_context import StorageContext
+from dive.storages.storage_context import StorageContext
 from dive.types import EmbeddingResult
 from typing import Optional, List, Any, Dict
 from dive.constants import DEFAULT_CHUNKING_TYPE
