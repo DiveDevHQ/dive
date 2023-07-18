@@ -15,7 +15,7 @@ class VectorStoreRetrieverAgent(Agent):
         refine_chain_type = "refine"
         llm = OpenAI()
         db_client = ChromaDBClient()
-        chromadb = Chroma(client = db_client)
+        chromadb = Chroma(client = db_client.db_connection(), embedding_function= )
         relevant_docs = chromadb.search(query = prompt, search_type = similarity_search)
         chain = load_summarize_chain(llm = llm, chain_type= refine_chain_type, prompt = prompt)
         return chain.run()

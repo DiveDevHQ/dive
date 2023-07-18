@@ -1,7 +1,6 @@
 import chromadb
 from chromadb.config import Settings
 
-
 class ChromaDBClient:
     db_directory = "db"
 
@@ -12,6 +11,7 @@ class ChromaDBClient:
                 chroma_db_impl="duckdb+parquet",
             )
         )
+        return db_connection
 
 
 
