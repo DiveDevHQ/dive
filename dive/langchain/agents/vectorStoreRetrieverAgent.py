@@ -27,7 +27,7 @@ class VectorStoreRetrieverAgent(Agent):
         query_context = QueryContext.from_documents()
         relevant_docs = query_context.query(query=query_text,k=4,filter={'connector_id': "example"})
         #I wrote a basic summarization function, which does not take external llm yet, it should and it should call langchain
-        summary=query_context.summarization(documents=relevant_docs)
+        summary=query_context.summarization(documents=relevant_docs,llm=llm)
         chain = load_summarize_chain(llm = llm, chain_type= refine_chain_type, prompt = prompt)
         return chain.run()
 
