@@ -45,5 +45,5 @@ class TxtReader(BaseReader):
             metadata = {"file_name": file_name}
             if extra_info is not None:
                 metadata.update(extra_info)
-            docs.append({'id': f"{str(doc_id)}", 'data': r.content, 'metadata': metadata})
+            docs.append({'id': f"{str(doc_id)}", 'data': r.text, 'metadata': metadata})
         return docs

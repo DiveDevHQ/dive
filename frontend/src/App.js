@@ -176,6 +176,7 @@ function App() {
       setError('Please select either accountId, or connectorId to search.');
       return;
     }
+
     if (!queryText) {
       setError('Please enter query text to search.');
       return;
