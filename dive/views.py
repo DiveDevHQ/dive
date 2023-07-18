@@ -13,7 +13,8 @@ from django.http import HttpResponse
 from dive.indices.service_context import ServiceContext
 from dive.retrievers.query_context import QueryContext
 from dive.indices.index_context import IndexContext
-from dive.types import EmbeddingResult, EmbeddingModel, VectorStoreQuery
+from dive.types import EmbeddingModel
+from langchain.schema import Document
 import json
 import environ
 import copy
@@ -380,8 +381,8 @@ def sync_instance_data(request, app, connector_id):
 @api_view(["PUT"])
 def clear_instance_data(request, app, connector_id):
     auth.clear_sync_status(connector_id)
-    index_context = IndexContext.from_documents(documents=[])
-    index_context.delete({'connector_id':connector_id})
+    index_context = IndexContext.from_documents(documents=[], ids=[])
+    index_context.delete({'connector_id': connector_id})
     return HttpResponse(status=204)
 
 
@@ -394,9 +395,10 @@ def index_data(module, connector_id, obj_type, schema, reload, chunking_type, ch
 
     auth.update_last_sync(connector_id, obj_type)
     documents = []
+    ids = []
     metadata = {'account_id': integration.account_id, 'connector_id': connector_id,
                 'obj_type': obj_type}
-    load_data(module, token, integration, obj_type, schema, documents, None, obj_last_sync_at, metadata)
+    load_data(module, token, integration, obj_type, schema, None, obj_last_sync_at, metadata, documents, ids)
     for document in documents:
         document.metadata.update(metadata)
 
@@ -405,18 +407,18 @@ def index_data(module, connector_id, obj_type, schema, reload, chunking_type, ch
     embedding_model.chunk_size = chunk_size
     embedding_model.chunk_overlap = chunk_overlap
     service_context = ServiceContext.from_defaults(embed_model=embedding_model)
-    index_context = IndexContext.from_documents(documents=documents, service_context=service_context)
-    ids = index_context.upsert()
+    index_context = IndexContext.from_documents(documents=documents, ids=ids, service_context=service_context)
+    index_context.upsert()
 
 
-def load_data(module, token, integration, obj_type, schema, documents, cursor, last_sync_at, metadata):
+def load_data(module, token, integration, obj_type, schema, cursor, last_sync_at, metadata, documents, ids):
     package_name = "integrations.connectors." + integration.name + "." + module + ".request_data"
     mod = importlib.import_module(package_name)
     data = mod.load_objects(token, integration, obj_type, last_sync_at, cursor, schema)
     if 'error' in data:
         if data['error']['status_code'] == 429:
             sleep(15)
-            load_data(module, token, integration, obj_type, schema, documents, cursor, last_sync_at, metadata)
+            load_data(module, token, integration, obj_type, schema, cursor, last_sync_at, metadata, documents, ids)
     else:
         if len(data['results']) == 0:
             return
@@ -424,11 +426,12 @@ def load_data(module, token, integration, obj_type, schema, documents, cursor, l
             _metadata = metadata
             if 'metadata' in d:
                 _metadata.update(d['metadata'])
-            document = EmbeddingResult(id=d['id'], text=str(d['data']), metadata=_metadata)
+            document = Document(page_content=str(d['data']), metadata=_metadata)
             documents.append(document)
+            ids.append(d['id'])
         if 'next_cursor' in data:
             cursor = data['next_cursor']
-            load_data(module, token, integration, obj_type, schema, documents, cursor, last_sync_at, metadata)
+            load_data(module, token, integration, obj_type, schema, cursor, last_sync_at, metadata, documents, ids)
 
 
 @api_view(["GET"])
@@ -454,17 +457,16 @@ def get_index_data(request):
         raise BadRequestException("Please include query_text in query parameter.")
 
     query_context = QueryContext.from_documents()
-    vector_store_query = VectorStoreQuery()
-    vector_store_query.text = query
-    vector_store_query.llm = None
+    k = None
     if chunk_size:
-        vector_store_query.chunk_size = int(chunk_size)
+        k = int(chunk_size)
+    where = None
     if connector_id:
-        vector_store_query.where = {'connector_id': connector_id}
+        where = {'connector_id': connector_id}
     elif account_id:
-        vector_store_query.where = {'account_id': account_id}
+        where = {'account_id': account_id}
 
-    data = query_context.query(query=vector_store_query)
+    data = query_context.query(query=query, k=k, filter=where)
 
     if not data:
         error_data = {'error': {}}
@@ -473,8 +475,10 @@ def get_index_data(request):
         error_data['error']['status_code'] = 404
         return JsonResponse(error_data, safe=False)
     summary = ""
-    for sentence in data.summary:
+    print(data)
+    '''for sentence in data.summary:
         summary += sentence + "\n"
+        '''
     return JsonResponse({'summary': summary}, safe=False)
 
 

@@ -3,38 +3,12 @@ from pydantic import BaseModel
 from dive.constants import DEFAULT_CHUNK_OVERLAP, DEFAULT_CHUNK_SIZE, DEFAULT_CHUNKING_TYPE, DEFAULT_QUERY_CHUNK_SIZE
 
 
-class EmbeddingResult:
-    embedding: List[float]
-    id: str
-    metadata: Dict
-    text: str
-
-    def __init__(self, id: str, metadata: Dict, text: Optional[str] = None,
-                 embedding: Optional[List[float]] = None) -> None:
-        self.id = id
-        self.metadata = metadata
-        if text:
-            self.text = text
-        else:
-            self.text = None
-        if embedding:
-            self.embedding = embedding
-        else:
-            self.embedding = None
-
-
 class EmbeddingModel(BaseModel):
     chunking_type: str = DEFAULT_CHUNKING_TYPE
     chunk_size: int = DEFAULT_CHUNK_SIZE
     chunk_overlap: int = DEFAULT_CHUNK_OVERLAP
     tokenizer: Any
 
-
-class VectorStoreQuery:
-    text: str
-    where: Dict
-    chunk_size: int = DEFAULT_QUERY_CHUNK_SIZE
-    llm: Any = None
 
 
 class QueryDocument:
