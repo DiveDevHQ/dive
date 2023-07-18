@@ -7,6 +7,10 @@ from dive.util.power_method import degree_centrality_scores
 from sentence_transformers import SentenceTransformer, util
 import nltk
 import numpy as np
+from langchain.chains.summarize import load_summarize_chain
+from langchain.chains.llm import BaseLanguageModel
+from langchain.embeddings import HuggingFaceEmbeddings, SentenceTransformerEmbeddings
+
 
 @dataclass
 class QueryContext:
@@ -28,24 +32,24 @@ class QueryContext:
         Document]:
         return self.storage_context.vector_store.similarity_search(query=query, k=k, filter=filter)
 
-    def summarization(self, documents:[Document])->[]:
-        chunks_text=''
+    def summarization(self, documents: [Document], llm: Optional[BaseLanguageModel] = None) -> str:
+        chunks_text = ''
         for d in documents:
             chunks_text += d.page_content + '\n'
 
-        model = SentenceTransformer('all-MiniLM-L6-v2')
+        if not llm:
+            model = SentenceTransformer('all-MiniLM-L6-v2')
+            sentences = nltk.sent_tokenize(chunks_text)
+            sentences = [sentence.strip() for sentence in sentences]
+            embeddings = model.encode(sentences, convert_to_tensor=True)
+            cos_scores = util.cos_sim(embeddings, embeddings).numpy()
+            centrality_scores = degree_centrality_scores(cos_scores, threshold=None)
+            most_central_sentence_indices = np.argsort(-centrality_scores)
+            summary_text = ""
+            for idx in most_central_sentence_indices[0:5]:
+                summary_text += sentences[idx].strip() + '\n'
+            return summary_text
 
-        sentences = nltk.sent_tokenize(chunks_text)
-        sentences = [sentence.strip() for sentence in sentences]
-
-        embeddings = model.encode(sentences, convert_to_tensor=True)
-
-        cos_scores = util.cos_sim(embeddings, embeddings).numpy()
-
-        centrality_scores = degree_centrality_scores(cos_scores, threshold=None)
-
-        most_central_sentence_indices = np.argsort(-centrality_scores)
-        summary_list = []
-        for idx in most_central_sentence_indices[0:5]:
-            summary_list.append(sentences[idx].strip())
-        return summary_list
+        else:
+            chain = load_summarize_chain(llm=llm, chain_type="map_reduce")
+            return chain.run(documents)

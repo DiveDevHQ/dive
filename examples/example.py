@@ -5,8 +5,12 @@ from dive.types import EmbeddingModel
 from langchain.schema import Document
 import importlib
 import time
+from langchain.embeddings.openai import OpenAIEmbeddings
+from dive.util.openAIAPIKey import set_openai_api_key
+from langchain import OpenAI
 
-def index_example_data(chunk_size, chunk_overlap):
+
+def index_example_data(chunk_size, chunk_overlap, embeddings):
     package_name = "integrations.connectors.example.filestorage.request_data"
     mod = importlib.import_module(package_name)
     data = mod.load_objects(None, None, "paul_graham_essay", None, None, None)
@@ -27,25 +31,39 @@ def index_example_data(chunk_size, chunk_overlap):
     embedding_model.chunk_size = chunk_size
     embedding_model.chunk_overlap = chunk_overlap
     service_context = ServiceContext.from_defaults(embed_model=embedding_model)
-    index_context = IndexContext.from_documents(documents=_documents, ids=_ids, service_context=service_context)
+    index_context = IndexContext.from_documents(documents=_documents, ids=_ids, service_context=service_context,
+                                                embeddings=embeddings)
     index_context.upsert()
 
 
-def query_example_data(chunk_size):
+def query_example_data(chunk_size, llm):
     query_text = "What did the author do growing up?"
     query_context = QueryContext.from_documents()
     print(query_context)
-    data = query_context.query(query=query_text,k=chunk_size,filter={'connector_id': "example"})
-    summary=query_context.summarization(documents=data)
-    print('------------top documents -----------------')
+    data = query_context.query(query=query_text, k=chunk_size, filter={'connector_id': "example"})
+    summary = query_context.summarization(documents=data,llm=llm)
+    print('------------top K chunks -----------------')
     for d in data:
         print(d.page_content)
-    print('------------top summary -----------------')
-    for s in summary:
-        print(s)
+    print('------------summary -----------------')
+    print(summary)
 
 
-index_example_data(256,20)
-'''wait 1 min to run query method'''
-time.sleep(60)
-query_example_data(4)
+#Default free model
+index_example_data(256, 20, None)
+#wait 1 min to run query method
+print('------------Finish Indexing Data-----------------')
+time.sleep(30)
+print('------------Start Querying Data-----------------')
+query_example_data(4, None)
+
+
+#Open AI model
+'''
+set_openai_api_key()
+index_example_data(256, 20, OpenAIEmbeddings())
+print('------------Finish Indexing Data-----------------')
+time.sleep(30)
+print('------------Start Querying Data-----------------')
+query_example_data(4, OpenAI())
+'''

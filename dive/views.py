@@ -475,10 +475,7 @@ def get_index_data(request):
         error_data['error']['status_code'] = 404
         return JsonResponse(error_data, safe=False)
 
-    summary_list = query_context.summarization(documents=data)
-    summary_text = ''
-    for sentence in summary_list:
-        summary_text += sentence + "\n"
+    summary_text = query_context.summarization(documents=data)
 
     return JsonResponse({'summary': summary_text}, safe=False)
 
