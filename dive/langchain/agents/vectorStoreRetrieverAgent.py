@@ -24,7 +24,7 @@ class VectorStoreRetrieverAgent(Agent):
         llm = OpenAI()
         self.index_test_data(chunk_size=256,chunk_overlap=20,embedding_function=OpenAIEmbeddings())
         query_text = "What did the author do growing up?"
-        query_context = QueryContext.from_documents()
+        query_context = QueryContext.from_defaults()
         relevant_docs = query_context.query(query=query_text,k=4,filter={'connector_id': "example"})
         #I wrote a basic summarization function, which does not take external llm yet, it should and it should call langchain
         summary=query_context.summarization(documents=relevant_docs,llm=llm)

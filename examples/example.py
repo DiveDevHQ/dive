@@ -11,7 +11,6 @@ from langchain.embeddings.openai import OpenAIEmbeddings
 from dive.util.openAIAPIKey import set_openai_api_key
 from langchain import OpenAI
 
-
 def index_example_data(chunk_size, chunk_overlap, embeddings):
     package_name = "integrations.connectors.example.filestorage.request_data"
     mod = importlib.import_module(package_name)
@@ -28,6 +27,7 @@ def index_example_data(chunk_size, chunk_overlap, embeddings):
         document = Document(page_content=str(d['data']), metadata=_metadata)
         _documents.append(document)
         _ids.append(d['id'])
+
     embedding_model = EmbeddingModel()
     embedding_model.chunking_type = "custom"
     embedding_model.chunk_size = chunk_size
@@ -37,10 +37,9 @@ def index_example_data(chunk_size, chunk_overlap, embeddings):
                                                 embeddings=embeddings)
 
 
-
 def query_example_data(chunk_size, llm):
     query_text = "What did the author do growing up?"
-    query_context = QueryContext.from_documents()
+    query_context = QueryContext.from_defaults()
     data = query_context.query(query=query_text, k=chunk_size, filter={'connector_id': "example"})
     summary = query_context.summarization(documents=data,llm=llm)
     print('------------top K chunks -----------------')
@@ -51,6 +50,7 @@ def query_example_data(chunk_size, llm):
 
 
 #Default free model
+
 index_example_data(256, 20, None)
 #wait 1 min to run query method
 print('------------Finish Indexing Data-----------------')
