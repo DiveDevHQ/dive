@@ -5,6 +5,8 @@ from dive.types import EmbeddingModel
 from langchain.schema import Document
 import importlib
 import time
+import nltk
+nltk.download('punkt')
 from langchain.embeddings.openai import OpenAIEmbeddings
 from dive.util.openAIAPIKey import set_openai_api_key
 from langchain import OpenAI
@@ -31,15 +33,14 @@ def index_example_data(chunk_size, chunk_overlap, embeddings):
     embedding_model.chunk_size = chunk_size
     embedding_model.chunk_overlap = chunk_overlap
     service_context = ServiceContext.from_defaults(embed_model=embedding_model)
-    index_context = IndexContext.from_documents(documents=_documents, ids=_ids, service_context=service_context,
+    IndexContext.from_documents(documents=_documents, ids=_ids, service_context=service_context,
                                                 embeddings=embeddings)
-    index_context.upsert()
+
 
 
 def query_example_data(chunk_size, llm):
     query_text = "What did the author do growing up?"
     query_context = QueryContext.from_documents()
-    print(query_context)
     data = query_context.query(query=query_text, k=chunk_size, filter={'connector_id': "example"})
     summary = query_context.summarization(documents=data,llm=llm)
     print('------------top K chunks -----------------')

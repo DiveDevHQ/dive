@@ -6,10 +6,10 @@ from dive.constants import DEFAULT_QUERY_CHUNK_SIZE
 from dive.util.power_method import degree_centrality_scores
 from sentence_transformers import SentenceTransformer, util
 import nltk
+nltk.download('punkt')
 import numpy as np
 from langchain.chains.summarize import load_summarize_chain
 from langchain.chains.llm import BaseLanguageModel
-from langchain.embeddings import HuggingFaceEmbeddings, SentenceTransformerEmbeddings
 
 
 @dataclass

@@ -21,8 +21,8 @@ class IndexContext:
     @classmethod
     def from_documents(
             cls,
-            documents: [Document] = None,
-            ids: [str] = None,
+            documents: [Document],
+            ids: [str],
             embeddings: Optional[Embeddings] = None,
             storage_context: Optional[StorageContext] = None,
             service_context: Optional[ServiceContext] = None,
@@ -35,43 +35,55 @@ class IndexContext:
             service_context = ServiceContext.from_defaults()
         if not embeddings:
             embeddings = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
-        return cls(storage_context=storage_context,
-                   service_context=service_context,
-                   documents=documents,
-                   ids=ids,
-                   embeddings=embeddings,
-                   **kwargs, )
 
-    def upsert(self):
+        return cls.upsert(storage_context=storage_context,
+                          service_context=service_context,
+                          documents=documents,
+                          ids=ids,
+                          embeddings=embeddings,
+                          **kwargs)
 
-        if not self.service_context.embed_model.chunking_type or self.service_context.embed_model.chunking_type == DEFAULT_CHUNKING_TYPE:
-            db = self.storage_context.vector_store.from_documents(documents=self.documents, ids=self.ids,
-                                                                  embedding=self.embeddings,
-                                                                  persist_directory=self.storage_context.persist_dir
-                                                                  )
+    @classmethod
+    def upsert(cls, documents: [Document],
+               ids: [str],
+               embeddings: Embeddings,
+               storage_context: StorageContext,
+               service_context: ServiceContext,
+               **kwargs: Any):
+
+
+        if not service_context.embed_model.chunking_type or service_context.embed_model.chunking_type == DEFAULT_CHUNKING_TYPE:
+            db = storage_context.vector_store.from_documents( documents=documents, ids=ids,
+                                                             embedding=embeddings,
+                                                             persist_directory=storage_context.persist_dir
+                                                             )
             db.persist()
         else:
             _tokenizer = lambda text: tiktoken.get_encoding("gpt2").encode(text, allowed_special={"<|endoftext|>"})
-            sentence_splitter_default = SentenceSplitter(chunk_size=self.service_context.embed_model.chunk_size,
-                                                         chunk_overlap=self.service_context.embed_model.chunk_overlap,
-                                                         tokenizer=self.service_context.embed_model.tokenizer or _tokenizer)
+            sentence_splitter_default = SentenceSplitter(chunk_size=service_context.embed_model.chunk_size,
+                                                         chunk_overlap=service_context.embed_model.chunk_overlap,
+                                                         tokenizer=service_context.embed_model.tokenizer or _tokenizer)
 
             _documents = []
             _ids = []
-            for i, document in enumerate(self.documents):
+            for i, document in enumerate(documents):
                 sentence_chunks = sentence_splitter_default.split_text(document.page_content)
                 for j, d in enumerate(sentence_chunks):
                     _document = Document(metadata=document.metadata,
                                          page_content=d)
                     _documents.append(_document)
-                    _ids.append(self.ids[i] + "_chunk_" + str(j))
+                    _ids.append(ids[i] + "_chunk_" + str(j))
 
-            db = self.storage_context.vector_store.from_documents(documents=_documents, ids=_ids,
-                                                                  persist_directory=self.storage_context.persist_dir,
-                                                                  embedding=self.embeddings)
+            db = storage_context.vector_store.from_documents(documents=_documents, ids=_ids,
+                                                             persist_directory=storage_context.persist_dir,
+                                                             embedding=embeddings)
             db.persist()
 
+            return cls(storage_context=storage_context,
+                       service_context=service_context,
+                       documents=documents,
+                       ids=ids,
+                       embeddings=embeddings,
+                       **kwargs, )
 
-    def delete(self, where: Dict):
-        result=self.storage_context.vector_store.get(where=where)
-        self.storage_context.vector_store.delete(ids=result['ids'])
+

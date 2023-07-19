@@ -54,8 +54,8 @@ class VectorStoreRetrieverAgent(Agent):
             embedding_model.chunk_size = chunk_size
             embedding_model.chunk_overlap = chunk_overlap
             service_context = ServiceContext.from_defaults(embed_model=embedding_model)
-            index_context = IndexContext.from_documents(documents=_documents, ids=_ids, service_context=service_context,embeddings=embedding_function)
-            index_context.upsert()
+            IndexContext.from_documents(documents=_documents, ids=_ids, service_context=service_context,embeddings=embedding_function)
+
 
 
 
