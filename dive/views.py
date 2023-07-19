@@ -456,7 +456,7 @@ def get_index_data(request):
     if not query:
         raise BadRequestException("Please include query_text in query parameter.")
 
-    query_context = QueryContext.from_documents()
+    query_context = QueryContext.from_defaults()
     k = None
     if chunk_size:
         k = int(chunk_size)

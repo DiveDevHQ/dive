@@ -3,7 +3,6 @@ from typing import Optional, List
 import chromadb
 from chromadb.config import Settings
 from dataclasses import dataclass
-from dive.constants import DEFAULT_COLLECTION_NAME
 from langchain.vectorstores.base import VectorStore
 from langchain.vectorstores import Chroma
 from langchain.embeddings import SentenceTransformerEmbeddings
@@ -21,12 +20,12 @@ class StorageContext:
         if not vector_store:
             client = chromadb.Client(
                 Settings(
-                    persist_directory=persist_dir or "db",
                     chroma_db_impl="duckdb+parquet",
+                    persist_directory=persist_dir or "db"
                 )
             )
             embedding_function = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
-            vector_store = Chroma(client=client,persist_directory=persist_dir or "db", embedding_function=embedding_function)
+            vector_store = Chroma(client=client, persist_directory=persist_dir or "db", embedding_function=embedding_function)
 
         return cls(
             vector_store=vector_store,

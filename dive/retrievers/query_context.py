@@ -17,7 +17,7 @@ class QueryContext:
     storage_context: StorageContext
 
     @classmethod
-    def from_documents(
+    def from_defaults(
             cls,
             storage_context: Optional[StorageContext] = None,
             **kwargs: Any,
