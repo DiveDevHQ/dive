@@ -13,6 +13,7 @@ from django.http import HttpResponse
 from dive.indices.service_context import ServiceContext
 from dive.retrievers.query_context import QueryContext
 from dive.indices.index_context import IndexContext
+from dive.indices.clear_context import ClearContext
 from dive.types import EmbeddingModel
 from langchain.schema import Document
 import json
@@ -381,8 +382,8 @@ def sync_instance_data(request, app, connector_id):
 @api_view(["PUT"])
 def clear_instance_data(request, app, connector_id):
     auth.clear_sync_status(connector_id)
-    index_context = IndexContext.from_documents(documents=[], ids=[])
-    index_context.delete({'connector_id': connector_id})
+    clear_context = ClearContext.from_defaults()
+    clear_context.delete_from(where={'connector_id': connector_id})
     return HttpResponse(status=204)
 
 
@@ -408,7 +409,6 @@ def index_data(module, connector_id, obj_type, schema, reload, chunking_type, ch
     embedding_model.chunk_overlap = chunk_overlap
     service_context = ServiceContext.from_defaults(embed_model=embedding_model)
     index_context = IndexContext.from_documents(documents=documents, ids=ids, service_context=service_context)
-    index_context.upsert()
 
 
 def load_data(module, token, integration, obj_type, schema, cursor, last_sync_at, metadata, documents, ids):

@@ -1,5 +1,3 @@
-from langchain.embeddings.openai import OpenAIEmbeddings
-from langchain.llms.openai import OpenAI
 from dive.constants import DEFAULT_CHUNK_OVERLAP, DEFAULT_CHUNK_SIZE, DEFAULT_CHUNKING_TYPE
 from pydantic import BaseModel
 from typing import Optional, List
