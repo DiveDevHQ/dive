@@ -23,6 +23,7 @@ class ClearContext:
     def delete_from(self, where: Dict):
 
         result = self.storage_context.vector_store.get(where=where)
+
         if len(result['ids']) > 0:
             self.storage_context.vector_store.delete(ids=result['ids'])
 
