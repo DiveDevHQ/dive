@@ -1,13 +1,14 @@
 from dive.indices.service_context import ServiceContext
 from dive.storages.storage_context import StorageContext
 from typing import Optional, Any, Dict
-from dive.constants import DEFAULT_CHUNKING_TYPE
+from dive.constants import DEFAULT_CHUNKING_TYPE, DEFAULT_COLLECTION_NAME
 from dive.util.text_splitter import SentenceSplitter
 from dataclasses import dataclass
 from langchain.schema import Document
 from langchain.embeddings import SentenceTransformerEmbeddings
 from langchain.embeddings.base import Embeddings
 from langchain.vectorstores import Chroma
+import chromadb
 import tiktoken
 
 
@@ -37,13 +38,13 @@ class IndexContext:
             embeddings = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
 
         return cls.upsert(
-                          documents=documents,
-                          ids=ids,
-                          embeddings=embeddings,
-                          service_context=service_context,
-                          storage_context=storage_context,
-                          persist_dir=persist_dir,
-                          **kwargs)
+            documents=documents,
+            ids=ids,
+            embeddings=embeddings,
+            service_context=service_context,
+            storage_context=storage_context,
+            persist_dir=persist_dir,
+            **kwargs)
 
     @classmethod
     def upsert(cls, documents: [Document],
@@ -53,18 +54,11 @@ class IndexContext:
                storage_context: Optional[StorageContext] = None,
                persist_dir: Optional[str] = None,
                **kwargs: Any):
-
+        _documents = []
+        _ids = []
         if not service_context.embed_model.chunking_type or service_context.embed_model.chunking_type == DEFAULT_CHUNKING_TYPE:
-            if storage_context is None:
-                print(documents)
-                db = Chroma.from_documents(documents=documents, ids=ids,
-                                           persist_directory=persist_dir or "db",
-                                           embedding=embeddings
-                                           )
-                db.persist()
-            else:
-                storage_context.vector_store.from_documents(documents=documents, ids=ids,
-                                                            embedding=embeddings)
+            _documents = documents
+            _ids = ids
         else:
             _tokenizer = lambda text: tiktoken.get_encoding("gpt2").encode(text, allowed_special={"<|endoftext|>"})
             sentence_splitter_default = SentenceSplitter(chunk_size=service_context.embed_model.chunk_size,
@@ -81,17 +75,27 @@ class IndexContext:
                     _documents.append(_document)
                     _ids.append(ids[i] + "_chunk_" + str(j))
 
-            if storage_context is None:
-                db = Chroma.from_documents(documents=_documents, ids=_ids,
-                                           persist_directory=persist_dir or "db",
-                                           embedding=embeddings)
-                db.persist()
-            else:
-                storage_context.vector_store.from_documents(documents=documents, ids=ids,
-                                                            embedding=embeddings)
-            return cls(storage_context=storage_context,
-                       service_context=service_context,
-                       documents=documents,
-                       ids=ids,
-                       embeddings=embeddings,
-                       **kwargs, )
+        if storage_context is None:
+            client_settings = chromadb.config.Settings(
+                chroma_db_impl="duckdb+parquet",
+                persist_directory=persist_dir or "db"
+            )
+            client = chromadb.Client(
+                client_settings
+            )
+            client.get_or_create_collection(DEFAULT_COLLECTION_NAME)
+            db = Chroma.from_documents(client=client, client_settings=client_settings,
+                                       collection_name=DEFAULT_COLLECTION_NAME,
+                                       documents=_documents, ids=_ids,
+                                       persist_directory=persist_dir or "db",
+                                       embedding=embeddings)
+            db.persist()
+        else:
+            storage_context.vector_store.from_documents(documents=_documents, ids=_ids,
+                                                        embedding=embeddings)
+        return cls(storage_context=storage_context,
+                   service_context=service_context,
+                   documents=documents,
+                   ids=ids,
+                   embeddings=embeddings,
+                   **kwargs, )

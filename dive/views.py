@@ -468,7 +468,7 @@ def get_index_data(request):
     except ValueError:
         error_data = {'error': {}}
         error_data['error']['id'] = 'Not Found'
-        error_data['error']['message'] = 'aaaRequested vector data does not exist'
+        error_data['error']['message'] = 'Requested vector data does not exist'
         error_data['error']['status_code'] = 404
         return JsonResponse(error_data, safe=False)
 
