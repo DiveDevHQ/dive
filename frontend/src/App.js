@@ -170,6 +170,10 @@ function App() {
 
   }
 
+  function refreshApps(){
+    loadApps();
+  }
+
   function queryDocuments() {
     setError('');
     if (!selectAccountId && !selectConnectorId) {
@@ -205,7 +209,9 @@ function App() {
         setQueryResult(error.response.data);
       }
 
-    });;
+    });
+
+
   }
 
   return (
@@ -249,6 +255,7 @@ function App() {
 
         {page && page === 1 && (
           <div><h2>Your Apps</h2>
+          <button type="button" className="btn btn-grey fr" onClick={() => refreshApps()} >Refresh</button>
             {
               apps && apps.length > 0 && (
                 <table className="table table-striped">

@@ -1,6 +1,7 @@
 from io import BytesIO
 import pypdf
 import requests
+import docx2txt
 from abc import abstractmethod
 from typing import Callable, Dict, Generator, List, Optional, Type, Any
 
@@ -11,11 +12,13 @@ class BaseReader:
     @abstractmethod
     def load_data(self, *args: Any, **load_kwargs: Any) -> List[Any]:
         """Load data from the input directory."""
-
+    @abstractmethod
+    def load_data_from_url(self, *args: Any, **load_kwargs: Any) -> List[Any]:
+        """Load data from the input directory."""
 
 class PDFReader(BaseReader):
     """PDF parser."""
-    def load_data(
+    def load_data_from_url(
             self, doc_id, file_name, file_url, extra_info
     ):
         r = requests.get(file_url)
@@ -36,7 +39,7 @@ class PDFReader(BaseReader):
 
 class TxtReader(BaseReader):
     """Txt parser."""
-    def load_data(
+    def load_data_from_url(
             self, doc_id, file_name, file_url, extra_info
     ):
         r = requests.get(file_url)
@@ -46,4 +49,24 @@ class TxtReader(BaseReader):
             if extra_info is not None:
                 metadata.update(extra_info)
             docs.append({'id': f"{str(doc_id)}", 'data': r.text, 'metadata': metadata})
+        return docs
+
+
+
+class DocxReader(BaseReader):
+    """Docx parser."""
+
+    def load_data_from_url(
+            self, doc_id, file_name, file_url, extra_info
+    ):
+        """Parse file."""
+        r = requests.get(file_url)
+        docs = []
+        with BytesIO(r.content) as data:
+
+            text = docx2txt.process(data)
+            metadata = {"file_name": file_name}
+            if extra_info is not None:
+                metadata.update(extra_info)
+            docs.append({'id': f"{str(doc_id)}", 'data': text, 'metadata': metadata})
         return docs

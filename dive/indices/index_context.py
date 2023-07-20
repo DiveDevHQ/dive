@@ -93,6 +93,7 @@ class IndexContext:
         else:
             storage_context.vector_store.from_documents(documents=_documents, ids=_ids,
                                                         embedding=embeddings)
+
         return cls(storage_context=storage_context,
                    service_context=service_context,
                    documents=documents,

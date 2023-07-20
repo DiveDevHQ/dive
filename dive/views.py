@@ -394,42 +394,43 @@ def index_data(module, connector_id, obj_type, schema, reload, chunking_type, ch
     if not reload:
         obj_last_sync_at = auth.get_last_sync_at(connector_id, obj_type)
 
-    auth.update_last_sync(connector_id, obj_type)
-    documents = []
-    ids = []
+    auth.update_last_sync(connector_id, obj_type,False)
+
     metadata = {'account_id': integration.account_id, 'connector_id': connector_id,
                 'obj_type': obj_type}
-    load_data(module, token, integration, obj_type, schema, None, obj_last_sync_at, metadata, documents, ids)
-
     embedding_model = EmbeddingModel()
     embedding_model.chunking_type = chunking_type
     embedding_model.chunk_size = chunk_size
     embedding_model.chunk_overlap = chunk_overlap
     service_context = ServiceContext.from_defaults(embed_model=embedding_model)
-    IndexContext.from_documents(documents=documents, ids=ids, service_context=service_context)
+    load_data(module, token, integration, obj_type, schema, None, obj_last_sync_at, metadata, service_context)
+    auth.update_last_sync(connector_id, obj_type,True)
 
 
-def load_data(module, token, integration, obj_type, schema, cursor, last_sync_at, metadata, documents, ids):
+def load_data(module, token, integration, obj_type, schema, cursor, last_sync_at, metadata, service_context):
     package_name = "integrations.connectors." + integration.name + "." + module + ".request_data"
     mod = importlib.import_module(package_name)
     data = mod.load_objects(token, integration, obj_type, last_sync_at, cursor, schema)
     if 'error' in data:
         if data['error']['status_code'] == 429:
             sleep(15)
-            load_data(module, token, integration, obj_type, schema, cursor, last_sync_at, metadata, documents, ids)
+            load_data(module, token, integration, obj_type, schema, cursor, last_sync_at, metadata, service_context)
     else:
         if len(data['results']) == 0:
             return
+        _documents = []
+        _ids = []
         for d in data['results']:
             _metadata = metadata
             if 'metadata' in d:
                 _metadata.update(d['metadata'])
             document = Document(page_content=str(d['data']), metadata=_metadata)
-            documents.append(document)
-            ids.append(d['id'])
+            _documents.append(document)
+            _ids.append(d['id'])
+        IndexContext.from_documents(documents=_documents, ids=_ids, service_context=service_context)
         if 'next_cursor' in data:
             cursor = data['next_cursor']
-            load_data(module, token, integration, obj_type, schema, cursor, last_sync_at, metadata, documents, ids)
+            load_data(module, token, integration, obj_type, schema, cursor, last_sync_at, metadata, service_context)
 
 
 @api_view(["GET"])
@@ -471,7 +472,7 @@ def get_index_data(request):
         error_data['error']['message'] = 'Requested vector data does not exist'
         error_data['error']['status_code'] = 404
         return JsonResponse(error_data, safe=False)
-
+   
     summary_text = ''
     if len(data) > 0:
         summary_text = query_context.summarization(documents=data)

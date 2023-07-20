@@ -1,5 +1,6 @@
 from django.apps import AppConfig
 from pathlib import Path
+
 import yaml
 
 class IntegrationsConfig(AppConfig):
@@ -9,4 +10,6 @@ class IntegrationsConfig(AppConfig):
     config_path = (base_path / "config.yaml").resolve()
     with open(config_path) as f:
         integration_config = yaml.safe_load(f)
+
+
 

@@ -1,0 +1,12 @@
+{
+  "owner_id": "hubspot_owner_id",
+  "from_email": "hs_email_sender_email",
+  "from_name": "${reference.hs_email_sender_firstname} ${reference.hs_email_sender_lastname}",
+  "subject": "hs_email_subject",
+  "text": "hs_email_text",
+  "to_email": "hs_email_to_email",
+  "to_name": "${reference.hs_email_to_firstname} ${reference.hs_email_to_lastname}",
+  "contact_ids": [],
+  "created_at": "hs_timestamp",
+  "updated_at": "hs_lastmodifieddate"
+}

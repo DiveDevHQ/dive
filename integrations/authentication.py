@@ -127,13 +127,13 @@ def get_last_sync_at(connector_id, obj_type):
         if integration.sync_status:
             sync_status = json.loads(integration.sync_status)
             if 'obj_status' in sync_status and obj_type in sync_status['obj_status']:
-                return sync_status['obj_status'][obj_type].get('sync_at',None)
+                return sync_status['obj_status'][obj_type].get('sync_at', None)
     except Integration.DoesNotExist:
         return
     return
 
 
-def update_last_sync(connector_id, obj_type):
+def update_last_sync(connector_id, obj_type, completed):
     try:
         integration = Integration.objects.get(connector_id=connector_id, enabled=True)
         sync_status = {'obj_status': {}}
@@ -144,10 +144,10 @@ def update_last_sync(connector_id, obj_type):
             if 'obj_status' not in integration.sync_status:
                 sync_status['obj_status'] = {}
 
-        if obj_type in sync_status['obj_status']:
-            sync_status['obj_status'][obj_type] = {'sync_at': get_now_iso_format()}
+        if not completed:
+            sync_status['obj_status'][obj_type] = {'sync_at': get_now_iso_format(), 'sync_status': 'in progress'}
         else:
-            sync_status['obj_status'][obj_type] = {'sync_at': get_now_iso_format()}
+            sync_status['obj_status'][obj_type]['sync_status'] = {'sync_status': 'completed'}
         integration.sync_status = json.dumps(sync_status)
         integration.save()
     except Integration.DoesNotExist:

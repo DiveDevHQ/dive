@@ -30,6 +30,8 @@ def get_object_by_id(auth, app, obj_type, obj_id, include_field_properties, cust
             return get_stage_by_id(auth, obj_id, obj_type, field_dict, include_field_properties)
         case 'users':
             return get_owner_by_id(auth, obj_id, obj_type, field_dict, include_field_properties)
+        case 'notes':
+            return get_note_by_id(auth, obj_id, obj_type, field_dict, custom_fields, include_field_properties)
         case _:
             return
 
@@ -62,6 +64,9 @@ def get_objects(auth, app, obj_type, include_field_properties, custom_fields, ob
             case 'users':
                 return get_owners(auth, obj_ids, obj_type, field_dict, include_field_properties,
                                   None, None, None, None)
+            case 'notes':
+                return get_notes_by_ids(auth, obj_ids, obj_type, field_dict, custom_fields, include_field_properties)
+
             case _:
                 return
     else:
@@ -95,6 +100,16 @@ def get_objects(auth, app, obj_type, include_field_properties, custom_fields, ob
             case 'users':
                 return get_owners(auth, [], obj_type, field_dict, include_field_properties,
                                   created_before, created_after, modified_before, modified_after)
+            case 'notes':
+                return get_notes_by_filter(auth, obj_type, field_dict, custom_fields, include_field_properties,
+                                           owner_id,
+                                           created_before, created_after, modified_before, modified_after,
+                                           page_size, cursor)
+            case 'emails':
+                return get_emails_by_filter(auth, obj_type, field_dict, custom_fields, include_field_properties,
+                                            owner_id,
+                                            created_before, created_after, modified_before, modified_after,
+                                            page_size, cursor)
             case _:
                 return
 
@@ -392,7 +407,6 @@ def get_contacts_by_filter(auth, obj_type, fields, custom_fields, include_field_
         limit = '100'
     data = query_objects_by_filter(auth, url, properties, fields, custom_fields, filters, limit, cursor)
     contacts = data['results']
-
     url_properties = "https://api.hubapi.com/properties/v1/contacts/properties"
     properties_details = get_properties(auth, url_properties)
     datetime_fields = []
@@ -447,7 +461,6 @@ def get_companies_by_filter(auth, obj_type, fields, custom_fields, include_field
         limit = '100'
     data = query_objects_by_filter(auth, url, properties, fields, custom_fields, filters, limit, cursor)
     companies = data['results']
-
     url_properties = "https://api.hubapi.com/properties/v1/contacts/properties"
     properties_details = get_properties(auth, url_properties)
     datetime_fields = []
@@ -777,7 +790,6 @@ def convert_iso_date_to_timestamp(ios_date):
 
 def query_object_by_id(auth, url, common_model, custom_model):
     result = ru.get_request_with_bearer(url, auth)
-
     result_dict = {}
     if result.success:
         result_dict['data'] = get_result_from_model(result.json_body['properties'], common_model, custom_model)
@@ -1077,8 +1089,8 @@ def get_owners(auth, obj_ids, obj_type, fields, include_field_properties,
                created_before, created_after, modified_before, modified_after):
     url = 'https://api.hubapi.com/owners/v2/owners'
     result = ru.get_request_with_bearer(url, auth)
-    data = {'results': []}
 
+    data = {'results': []}
     if result.success:
         owners = result.json_body
         if obj_ids and len(obj_ids) > 0:
@@ -1208,7 +1220,6 @@ def get_deals_by_filter(auth, obj_type, fields, custom_fields, include_field_pro
         limit = '100'
     data = query_objects_by_filter(auth, url, properties, fields, custom_fields, filters, limit, cursor)
     deals = data['results']
-
     association_url = "https://api.hubapi.com/crm/v3/associations/deal/company/batch/read"
     associations = query_associations_by_ids_batch(auth, association_url, list([d['id'] for d in deals]))
 
@@ -1247,6 +1258,61 @@ def get_deals_by_filter(auth, obj_type, fields, custom_fields, include_field_pro
     return result
 
 
+def get_emails_by_filter(auth, obj_type, fields, custom_fields, include_field_properties, owner_id, created_before,
+                         created_after, modified_before, modified_after, limit, cursor):
+    url = "https://api.hubapi.com/crm/v3/objects/emails/search"
+    properties = get_properties_from_model(fields, custom_fields)
+
+    filters = []
+    if owner_id:
+        f = {'filter_field': 'hubspot_owner_id', 'filter_operator': 'EQ', 'filter_value': owner_id}
+        filters.append(f)
+    elif created_before:
+        f = {'filter_field': 'createdate', 'filter_operator': 'LT', 'filter_value': int(created_before)}
+        filters.append(f)
+    elif created_after:
+        f = {'filter_field': 'createdate', 'filter_operator': 'GTE', 'filter_value': int(created_after)}
+        filters.append(f)
+    elif modified_before:
+        f = {'filter_field': 'hs_lastmodifieddate', 'filter_operator': 'LT',
+             'filter_value': int(modified_before)}
+        filters.append(f)
+    elif modified_after:
+        f = {'filter_field': 'hs_lastmodifieddate', 'filter_operator': 'GTE',
+             'filter_value': int(modified_after)}
+        filters.append(f)
+    if not limit:
+        limit = '100'
+    data = query_objects_by_filter(auth, url, properties, fields, custom_fields, filters, limit, cursor)
+    emails = data['results']
+    association_url = "https://api.hubapi.com/crm/v3/associations/email/contact/batch/read"
+    associations = query_associations_by_ids_batch(auth, association_url, list([d['id'] for d in emails]))
+
+    for email in emails:
+        try:
+            m = next(i for i in associations['results'] if
+                     str(i['id']) == str(email['id']))
+            if len(m['associated_ids']) > 0:
+                email['data']['contact_ids'] = m['associated_ids']
+        except StopIteration:
+            email['data']['contact_ids'] = []
+
+        if 'data' in email:
+            datetime_fields = ['created_at', 'updated_at']
+        for df in datetime_fields:
+            email['data'][df] = get_normalized_datetime(email['data'].get(df, None))
+
+        if email['data'].get('text', None):
+            email['data']['text'] = util.html_to_txt(email['data']['text'])
+
+    result = {'results': emails}
+    if 'error' in data:
+        result['error'] = data['error']
+    if 'next_cursor' in data:
+        result['next_cursor'] = data['next_cursor']
+    return result
+
+
 def get_notes_by_filter(auth, obj_type, fields, custom_fields, include_field_properties, owner_id, created_before,
                         created_after, modified_before, modified_after, limit, cursor):
     url = "https://api.hubapi.com/crm/v3/objects/notes/search"
@@ -1274,12 +1340,165 @@ def get_notes_by_filter(auth, obj_type, fields, custom_fields, include_field_pro
         limit = '100'
     data = query_objects_by_filter(auth, url, properties, fields, custom_fields, filters, limit, cursor)
     notes = data['results']
+    note_ids = list([d['id'] for d in notes])
+    association_url_companies = "https://api.hubapi.com/crm/v3/associations/note/company/batch/read"
+    associations_companies = query_associations_by_ids_batch(auth, association_url_companies, note_ids)
+
+    association_url_contacts = "https://api.hubapi.com/crm/v3/associations/note/contact/batch/read"
+    associations_contacts = query_associations_by_ids_batch(auth, association_url_contacts, note_ids)
+
+    association_url_deals = "https://api.hubapi.com/crm/v3/associations/note/deal/batch/read"
+    associations_deals = query_associations_by_ids_batch(auth, association_url_deals, note_ids)
+
+    for note in notes:
+        try:
+            m = next(i for i in associations_companies['results'] if
+                     str(i['id']) == str(note['id']))
+            if len(m['associated_ids']) > 0:
+                note['data']['account_id'] = m['associated_ids'][0]
+        except StopIteration:
+            note['data']['account_id'] = None
+        try:
+            m = next(i for i in associations_contacts['results'] if
+                     str(i['id']) == str(note['id']))
+            if len(m['associated_ids']) > 0:
+                note['data']['contact_id'] = m['associated_ids'][0]
+        except StopIteration:
+            note['data']['contact_id'] = None
+        try:
+            m = next(i for i in associations_deals['results'] if
+                     str(i['id']) == str(note['id']))
+            if len(m['associated_ids']) > 0:
+                note['data']['opportunity_id'] = m['associated_ids'][0]
+        except StopIteration:
+            note['data']['opportunity_id'] = None
+
+        if 'data' in note:
+            datetime_fields = ['created_at', 'updated_at']
+        for df in datetime_fields:
+            note['data'][df] = get_normalized_datetime(note['data'].get(df, None))
+
+        if note['data'].get('note', None):
+            note['data']['note'] = util.html_to_txt(note['data']['note'])
 
     result = {'results': notes}
     if 'error' in data:
         result['error'] = data['error']
     if 'next_cursor' in data:
         result['next_cursor'] = data['next_cursor']
+    return result
+
+
+def get_notes_by_ids(auth, object_ids: [], obj_type, fields, custom_fields, include_field_properties):
+    url = "https://api.hubapi.com/crm/v3/objects/notes/batch/read"
+    properties = get_properties_from_model(fields, custom_fields)
+    data = query_objects_by_ids_batch(auth, url, object_ids, properties, fields, custom_fields)
+    notes = data['results']
+
+    note_ids = list([d['id'] for d in notes])
+    association_url_companies = "https://api.hubapi.com/crm/v3/associations/note/company/batch/read"
+    associations_companies = query_associations_by_ids_batch(auth, association_url_companies, note_ids)
+
+    association_url_contacts = "https://api.hubapi.com/crm/v3/associations/note/contact/batch/read"
+    associations_contacts = query_associations_by_ids_batch(auth, association_url_contacts, note_ids)
+
+    association_url_deals = "https://api.hubapi.com/crm/v3/associations/note/deal/batch/read"
+    associations_deals = query_associations_by_ids_batch(auth, association_url_deals, note_ids)
+
+    for note in notes:
+        try:
+            m = next(i for i in associations_companies['results'] if
+                     str(i['id']) == str(note['id']))
+            if len(m['associated_ids']) > 0:
+                note['data']['account_id'] = m['associated_ids'][0]
+        except StopIteration:
+            note['data']['account_id'] = None
+        try:
+            m = next(i for i in associations_contacts['results'] if
+                     str(i['id']) == str(note['id']))
+            if len(m['associated_ids']) > 0:
+                note['data']['contact_id'] = m['associated_ids'][0]
+        except StopIteration:
+            note['data']['contact_id'] = None
+        try:
+            m = next(i for i in associations_deals['results'] if
+                     str(i['id']) == str(note['id']))
+            if len(m['associated_ids']) > 0:
+                note['data']['opportunity_id'] = m['associated_ids'][0]
+        except StopIteration:
+            note['data']['opportunity_id'] = None
+
+        if 'data' in note:
+            datetime_fields = ['created_at', 'updated_at']
+        for df in datetime_fields:
+            note['data'][df] = get_normalized_datetime(note['data'].get(df, None))
+
+        if note['data'].get('note', None):
+            note['data']['note'] = util.html_to_txt(note['data']['note'])
+
+    if 'error' in data:
+        return {'results': notes, 'error': data['error']}
+    else:
+        return {'results': notes}
+
+
+def get_note_by_id(auth, obj_id, obj_type, fields, custom_fields, include_field_properties):
+    url = "https://api.hubapi.com/crm/v3/objects/notes/" + str(obj_id)
+    url_params = ''
+    properties = get_properties_from_model(fields, custom_fields)
+    for p in properties:
+        url_params += "&properties=" + p
+    url += '?' + url_params
+    note = query_object_by_id(auth, url, fields, custom_fields)
+    result = {'id': obj_id}
+
+    if 'data' in note:
+        datetime_fields = ['created_at', 'updated_at']
+        for df in datetime_fields:
+            note['data'][df] = get_normalized_datetime(note['data'].get(df, None))
+
+    if note['data'].get('note', None):
+        note['data']['note'] = util.html_to_txt(note['data']['note'])
+
+    elif 'error' in note:
+        result['error'] = note['error']
+        return result
+
+    note_ids = [obj_id]
+    association_url_companies = "https://api.hubapi.com/crm/v3/associations/note/company/batch/read"
+    associations_companies = query_associations_by_ids_batch(auth, association_url_companies, note_ids)
+
+    association_url_contacts = "https://api.hubapi.com/crm/v3/associations/note/contact/batch/read"
+    associations_contacts = query_associations_by_ids_batch(auth, association_url_contacts, note_ids)
+
+    association_url_deals = "https://api.hubapi.com/crm/v3/associations/note/deal/batch/read"
+    associations_deals = query_associations_by_ids_batch(auth, association_url_deals, note_ids)
+
+    try:
+        m = next(i for i in associations_companies['results'] if
+                 str(i['id']) == str(obj_id))
+        if len(m['associated_ids']) > 0:
+            note['data']['account_id'] = m['associated_ids'][0]
+    except StopIteration:
+        note['data']['account_id'] = None
+    try:
+        m = next(i for i in associations_contacts['results'] if
+                 str(i['id']) == str(obj_id))
+        if len(m['associated_ids']) > 0:
+            note['data']['contact_id'] = m['associated_ids'][0]
+    except StopIteration:
+        note['data']['contact_id'] = None
+    try:
+        m = next(i for i in associations_deals['results'] if
+                 str(i['id']) == str(obj_id))
+        if len(m['associated_ids']) > 0:
+            note['data']['opportunity_id'] = m['associated_ids'][0]
+    except StopIteration:
+        note['data']['opportunity_id'] = None
+
+    if 'data' in note:
+        result['data'] = note['data']
+
     return result
 
 

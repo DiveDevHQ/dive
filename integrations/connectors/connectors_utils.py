@@ -6,7 +6,9 @@ from typing import Dict, Type
 from integrations.connectors.files_reader import BaseReader
 from integrations.connectors.files_reader import PDFReader
 from integrations.connectors.files_reader import TxtReader
-
+from integrations.connectors.files_reader import DocxReader
+from io import StringIO
+from html.parser import HTMLParser
 
 def get_params_value(text, data):
     variables = re.findall(r'\{(.*?)\}', text)
@@ -20,16 +22,16 @@ def get_params_value(text, data):
                 text = text.replace('${constant.' + parts[1] + '}', parts[1])
             elif params_type == 'reference' and data:
                 if len(parts) == 2 and parts[1] in data:
-                    text = text.replace('${reference.' + parts[1] + '}', str(data[parts[1]]))
+                    text = text.replace('${reference.' + parts[1] + '}', str(data[parts[1]] or ""))
                 elif len(parts) == 3 and data.get(parts[1], None) and data[parts[1]].get(parts[2], None):
                     text = text.replace('${reference.' + parts[1] + '.' + parts[2] + '}',
-                                        data[parts[1]][parts[2]])
+                                        data[parts[1]][parts[2]] or "")
                 else:
                     text = None
             elif params_type == 'formula' and data:
                 has_formula = True
                 if len(parts) == 2 and parts[1] in data:
-                    text = text.replace('${formula.' + parts[1] + '}', str(data[parts[1]]))
+                    text = text.replace('${formula.' + parts[1] + '}', str(data[parts[1]] or ""))
     if has_formula:
         text = get_value_from_formula(text)
     return params_type, text
@@ -42,6 +44,8 @@ def get_value_from_formula(text):
         formula_text = formula_start[formula_start.find("(") + 1:-1]
         eval_text = formula_text[:formula_text.find(',')]
         result_text = formula_text[formula_text.find(',') + 1:]
+        if not eval_text:
+            return ""
         if 'IF' in result_text:
             ifs = re.findall('IF\(([^)]+)\)', result_text)
             if len(ifs) == 2:
@@ -103,7 +107,8 @@ def get_params_keys(text):
 
 DEFAULT_FILE_READER_CLS: Dict[str, Type[BaseReader]] = {
     "pdf": PDFReader,
-    "txt": TxtReader
+    "txt": TxtReader,
+    "docx": DocxReader
 }
 
 
@@ -112,5 +117,27 @@ def load_file_from_url(doc_id, file_name, file_url, mime_type, extra_info):
     docs = []
     if mime_type in supported_suffix:
         reader = DEFAULT_FILE_READER_CLS[mime_type]()
-        docs = reader.load_data(doc_id, file_name, file_url, extra_info)
+        docs = reader.load_data_from_url(doc_id, file_name, file_url, extra_info)
     return docs
+
+
+def html_to_txt(html):
+    s = MLStripper()
+    s.feed(html)
+    return s.get_data()
+
+
+class MLStripper(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.reset()
+        self.strict = False
+        self.convert_charrefs= True
+        self.text = StringIO()
+    def handle_data(self, d):
+        self.text.write(d)
+    def get_data(self):
+        return self.text.getvalue()
+
+
+
