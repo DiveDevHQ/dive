@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from langchain.vectorstores.base import VectorStore
 from langchain.vectorstores import Chroma
 from langchain.embeddings import SentenceTransformerEmbeddings
+from dive.constants import DEFAULT_COLLECTION_NAME
 
 
 @dataclass
@@ -25,8 +26,9 @@ class StorageContext:
             client = chromadb.Client(
                 client_settings
             )
+            client.get_or_create_collection(DEFAULT_COLLECTION_NAME)
             embedding_function = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
-            vector_store = Chroma(client=client,client_settings=client_settings, persist_directory=persist_dir or "db", embedding_function=embedding_function)
+            vector_store = Chroma(client=client,client_settings=client_settings, collection_name=DEFAULT_COLLECTION_NAME, persist_directory=persist_dir or "db", embedding_function=embedding_function)
 
         return cls(
             vector_store=vector_store,
