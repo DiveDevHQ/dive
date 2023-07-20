@@ -1,0 +1,9 @@
+{
+  "note": "hs_note_body",
+  "owner_id": "hubspot_owner_id",
+  "account_id": "",
+  "contact_id": "",
+  "opportunity_id": "",
+  "created_at": "hs_timestamp",
+  "updated_at": "hs_lastmodifieddate"
+}
