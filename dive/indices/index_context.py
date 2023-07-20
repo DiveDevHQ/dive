@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from langchain.schema import Document
 from langchain.embeddings import SentenceTransformerEmbeddings
 from langchain.embeddings.base import Embeddings
+from langchain.vectorstores import Chroma
 import tiktoken
 
 
@@ -24,40 +25,46 @@ class IndexContext:
             documents: [Document],
             ids: [str],
             embeddings: Optional[Embeddings] = None,
-            storage_context: Optional[StorageContext] = None,
             service_context: Optional[ServiceContext] = None,
+            storage_context: Optional[StorageContext] = None,
+            persist_dir: Optional[str] = None,
             **kwargs: Any,
     ):
 
-        if not storage_context:
-            storage_context = StorageContext.from_defaults()
         if not service_context:
             service_context = ServiceContext.from_defaults()
         if not embeddings:
             embeddings = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
 
-        return cls.upsert(storage_context=storage_context,
-                          service_context=service_context,
+        return cls.upsert(
                           documents=documents,
                           ids=ids,
                           embeddings=embeddings,
+                          service_context=service_context,
+                          storage_context=storage_context,
+                          persist_dir=persist_dir,
                           **kwargs)
 
     @classmethod
     def upsert(cls, documents: [Document],
                ids: [str],
                embeddings: Embeddings,
-               storage_context: StorageContext,
                service_context: ServiceContext,
+               storage_context: Optional[StorageContext] = None,
+               persist_dir: Optional[str] = None,
                **kwargs: Any):
 
-
         if not service_context.embed_model.chunking_type or service_context.embed_model.chunking_type == DEFAULT_CHUNKING_TYPE:
-            db = storage_context.vector_store.from_documents( documents=documents, ids=ids,
-                                                             embedding=embeddings,
-                                                             persist_directory=storage_context.persist_dir
-                                                             )
-            db.persist()
+            if storage_context is None:
+                print(documents)
+                db = Chroma.from_documents(documents=documents, ids=ids,
+                                           persist_directory=persist_dir or "db",
+                                           embedding=embeddings
+                                           )
+                db.persist()
+            else:
+                storage_context.vector_store.from_documents(documents=documents, ids=ids,
+                                                            embedding=embeddings)
         else:
             _tokenizer = lambda text: tiktoken.get_encoding("gpt2").encode(text, allowed_special={"<|endoftext|>"})
             sentence_splitter_default = SentenceSplitter(chunk_size=service_context.embed_model.chunk_size,
@@ -74,16 +81,17 @@ class IndexContext:
                     _documents.append(_document)
                     _ids.append(ids[i] + "_chunk_" + str(j))
 
-            db = storage_context.vector_store.from_documents(documents=_documents, ids=_ids,
-                                                             persist_directory=storage_context.persist_dir,
-                                                             embedding=embeddings)
-            db.persist()
-
+            if storage_context is None:
+                db = Chroma.from_documents(documents=_documents, ids=_ids,
+                                           persist_directory=persist_dir or "db",
+                                           embedding=embeddings)
+                db.persist()
+            else:
+                storage_context.vector_store.from_documents(documents=documents, ids=ids,
+                                                            embedding=embeddings)
             return cls(storage_context=storage_context,
                        service_context=service_context,
                        documents=documents,
                        ids=ids,
                        embeddings=embeddings,
                        **kwargs, )
-
-

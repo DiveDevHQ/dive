@@ -400,15 +400,13 @@ def index_data(module, connector_id, obj_type, schema, reload, chunking_type, ch
     metadata = {'account_id': integration.account_id, 'connector_id': connector_id,
                 'obj_type': obj_type}
     load_data(module, token, integration, obj_type, schema, None, obj_last_sync_at, metadata, documents, ids)
-    for document in documents:
-        document.metadata.update(metadata)
 
     embedding_model = EmbeddingModel()
     embedding_model.chunking_type = chunking_type
     embedding_model.chunk_size = chunk_size
     embedding_model.chunk_overlap = chunk_overlap
     service_context = ServiceContext.from_defaults(embed_model=embedding_model)
-    index_context = IndexContext.from_documents(documents=documents, ids=ids, service_context=service_context)
+    IndexContext.from_documents(documents=documents, ids=ids, service_context=service_context)
 
 
 def load_data(module, token, integration, obj_type, schema, cursor, last_sync_at, metadata, documents, ids):
@@ -465,17 +463,18 @@ def get_index_data(request):
         where = {'connector_id': connector_id}
     elif account_id:
         where = {'account_id': account_id}
-
-    data = query_context.query(query=query, k=k, filter=where)
-
-    if not data:
+    try:
+        data = query_context.query(query=query, k=k, filter=where)
+    except ValueError:
         error_data = {'error': {}}
         error_data['error']['id'] = 'Not Found'
-        error_data['error']['message'] = 'Requested vector data does not exist'
+        error_data['error']['message'] = 'aaaRequested vector data does not exist'
         error_data['error']['status_code'] = 404
         return JsonResponse(error_data, safe=False)
 
-    summary_text = query_context.summarization(documents=data)
+    summary_text = ''
+    if len(data) > 0:
+        summary_text = query_context.summarization(documents=data)
 
     return JsonResponse({'summary': summary_text}, safe=False)
 

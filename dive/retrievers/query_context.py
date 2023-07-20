@@ -30,7 +30,14 @@ class QueryContext:
 
     def query(self, query: str, k: int = DEFAULT_QUERY_CHUNK_SIZE, filter: Optional[Dict[str, str]] = None) -> List[
         Document]:
-        return self.storage_context.vector_store.similarity_search(query=query, k=k, filter=filter)
+
+        try:
+            return self.storage_context.vector_store.similarity_search(query=query, k=k, filter=filter)
+        except KeyError:
+            raise ValueError(
+                "Could not find the index"
+            )
+
 
     def summarization(self, documents: [Document], llm: Optional[BaseLanguageModel] = None) -> str:
         chunks_text = ''
