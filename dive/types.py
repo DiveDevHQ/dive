@@ -8,6 +8,7 @@ class EmbeddingModel(BaseModel):
     chunk_size: int = DEFAULT_CHUNK_SIZE
     chunk_overlap: int = DEFAULT_CHUNK_OVERLAP
     tokenizer: Any
+    summarize: bool=False
 
 
 
