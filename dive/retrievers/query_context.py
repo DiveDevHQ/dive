@@ -4,18 +4,15 @@ from typing import Optional, List, Any, Dict
 from dataclasses import dataclass
 from langchain.schema import Document
 from dive.constants import DEFAULT_QUERY_CHUNK_SIZE
-from dive.util.power_method import degree_centrality_scores
-from sentence_transformers import SentenceTransformer, util
-import nltk
-nltk.download('punkt')
-import numpy as np
+from dive.util.power_method import sentence_transformer_summarize
 from langchain.chains.summarize import load_summarize_chain
-from langchain.embeddings.base import Embeddings
+from langchain import PromptTemplate
+
 
 @dataclass
 class QueryContext:
     storage_context: StorageContext
-    service_context:ServiceContext
+    service_context: ServiceContext
 
     @classmethod
     def from_defaults(
@@ -45,25 +42,24 @@ class QueryContext:
                 "Could not find the index"
             )
 
-
     def summarization(self, documents: [Document]) -> str:
         chunks_text = ''
         for d in documents:
             chunks_text += d.page_content + '\n'
 
-        if not self.service_context.llm:
-            model = SentenceTransformer('all-MiniLM-L6-v2')
-            sentences = nltk.sent_tokenize(chunks_text)
-            sentences = [sentence.strip() for sentence in sentences]
-            embeddings = model.encode(sentences, convert_to_tensor=True)
-            cos_scores = util.cos_sim(embeddings, embeddings).numpy()
-            centrality_scores = degree_centrality_scores(cos_scores, threshold=None)
-            most_central_sentence_indices = np.argsort(-centrality_scores)
-            summary_text = ""
-            for idx in most_central_sentence_indices[0:5]:
-                summary_text += sentences[idx].strip() + '\n'
-            return summary_text
+        if self.service_context.instruction:
+            map_prompt = f'{self.service_context.instruction}' """
+            "{text}"
+            CONCISE SUMMARY:
+            """
+            map_prompt_template = PromptTemplate(template=map_prompt, input_variables=["text"])
 
+        if not self.service_context.llm:
+            return sentence_transformer_summarize(chunks_text)
         else:
-            chain = load_summarize_chain(llm=self.service_context.llm, chain_type="map_reduce")
-            return chain.run(documents)
+            if self.service_context.instruction:
+                chain = load_summarize_chain(llm=self.service_context.llm, chain_type="map_reduce", verbose=True,
+                                             map_prompt=map_prompt_template)
+            else:
+                chain = load_summarize_chain(llm=self.service_context.llm, chain_type="map_reduce")
+        return chain.run(documents)

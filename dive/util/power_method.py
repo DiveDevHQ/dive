@@ -1,6 +1,8 @@
 import numpy as np
 from scipy.sparse.csgraph import connected_components
-
+from sentence_transformers import SentenceTransformer, util
+import nltk
+nltk.download('punkt')
 
 def _power_method(transition_matrix, increase_power=True):
     eigenvector = np.ones(len(transition_matrix))
@@ -121,3 +123,17 @@ def degree_centrality_scores(
     )
 
     return scores
+
+
+def sentence_transformer_summarize(text):
+    model = SentenceTransformer('all-MiniLM-L6-v2')
+    sentences = nltk.sent_tokenize(text)
+    sentences = [sentence.strip() for sentence in sentences]
+    embeddings = model.encode(sentences, convert_to_tensor=True)
+    cos_scores = util.cos_sim(embeddings, embeddings).numpy()
+    centrality_scores = degree_centrality_scores(cos_scores, threshold=None)
+    most_central_sentence_indices = np.argsort(-centrality_scores)
+    summary_text = ""
+    for idx in most_central_sentence_indices[0:5]:
+        summary_text += sentences[idx].strip() + '\n'
+    return summary_text

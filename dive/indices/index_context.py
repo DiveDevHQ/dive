@@ -2,12 +2,12 @@ from dive.indices.service_context import ServiceContext
 from dive.storages.storage_context import StorageContext
 from typing import Optional, Any, Dict
 from dive.constants import DEFAULT_CHUNKING_TYPE, DEFAULT_COLLECTION_NAME
-from dive.util.text_splitter import SentenceSplitter
+from dive.util.text_splitter import SentenceSplitter,TokenTextSplitter
 from dataclasses import dataclass
 from langchain.schema import Document
-from langchain.embeddings import SentenceTransformerEmbeddings
-from langchain.embeddings.base import Embeddings
 from langchain.vectorstores import Chroma
+from dive.util.power_method import sentence_transformer_summarize
+from langchain.chains.summarize import load_summarize_chain
 import chromadb
 import tiktoken
 
@@ -32,8 +32,6 @@ class IndexContext:
         if not storage_context:
             storage_context = StorageContext.from_defaults(embedding_function=service_context.embeddings)
 
-        if not service_context:
-            service_context = ServiceContext.from_defaults()
 
         return cls(
             documents=[],
@@ -70,6 +68,7 @@ class IndexContext:
                storage_context: Optional[StorageContext] = None,
                persist_dir: Optional[str] = None,
                **kwargs: Any):
+
         _documents = []
         _ids = []
         if not service_context.embed_config.chunking_type or service_context.embed_config.chunking_type == DEFAULT_CHUNKING_TYPE:
@@ -77,7 +76,7 @@ class IndexContext:
             _ids = ids
         else:
             _tokenizer = lambda text: tiktoken.get_encoding("gpt2").encode(text, allowed_special={"<|endoftext|>"})
-            sentence_splitter_default = SentenceSplitter(chunk_size=service_context.embed_config.chunk_size,
+            sentence_splitter_default = TokenTextSplitter(chunk_size=service_context.embed_config.chunk_size,
                                                          chunk_overlap=service_context.embed_config.chunk_overlap,
                                                          tokenizer=service_context.embed_config.tokenizer or _tokenizer)
 
@@ -127,4 +126,5 @@ class IndexContext:
                 self.storage_context.vector_store.delete(ids=result['ids'])
             except KeyError:
                 return
+
 
