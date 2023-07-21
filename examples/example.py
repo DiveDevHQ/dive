@@ -6,10 +6,12 @@ from langchain.schema import Document
 import importlib
 import time
 import nltk
+
 nltk.download('punkt')
 from langchain.embeddings.openai import OpenAIEmbeddings
 from dive.util.openAIAPIKey import set_openai_api_key
 from langchain import OpenAI
+
 
 def index_example_data(chunk_size, chunk_overlap, embeddings):
     package_name = "integrations.connectors.example.filestorage.request_data"
@@ -32,16 +34,16 @@ def index_example_data(chunk_size, chunk_overlap, embeddings):
     embedding_model.chunking_type = "custom"
     embedding_model.chunk_size = chunk_size
     embedding_model.chunk_overlap = chunk_overlap
-    service_context = ServiceContext.from_defaults(embed_model=embedding_model)
-    IndexContext.from_documents(documents=_documents, ids=_ids, service_context=service_context,
-                                                embeddings=embeddings)
+    service_context = ServiceContext.from_defaults(embed_config=embedding_model,embeddings=embeddings)
+    IndexContext.from_documents(documents=_documents, ids=_ids, service_context=service_context)
 
 
-def query_example_data(chunk_size, llm):
+def query_example_data(chunk_size, embeddings, llm):
     query_text = "What did the author do growing up?"
-    query_context = QueryContext.from_defaults()
+    service_context = ServiceContext.from_defaults(embeddings=embeddings,llm=llm)
+    query_context = QueryContext.from_defaults(service_context=service_context)
     data = query_context.query(query=query_text, k=chunk_size, filter={'connector_id': "example"})
-    summary = query_context.summarization(documents=data,llm=llm)
+    summary = query_context.summarization(documents=data)
     print('------------top K chunks -----------------')
     for d in data:
         print(d.page_content)
@@ -49,22 +51,21 @@ def query_example_data(chunk_size, llm):
     print(summary)
 
 
-#Default free model
+# Default free model
 
 index_example_data(256, 20, None)
-#wait 1 min to run query method
+# wait 1 min to run query method
 print('------------Finish Indexing Data-----------------')
 time.sleep(30)
 print('------------Start Querying Data-----------------')
-query_example_data(4, None)
+query_example_data(4, None, None)
 
-
-#Open AI model
+# Open AI model
 '''
 set_openai_api_key()
 index_example_data(256, 20, OpenAIEmbeddings())
 print('------------Finish Indexing Data-----------------')
 time.sleep(30)
 print('------------Start Querying Data-----------------')
-query_example_data(4, OpenAI())
+query_example_data(4, OpenAIEmbeddings(),OpenAI())
 '''
