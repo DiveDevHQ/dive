@@ -24,16 +24,17 @@ class VectorStoreRetrieverAgent(Agent):
         llm = OpenAI()
         self.index_test_data(chunk_size=256,chunk_overlap=20,embedding_function=OpenAIEmbeddings())
         query_text = "What did the author do growing up?"
-        query_context = QueryContext.from_defaults()
+        service_context = ServiceContext.from_defaults(embeddings=OpenAIEmbeddings(),llm=llm)
+        query_context = QueryContext.from_defaults(service_context=service_context)
         relevant_docs = query_context.query(query=query_text,k=4,filter={'connector_id': "example"})
         #I wrote a basic summarization function, which does not take external llm yet, it should and it should call langchain
-        summary=query_context.summarization(documents=relevant_docs,llm=llm)
+        summary=query_context.summarization(documents=relevant_docs)
         chain = load_summarize_chain(llm = llm, chain_type= refine_chain_type, prompt = prompt)
         return chain.run()
 
 
 
-    def index_test_data(self, chunk_size,chunk_overlap, embedding_function):
+    def index_test_data(self,chunk_size, chunk_overlap, embeddings):
         package_name = "integrations.connectors.example.filestorage.request_data"
         mod = importlib.import_module(package_name)
         data = mod.load_objects(None, None, "paul_graham_essay", None, None, None)
@@ -49,12 +50,13 @@ class VectorStoreRetrieverAgent(Agent):
             document = Document(page_content=str(d['data']), metadata=_metadata)
             _documents.append(document)
             _ids.append(d['id'])
-            embedding_model = EmbeddingModel()
-            embedding_model.chunking_type = "custom"
-            embedding_model.chunk_size = chunk_size
-            embedding_model.chunk_overlap = chunk_overlap
-            service_context = ServiceContext.from_defaults(embed_model=embedding_model)
-            IndexContext.from_documents(documents=_documents, ids=_ids, service_context=service_context,embeddings=embedding_function)
+
+        embedding_model = EmbeddingModel()
+        embedding_model.chunking_type = "custom"
+        embedding_model.chunk_size = chunk_size
+        embedding_model.chunk_overlap = chunk_overlap
+        service_context = ServiceContext.from_defaults(embed_config=embedding_model,embeddings=embeddings)
+        IndexContext.from_documents(documents=_documents, ids=_ids, service_context=service_context)
 
 
 

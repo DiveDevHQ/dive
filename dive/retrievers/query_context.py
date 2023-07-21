@@ -1,4 +1,5 @@
 from dive.storages.storage_context import StorageContext
+from dive.indices.service_context import ServiceContext
 from typing import Optional, List, Any, Dict
 from dataclasses import dataclass
 from langchain.schema import Document
@@ -9,23 +10,29 @@ import nltk
 nltk.download('punkt')
 import numpy as np
 from langchain.chains.summarize import load_summarize_chain
-from langchain.chains.llm import BaseLanguageModel
-
+from langchain.embeddings.base import Embeddings
 
 @dataclass
 class QueryContext:
     storage_context: StorageContext
+    service_context:ServiceContext
 
     @classmethod
     def from_defaults(
             cls,
             storage_context: Optional[StorageContext] = None,
+            service_context: Optional[ServiceContext] = None,
             **kwargs: Any,
     ):
+
+        if not service_context:
+            service_context = ServiceContext.from_defaults()
+
         if not storage_context:
-            storage_context = StorageContext.from_defaults()
+            storage_context = StorageContext.from_defaults(embedding_function=service_context.embeddings)
 
         return cls(storage_context=storage_context,
+                   service_context=service_context,
                    **kwargs, )
 
     def query(self, query: str, k: int = DEFAULT_QUERY_CHUNK_SIZE, filter: Optional[Dict[str, str]] = None) -> List[
@@ -39,12 +46,12 @@ class QueryContext:
             )
 
 
-    def summarization(self, documents: [Document], llm: Optional[BaseLanguageModel] = None) -> str:
+    def summarization(self, documents: [Document]) -> str:
         chunks_text = ''
         for d in documents:
             chunks_text += d.page_content + '\n'
 
-        if not llm:
+        if not self.service_context.llm:
             model = SentenceTransformer('all-MiniLM-L6-v2')
             sentences = nltk.sent_tokenize(chunks_text)
             sentences = [sentence.strip() for sentence in sentences]
@@ -58,5 +65,5 @@ class QueryContext:
             return summary_text
 
         else:
-            chain = load_summarize_chain(llm=llm, chain_type="map_reduce")
+            chain = load_summarize_chain(llm=self.service_context.llm, chain_type="map_reduce")
             return chain.run(documents)

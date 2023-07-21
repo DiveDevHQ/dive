@@ -13,7 +13,6 @@ from django.http import HttpResponse
 from dive.indices.service_context import ServiceContext
 from dive.retrievers.query_context import QueryContext
 from dive.indices.index_context import IndexContext
-from dive.indices.clear_context import ClearContext
 from dive.types import EmbeddingModel
 from langchain.schema import Document
 import json
@@ -382,8 +381,8 @@ def sync_instance_data(request, app, connector_id):
 @api_view(["PUT"])
 def clear_instance_data(request, app, connector_id):
     auth.clear_sync_status(connector_id)
-    clear_context = ClearContext.from_defaults()
-    clear_context.delete_from(where={'connector_id': connector_id})
+    index_context = IndexContext.from_defaults()
+    index_context.delete_from(where={'connector_id': connector_id})
     return HttpResponse(status=204)
 
 
@@ -394,7 +393,7 @@ def index_data(module, connector_id, obj_type, schema, reload, chunking_type, ch
     if not reload:
         obj_last_sync_at = auth.get_last_sync_at(connector_id, obj_type)
 
-    auth.update_last_sync(connector_id, obj_type,False)
+    auth.update_last_sync(connector_id, obj_type, False)
 
     metadata = {'account_id': integration.account_id, 'connector_id': connector_id,
                 'obj_type': obj_type}
@@ -402,9 +401,9 @@ def index_data(module, connector_id, obj_type, schema, reload, chunking_type, ch
     embedding_model.chunking_type = chunking_type
     embedding_model.chunk_size = chunk_size
     embedding_model.chunk_overlap = chunk_overlap
-    service_context = ServiceContext.from_defaults(embed_model=embedding_model)
+    service_context = ServiceContext.from_defaults(embed_config=embedding_model)
     load_data(module, token, integration, obj_type, schema, None, obj_last_sync_at, metadata, service_context)
-    auth.update_last_sync(connector_id, obj_type,True)
+    auth.update_last_sync(connector_id, obj_type, True)
 
 
 def load_data(module, token, integration, obj_type, schema, cursor, last_sync_at, metadata, service_context):
@@ -427,6 +426,7 @@ def load_data(module, token, integration, obj_type, schema, cursor, last_sync_at
             document = Document(page_content=str(d['data']), metadata=_metadata)
             _documents.append(document)
             _ids.append(d['id'])
+
         IndexContext.from_documents(documents=_documents, ids=_ids, service_context=service_context)
         if 'next_cursor' in data:
             cursor = data['next_cursor']
@@ -472,7 +472,7 @@ def get_index_data(request):
         error_data['error']['message'] = 'Requested vector data does not exist'
         error_data['error']['status_code'] = 404
         return JsonResponse(error_data, safe=False)
-   
+
     summary_text = ''
     if len(data) > 0:
         summary_text = query_context.summarization(documents=data)

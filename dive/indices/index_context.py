@@ -17,15 +17,35 @@ class IndexContext:
     service_context: ServiceContext
     storage_context: StorageContext
     documents: [Document]
-    embeddings: Optional[Embeddings]
     ids: [str]
+
+    @classmethod
+    def from_defaults(
+            cls,
+            service_context: Optional[ServiceContext] = None,
+            storage_context: Optional[StorageContext] = None
+    ):
+
+        if not service_context:
+            service_context = ServiceContext.from_defaults()
+
+        if not storage_context:
+            storage_context = StorageContext.from_defaults(embedding_function=service_context.embeddings)
+
+        if not service_context:
+            service_context = ServiceContext.from_defaults()
+
+        return cls(
+            documents=[],
+            ids=[],
+            service_context=service_context,
+            storage_context=storage_context)
 
     @classmethod
     def from_documents(
             cls,
             documents: [Document],
             ids: [str],
-            embeddings: Optional[Embeddings] = None,
             service_context: Optional[ServiceContext] = None,
             storage_context: Optional[StorageContext] = None,
             persist_dir: Optional[str] = None,
@@ -34,13 +54,10 @@ class IndexContext:
 
         if not service_context:
             service_context = ServiceContext.from_defaults()
-        if not embeddings:
-            embeddings = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
 
         return cls.upsert(
             documents=documents,
             ids=ids,
-            embeddings=embeddings,
             service_context=service_context,
             storage_context=storage_context,
             persist_dir=persist_dir,
@@ -49,21 +66,20 @@ class IndexContext:
     @classmethod
     def upsert(cls, documents: [Document],
                ids: [str],
-               embeddings: Embeddings,
                service_context: ServiceContext,
                storage_context: Optional[StorageContext] = None,
                persist_dir: Optional[str] = None,
                **kwargs: Any):
         _documents = []
         _ids = []
-        if not service_context.embed_model.chunking_type or service_context.embed_model.chunking_type == DEFAULT_CHUNKING_TYPE:
+        if not service_context.embed_config.chunking_type or service_context.embed_config.chunking_type == DEFAULT_CHUNKING_TYPE:
             _documents = documents
             _ids = ids
         else:
             _tokenizer = lambda text: tiktoken.get_encoding("gpt2").encode(text, allowed_special={"<|endoftext|>"})
-            sentence_splitter_default = SentenceSplitter(chunk_size=service_context.embed_model.chunk_size,
-                                                         chunk_overlap=service_context.embed_model.chunk_overlap,
-                                                         tokenizer=service_context.embed_model.tokenizer or _tokenizer)
+            sentence_splitter_default = SentenceSplitter(chunk_size=service_context.embed_config.chunk_size,
+                                                         chunk_overlap=service_context.embed_config.chunk_overlap,
+                                                         tokenizer=service_context.embed_config.tokenizer or _tokenizer)
 
             _documents = []
             _ids = []
@@ -88,15 +104,27 @@ class IndexContext:
                                        collection_name=DEFAULT_COLLECTION_NAME,
                                        documents=_documents, ids=_ids,
                                        persist_directory=persist_dir or "db",
-                                       embedding=embeddings)
+                                       embedding=service_context.embeddings)
             db.persist()
         else:
             storage_context.vector_store.from_documents(documents=_documents, ids=_ids,
-                                                        embedding=embeddings)
+                                                        embedding=service_context.embeddings)
 
         return cls(storage_context=storage_context,
                    service_context=service_context,
                    documents=documents,
                    ids=ids,
-                   embeddings=embeddings,
                    **kwargs, )
+
+
+
+    def delete_from(self, where: Dict):
+
+        result = self.storage_context.vector_store.get(where=where)
+
+        if len(result['ids']) > 0:
+            try:
+                self.storage_context.vector_store.delete(ids=result['ids'])
+            except KeyError:
+                return
+
