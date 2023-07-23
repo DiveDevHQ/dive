@@ -5,10 +5,17 @@ from langchain.schema.prompt import PromptValue
 from abc import abstractmethod
 from typing import List, Any, Optional,Sequence
 from langchain.callbacks.manager import Callbacks
+from langchain.callbacks.manager import (
+    AsyncCallbackManager,
+    AsyncCallbackManagerForLLMRun,
+    CallbackManager,
+    CallbackManagerForLLMRun,
+    Callbacks,
+)
 
 class LlamaLLM(BaseLLM):
 
-    @abstractmethod
+
     def predict_messages(
             self,
             messages: List[BaseMessage],
@@ -20,14 +27,14 @@ class LlamaLLM(BaseLLM):
 
 
 
-    @abstractmethod
+
     async def apredict(
             self, text: str, *, stop: Optional[Sequence[str]] = None, **kwargs: Any
     ) -> str:
         return None
 
 
-    @abstractmethod
+
     async def apredict_messages(
             self,
             messages: List[BaseMessage],
@@ -38,7 +45,7 @@ class LlamaLLM(BaseLLM):
 
         return None
 
-    @abstractmethod
+
     def generate_prompt(
             self,
             prompts: List[PromptValue],
@@ -49,8 +56,31 @@ class LlamaLLM(BaseLLM):
 
         return None
 
-    @abstractmethod
+
     def predict(
             self, text: str, *, stop: Optional[Sequence[str]] = None, **kwargs: Any
     ) -> str:
+        return None
+
+    def _generate(
+            self,
+            prompts: List[str],
+            stop: Optional[List[str]] = None,
+            run_manager: Optional[CallbackManagerForLLMRun] = None,
+            **kwargs: Any,
+    ) -> LLMResult:
+        return None
+
+    async def _agenerate(
+            self,
+            prompts: List[str],
+            stop: Optional[List[str]] = None,
+            run_manager: Optional[AsyncCallbackManagerForLLMRun] = None,
+            **kwargs: Any,
+    ) -> LLMResult:
+        return None
+
+
+    @property
+    def _llm_type(self) -> str:
         return None

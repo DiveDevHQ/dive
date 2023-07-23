@@ -41,7 +41,7 @@ class LlamaEmbeddings(Embeddings):
             bnb_4bit_compute_dtype=bfloat16
         )
         # begin initializing HF items, need auth token for these
-        hf_auth = env.str('HUGGING_FACE_API_KEY', default='')
+        hf_auth = ""
         model_config = transformers.AutoConfig.from_pretrained(
             model_id,
             use_auth_token=hf_auth
