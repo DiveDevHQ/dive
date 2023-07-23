@@ -55,3 +55,5 @@ langchain>=0.0.235
 pytest>=7.2.2
 openai>=0.27.8
 docx2txt==0.8
+accelerate==0.21.0
+bitsandbytes==0.41.0
