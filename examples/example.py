@@ -10,7 +10,10 @@ nltk.download('punkt')
 from langchain.embeddings.openai import OpenAIEmbeddings
 from dive.util.openAIAPIKey import set_openai_api_key
 from langchain import OpenAI
-from langchain.prompts import PromptTemplate
+from langchain.schema import Document
+import importlib
+from dive.embeddings.llama_embeddings import LlamaEmbeddings
+from dive.llms.llama_llm import LlamaLLM
 
 
 def index_example_data(chunk_size, chunk_overlap, summarize, embeddings, llm):
@@ -39,11 +42,11 @@ def index_example_data(chunk_size, chunk_overlap, summarize, embeddings, llm):
     IndexContext.from_documents(documents=_documents, ids=_ids, service_context=service_context)
 
 
-def query_example_data(chunk_size, embeddings, llm, instruction):
-    query_text = "What did the author do growing up?"
+def query_example_data(question, chunk_size, embeddings, llm, instruction):
+
     service_context = ServiceContext.from_defaults(embeddings=embeddings, llm=llm, instruction=instruction)
     query_context = QueryContext.from_defaults(service_context=service_context)
-    data = query_context.query(query=query_text, k=chunk_size, filter={'connector_id': "example"})
+    data = query_context.query(query=question, k=chunk_size, filter={'connector_id': "example"})
     summary = query_context.summarization(documents=data)
     print('------------top K chunks -----------------')
     for d in data:
@@ -59,15 +62,27 @@ index_example_data(256, 20, False, None,None)
 print('------------Finish Indexing Data-----------------')
 time.sleep(30)
 print('------------Start Querying Data-----------------')
-query_example_data(4, None, None)
+question='What did the author do growing up?'
+query_example_data(question, 4, None, None, None)
 '''
 # Open AI model
-
+'''
 set_openai_api_key()
 index_example_data(256, 20, False, OpenAIEmbeddings(),OpenAI())
 print('------------Finish Indexing Data-----------------')
 time.sleep(30)
 print('------------Start Querying Data-----------------')
-instruction=None #instruction='summarise your response in no more than 5 lines'
-query_example_data(4, OpenAIEmbeddings(),OpenAI(temperature=0),instruction)
+question='What did the author do growing up?'
+instruction='summarise your response in no more than 5 lines'
+query_example_data(question,4, OpenAIEmbeddings(),OpenAI(temperature=0),instruction)
+'''
 
+# Llama v2 7B model
+
+index_example_data(256, 20, False, LlamaEmbeddings(),LlamaLLM())
+print('------------Finish Indexing Data-----------------')
+time.sleep(30)
+print('------------Start Querying Data-----------------')
+question='What did the author do growing up?'
+instruction='summarise your response in no more than 5 lines'
+query_example_data(question,4, LlamaEmbeddings(),LlamaLLM(),instruction)

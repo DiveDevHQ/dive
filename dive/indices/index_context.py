@@ -6,9 +6,6 @@ from dive.util.text_splitter import SentenceSplitter,TokenTextSplitter
 from dataclasses import dataclass
 from langchain.schema import Document
 from langchain.vectorstores import Chroma
-from dive.util.power_method import sentence_transformer_summarize
-from langchain.chains.summarize import load_summarize_chain
-import chromadb
 import tiktoken
 
 
@@ -91,15 +88,7 @@ class IndexContext:
                     _ids.append(ids[i] + "_chunk_" + str(j))
 
         if storage_context is None:
-            client_settings = chromadb.config.Settings(
-                chroma_db_impl="duckdb+parquet",
-                persist_directory=persist_dir or "db"
-            )
-            client = chromadb.Client(
-                client_settings
-            )
-            client.get_or_create_collection(DEFAULT_COLLECTION_NAME)
-            db = Chroma.from_documents(client=client, client_settings=client_settings,
+            db = Chroma.from_documents(
                                        collection_name=DEFAULT_COLLECTION_NAME,
                                        documents=_documents, ids=_ids,
                                        persist_directory=persist_dir or "db",

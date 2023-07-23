@@ -52,10 +52,11 @@ You can install all the required dependencies by running command
 ```
 pip install -r requirements.txt
 ```
-
-If you have trouble install chromadb, you might need to run below command first
+If you want to use chromadb as default vector db, please run below command
 ```
 export HNSWLIB_NO_NATIVE=1 
+
+pip install chromadb
 ```
 
 You can add a **.env** file under "dive" folder with the following content:
@@ -68,6 +69,7 @@ ALLOWED_HOSTS=.localhost
 CORS_ORIGIN_WHITELIST=http://localhost:3000  
 HOME_URL=http://localhost:3000  
 ```
+
 Then simply apply the migrations:
 ```
 python manage.py migrate
