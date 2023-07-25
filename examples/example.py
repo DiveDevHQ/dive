@@ -10,6 +10,7 @@ from langchain.embeddings import SentenceTransformerEmbeddings
 import os
 import time
 import nltk
+import os
 
 nltk.download('punkt')
 from langchain.embeddings.openai import OpenAIEmbeddings
@@ -84,6 +85,7 @@ query_example_data(question, 4, None, None, None)
 clear_example_data()
 '''
 
+ 
 # Open AI model
 
 set_openai_api_key()
@@ -95,9 +97,11 @@ question = 'What did the author do growing up?'
 instruction = None  # 'summarise your response in no more than 5 lines'
 #query_example_data(question, 4, OpenAIEmbeddings(), OpenAI(temperature=0), instruction)
 #clear_example_data()
-
-# Llama v2 7B model
 '''
+# Llama v2 7B model
+os.environ["PYTORCH_MPS_HIGH_WATERMARK_RATIO"] = "0.0"
+os.environ["COMMANDLINE_ARGS"] = "--skip-torch-cuda-test --upcast-sampling --no-half-vae --no-half --opt-sub-quad-attention --use-cpu interrogate"
+os.environ["use_auth_token"] = "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"
 index_example_data(256, 20, False, LlamaEmbeddings(),LlamaLLM())
 print('------------Finish Indexing Data-----------------')
 time.sleep(30)
@@ -106,3 +110,4 @@ question='What did the author do growing up?'
 instruction='summarise your response in no more than 5 lines'
 query_example_data(question,4, LlamaEmbeddings(),LlamaLLM(),instruction)
 '''
+
