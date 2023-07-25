@@ -2,7 +2,7 @@ from dive.langchain.agents.agent import Agent
 from langchain.vectorstores import Chroma
 from dive.util.chromaDBClient import ChromaDBClient
 from langchain.chains.summarize import load_summarize_chain
-from dive.util.openAIAPIKey import set_openai_api_key
+from dive.util.configAPIKey import set_openai_api_key
 from langchain import OpenAI
 from dive.indices.service_context import ServiceContext
 from dive.indices.index_context import IndexContext

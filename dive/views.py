@@ -15,6 +15,7 @@ from dive.retrievers.query_context import QueryContext
 from dive.indices.index_context import IndexContext
 from dive.types import EmbeddingModel
 from langchain.schema import Document
+from dive.constants import DEFAULT_COLLECTION_NAME
 import json
 import environ
 import copy
@@ -40,6 +41,56 @@ def get_connected_apps(request):
         connectors.append(
             {'account_id': i.account_id, 'connector_id': i.connector_id, 'app': i.name, 'sync_status': i.sync_status})
     return JsonResponse(connectors, safe=False)
+
+
+def initialize_vector(request):
+
+    PINECONE_API_KEY = env.str('PINECONE_API_KEY', default='') or os.environ.get('PINECONE_API_KEY', '')
+    PINECONE_ENV = env.str('PINECONE_ENV', default='') or os.environ.get('PINECONE_ENV', '')
+    PINECONE_INDEX_DIMENSIONS = env.str('PINECONE_INDEX_DIMENSIONS', default='512') or os.environ.get(
+        'PINECONE_INDEX_DIMENSIONS', '512')
+    if PINECONE_API_KEY:
+        import_err_msg = (
+            "`pinecone` package not found, please run `pip install pinecone`"
+        )
+        try:
+            import pinecone
+            pinecone.init(
+                api_key=PINECONE_API_KEY,  # find at app.pinecone.io
+                environment=PINECONE_ENV,  # next to api key in console
+            )
+
+            if DEFAULT_COLLECTION_NAME not in pinecone.list_indexes():
+
+                pinecone.create_index(
+                    name=DEFAULT_COLLECTION_NAME,
+                    metric="cosine",
+                    dimension=int(PINECONE_INDEX_DIMENSIONS))
+
+        except ImportError:
+            raise ImportError(import_err_msg)
+    '''
+    else:
+        CHROMA_PERSIST_DIR = env.str('CHROMA_PERSIST_DIR', default='db') or os.environ.get('CHROMA_PERSIST_DIR', 'db')
+        import_err_msg = (
+            "`chromadb` package not found, please run `pip install chromadb`"
+        )
+        try:
+            import chromadb
+            client_settings = chromadb.config.Settings(
+                chroma_db_impl="duckdb+parquet",
+                persist_directory=CHROMA_PERSIST_DIR
+            )
+            client = chromadb.Client(
+                client_settings
+            )
+            client.get_collection(DEFAULT_COLLECTION_NAME)
+        except ImportError:
+            raise ImportError(import_err_msg)
+        except KeyError:
+            client.create_collection(DEFAULT_COLLECTION_NAME)
+    '''
+    return HttpResponse(status=204)
 
 
 @api_view(["POST"])

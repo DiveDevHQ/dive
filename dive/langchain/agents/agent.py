@@ -4,7 +4,7 @@ from langchain.agents import AgentType
 
 import os
 
-from dive.util.openAIAPIKey import set_openai_api_key
+from dive.util.configAPIKey import set_openai_api_key
 
 
 class Agent:

@@ -10,8 +10,9 @@ import Schema from './controls/Schema';
 import XIcon from './icons/XIcon';
 import InfoIcon from './icons/InfoIcon';
 import SelectCtrl from './controls/SelectCtrl';
+import { PulseLoader } from 'react-spinners';
 
-import { getApps, getConnectors, clearData, syncData, queryData } from './api';
+import { getApps, getConnectors, clearData, syncData, queryData, setupVector } from './api';
 
 function App() {
   const [page, setPage] = useState(1);
@@ -25,6 +26,13 @@ function App() {
   const [queryResult, setQueryResult] = useState();
   const [queryText, setQueryText] = useState();
   const [error, setError] = useState();
+  const [loading, setLoading] = useState(true);
+
+  function setup(){
+    setupVector().then(data => {
+      setLoading(false);
+    });
+  }
 
   function loadConnectors() {
     getConnectors().then(data => {
@@ -63,7 +71,7 @@ function App() {
   }
 
   useEffect(() => {
-
+    setup();
     loadConnectors();
     loadApps();
 
@@ -252,7 +260,9 @@ function App() {
         </nav>
       </div>
       <div className='main-content'>
-
+      <div >
+                  <PulseLoader color="#2598d6" loading={loading} />
+                </div>
         {page && page === 1 && (
           <div><h2>Your Apps</h2>
           <button type="button" className="btn btn-grey fr" onClick={() => refreshApps()} >Refresh</button>
