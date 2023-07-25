@@ -111,3 +111,9 @@ export function queryData(account_id, connector_id,query_text, chunk_size) {
     return axios.get(`${serviceUrl}/api/v1/documents/search?query_text=${query_text}&account_id=${account_id}&connector_id=${connector_id}&chunk_size=${chunk_size}`)
         .then(res => res.data);
 }
+
+export function setupVector() {
+
+    return axios.get(`${serviceUrl}/setup/vector`)
+        .then(res => res.data);
+}

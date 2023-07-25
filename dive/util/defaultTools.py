@@ -1,6 +1,6 @@
 from langchain.agents import load_tools
 from langchain.llms import OpenAI
-from dive.util.openAIAPIKey import set_openai_api_key
+from dive.util.configAPIKey import set_openai_api_key
 
 
 set_openai_api_key()
