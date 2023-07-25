@@ -103,6 +103,7 @@
   font-size: 0.875rem;
 }
 
+
 /* Navbar expanded */
 .nav:hover {
   width: var(--nav-width);
@@ -367,6 +368,22 @@
   color: red;
 }
 
+.form-control-normal {
+
+  display: inline;
+  white-space: pre-wrap;
+  border: 1px solid #9e9e9e;
+  padding: 0.5rem;
+
+  font-size: 1rem;
+  border-radius: 4px;
+  resize: none;
+  background-color: white;
+  box-sizing: border-box;
+  flex: 1 1 auto;
+}
+
+
 .form-control-long {
   max-width: 275px;
   display: inline;
@@ -406,6 +423,13 @@
   padding: 5px;
 }
 
+pre {
+  white-space: pre-wrap;       /* Since CSS 2.1 */
+  white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
+  white-space: -pre-wrap;      /* Opera 4-6 */
+  white-space: -o-pre-wrap;    /* Opera 7 */
+  word-wrap: break-word;       /* Internet Explorer 5.5+ */
+}
 
 [simple-title]:hover:after {
   opacity: 1;

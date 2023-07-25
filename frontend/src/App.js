@@ -21,12 +21,13 @@ function App() {
   const [accountIds, setAccountIds] = useState([]);
   const [connectIds, setConnectIds] = useState([]);
   const [selectAccountId, setSelectAccountId] = useState();
-  const [chunkSize, setChunkSize] = useState(2);
+  const [chunkSize, setChunkSize] = useState(4);
   const [selectConnectorId, setSelectConnectorId] = useState();
   const [queryResult, setQueryResult] = useState();
   const [queryText, setQueryText] = useState();
   const [error, setError] = useState();
   const [loading, setLoading] = useState(true);
+  const [instruction, setInstruction] = useState();
 
   function setup(){
     setupVector().then(data => {
@@ -206,21 +207,26 @@ function App() {
       setError('Please enter chunk size between 2 to 10.');
       return;
     }
-
-
-    queryData(selectAccountId ? selectAccountId : "", selectConnectorId ? selectConnectorId : "", queryText, chunkSize ? chunkSize : "").then(data => {
-
+    setQueryResult(null);
+    setLoading(true);
+    queryData(selectAccountId ? selectAccountId : "", selectConnectorId ? selectConnectorId : "", 
+    queryText, chunkSize ? chunkSize : "", instruction? instruction: "").then(data => {
       setQueryResult(data);
+      setLoading(false);
 
     }).catch(function (error) {
       if (error.response) {
         setQueryResult(error.response.data);
+        setLoading(false);
       }
 
     });
 
+    
 
   }
+
+  
 
   return (
     <div>
@@ -335,7 +341,7 @@ function App() {
               <div className='col-4'>
                 <span className="svg-icon-sm svg-text cursor-pointer" simple-title='Top K chunks from the result, K between 2 to 10' >
                   <InfoIcon />
-                </span> Chunk size:<input className='form-control-short' value={chunkSize || ""} onChange={e => setChunkSize(e.target.value)}
+                </span> Chunk size:<input className='form-control-short ml-2' value={chunkSize || ""} onChange={e => setChunkSize(e.target.value)}
                   type="text" />
 
               </div>
@@ -343,14 +349,28 @@ function App() {
             <br />
             <h4>Search query</h4>
             <br />
-            <textarea rows="5" cols="50" value={queryText || ""} onChange={e => setQueryText(e.target.value)}></textarea>
+            <div className='row'><div className='col-8'>
+            Instructions (optional):  <input className='form-control  ml-2' value={instruction || ""} onChange={e => setInstruction(e.target.value)}
+            placeholder='Enter prompt for your question'
+                  type="text" /> 
+              </div>
+              <div className='col-4'>
+              <span className='small-grey-text'>e.g. Summerize your response in no more than 5 lines</span> 
+              </div>
+              </div>
+         
+                  <br /> 
+                  <br />
+                  Question: <br />
+            <textarea rows="5" cols="60" value={queryText || ""} onChange={e => setQueryText(e.target.value)}></textarea>
             <br />
             <div className='red-text'>{error}</div>
             <br />
             <button type="button" className="btn btn-grey mr-3" onClick={() => queryDocuments()} >Search</button>
             <br />
             {queryResult && (<pre className='json-copy mt-3'>{JSON.stringify(queryResult, null, 2)}</pre>)}
-
+           
+           
           </div>
         )}
 

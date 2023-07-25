@@ -1,6 +1,6 @@
 from dive.indices.service_context import ServiceContext
 from dive.storages.storage_context import StorageContext
-from typing import Optional, Any, Dict
+from typing import Optional, Any, Dict, List
 from dive.constants import DEFAULT_CHUNKING_TYPE, DEFAULT_COLLECTION_NAME
 from dive.util.text_splitter import SentenceSplitter, TokenTextSplitter
 from dataclasses import dataclass
@@ -8,9 +8,11 @@ from langchain.schema import Document
 
 import tiktoken
 import environ
+
 env = environ.Env()
 environ.Env.read_env()  # reading .env file
 import os
+
 
 @dataclass
 class IndexContext:
@@ -18,7 +20,6 @@ class IndexContext:
     storage_context: StorageContext
     documents: [Document]
     ids: [str]
-
 
     @classmethod
     def from_defaults(
@@ -94,11 +95,12 @@ class IndexContext:
         if PINECONE_API_KEY:
             storage_context.vector_store.from_documents(
                 index_name=DEFAULT_COLLECTION_NAME,
-                documents=_documents, ids=_ids,batch_size=100,
+                documents=_documents, ids=_ids, batch_size=100,
                 embedding=service_context.embeddings)
 
         else:
-            CHROMA_PERSIST_DIR=env.str('CHROMA_PERSIST_DIR', default='db') or os.environ.get('CHROMA_PERSIST_DIR', 'db')
+            CHROMA_PERSIST_DIR = env.str('CHROMA_PERSIST_DIR', default='db') or os.environ.get('CHROMA_PERSIST_DIR',
+                                                                                               'db')
             storage_context.vector_store.from_documents(
                 collection_name=DEFAULT_COLLECTION_NAME,
                 documents=_documents, ids=_ids,
@@ -111,16 +113,8 @@ class IndexContext:
                    ids=ids,
                    **kwargs, )
 
-    def delete_from(self, where: Dict):
+    def delete(self, ids: Optional[List[str]] = None,
+               delete_all: Optional[bool] = None,
+               filter: Optional[dict] = None):
 
-        result = self.storage_context.vector_store.get(where=where)
-
-        if len(result['ids']) > 0:
-            try:
-                self.storage_context.vector_store.delete(ids=result['ids'])
-            except KeyError:
-                return
-
-
-    def clear_all_data(self):
-        self.storage_context.vector_store.clear_all()
+        self.storage_context.vector_store.delete(ids=ids, delete_all=delete_all, filter=filter)

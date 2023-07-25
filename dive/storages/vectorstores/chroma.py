@@ -568,14 +568,20 @@ class Chroma(VectorStore):
             self.persist()
 
 
-    def delete(self, ids: Optional[List[str]] = None, **kwargs: Any) -> None:
+    def delete(self, ids: Optional[List[str]] = None,
+               delete_all: Optional[bool] = None,
+               filter: Optional[dict] = None, **kwargs: Any) -> None:
         """Delete by vector IDs.
 
         Args:
             ids: List of ids to delete.
         """
-        self._collection.delete(ids=ids)
+        if delete_all:
+            self._client.reset()
+        elif filter:
+            self._collection.delete(where=filter)
+        elif ids and len(ids)>0:
+            self._collection.delete(ids=ids)
 
 
-    def clear_all(self):
-        self._client.reset()
+
