@@ -41,7 +41,7 @@ class LlamaEmbeddings(Embeddings):
             bnb_4bit_compute_dtype=bfloat16
         )
         # begin initializing HF items, need auth token for these
-        hf_auth = ""
+        hf_auth = "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"
         model_config = transformers.AutoConfig.from_pretrained(
             model_id,
             use_auth_token=hf_auth
@@ -56,8 +56,11 @@ class LlamaEmbeddings(Embeddings):
         )
         model.eval()
         print(f"Model loaded on {device}")
-        tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-2-7b-chat-hf")
-        model = AutoModel.from_pretrained('meta-llama/Llama-2-7b-chat-hf')
+        tokenizer = transformers.AutoTokenizer.from_pretrained("meta-llama/Llama-2-7b-chat-hf")
+        if tokenizer.pad_token is None:
+            tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+        model = transformers.AutoModel.from_pretrained('meta-llama/Llama-2-7b-chat-hf')
+        model.resize_token_embeddings(len(tokenizer))
         encoded_input = tokenizer(texts, padding=True, truncation=True, return_tensors='pt')
 
         # Compute token embeddings
