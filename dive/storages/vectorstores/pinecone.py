@@ -128,7 +128,7 @@ class Pinecone(VectorStore):
             namespace=namespace,
             filter=filter,
         )
-        print(results)
+
         for res in results["matches"]:
             metadata = res["metadata"]
             if self._text_key in metadata:
@@ -478,7 +478,3 @@ class Pinecone(VectorStore):
             raise ValueError("Either ids, delete_all, or filter must be provided.")
 
         return None
-
-
-    def clear_all(self):
-        self._index.delete(delete_all=True)

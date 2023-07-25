@@ -15,7 +15,10 @@ from dive.retrievers.query_context import QueryContext
 from dive.indices.index_context import IndexContext
 from dive.types import EmbeddingModel
 from langchain.schema import Document
-from dive.constants import DEFAULT_COLLECTION_NAME
+from dive.constants import DEFAULT_COLLECTION_NAME, DEFAULT_CHUNKING_TYPE
+from langchain.embeddings.openai import OpenAIEmbeddings
+from langchain import OpenAI
+from dive.util.configAPIKey import set_openai_api_key_from_env
 import json
 import environ
 import copy
@@ -44,7 +47,6 @@ def get_connected_apps(request):
 
 
 def initialize_vector(request):
-
     PINECONE_API_KEY = env.str('PINECONE_API_KEY', default='') or os.environ.get('PINECONE_API_KEY', '')
     PINECONE_ENV = env.str('PINECONE_ENV', default='') or os.environ.get('PINECONE_ENV', '')
     PINECONE_INDEX_DIMENSIONS = env.str('PINECONE_INDEX_DIMENSIONS', default='512') or os.environ.get(
@@ -61,7 +63,6 @@ def initialize_vector(request):
             )
 
             if DEFAULT_COLLECTION_NAME not in pinecone.list_indexes():
-
                 pinecone.create_index(
                     name=DEFAULT_COLLECTION_NAME,
                     metric="cosine",
@@ -417,9 +418,12 @@ def sync_instance_data(request, app, connector_id):
         chunk_overlap = None
         if template.chunking_type:
             ct = json.loads(template.chunking_type)
-            chunking_type = ct.get('chunking_type', None)
-            chunk_size = ct.get('chunk_size', None)
-            chunk_overlap = ct.get('chunk_overlap', None)
+            if not ct:
+                chunking_type = DEFAULT_CHUNKING_TYPE
+            else:
+                chunking_type = ct.get('chunking_type', None)
+                chunk_size = ct.get('chunk_size', None)
+                chunk_overlap = ct.get('chunk_overlap', None)
             if chunk_size:
                 chunk_size = int(chunk_size)
             if chunk_overlap:
@@ -433,7 +437,7 @@ def sync_instance_data(request, app, connector_id):
 def clear_instance_data(request, app, connector_id):
     auth.clear_sync_status(connector_id)
     index_context = IndexContext.from_defaults()
-    index_context.delete_from(where={'connector_id': connector_id})
+    index_context.delete(filter={'connector_id': connector_id})
     return HttpResponse(status=204)
 
 
@@ -452,7 +456,15 @@ def index_data(module, connector_id, obj_type, schema, reload, chunking_type, ch
     embedding_model.chunking_type = chunking_type
     embedding_model.chunk_size = chunk_size
     embedding_model.chunk_overlap = chunk_overlap
-    service_context = ServiceContext.from_defaults(embed_config=embedding_model)
+
+    OPENAI_API_KEY = env.str('OPENAI_API_KEY', default='') or os.environ.get('OPENAI_API_KEY', '')
+
+    if OPENAI_API_KEY:
+        set_openai_api_key_from_env(OPENAI_API_KEY)
+        service_context = ServiceContext.from_defaults(embed_config=embedding_model, embeddings=OpenAIEmbeddings(), llm=OpenAI())
+    else:
+        service_context = ServiceContext.from_defaults(embed_config=embedding_model)
+
     load_data(module, token, integration, obj_type, schema, None, obj_last_sync_at, metadata, service_context)
     auth.update_last_sync(connector_id, obj_type, True)
 
@@ -491,6 +503,7 @@ def get_index_data(request):
     account_id = None
     query = None
     chunk_size = None
+    instruction = None
     if url_params:
         url_params_dict = parse_qs(url_params)
         if 'connector_id' in url_params_dict and url_params_dict['connector_id'][0]:
@@ -501,12 +514,21 @@ def get_index_data(request):
             query = url_params_dict['query_text'][0]
         if 'chunk_size' in url_params_dict:
             chunk_size = url_params_dict['chunk_size'][0]
+        if 'instruction' in url_params_dict:
+            instruction = url_params_dict['instruction'][0]
     if not connector_id and not account_id:
         raise BadRequestException("Please include either connector_id or account_id in the query parameter.")
     if not query:
         raise BadRequestException("Please include query_text in query parameter.")
 
-    query_context = QueryContext.from_defaults()
+    OPENAI_API_KEY = env.str('OPENAI_API_KEY', default='') or os.environ.get('OPENAI_API_KEY', '')
+
+    if OPENAI_API_KEY:
+        set_openai_api_key_from_env(OPENAI_API_KEY)
+        service_context = ServiceContext.from_defaults(embeddings=OpenAIEmbeddings(), llm=OpenAI(), instruction=instruction)
+
+    query_context = QueryContext.from_defaults(service_context=service_context)
+
     k = None
     if chunk_size:
         k = int(chunk_size)
@@ -525,10 +547,13 @@ def get_index_data(request):
         return JsonResponse(error_data, safe=False)
 
     summary_text = ''
+    top_chunks=[]
     if len(data) > 0:
+        for d in data:
+            top_chunks.append(d.page_content)
         summary_text = query_context.summarization(documents=data)
 
-    return JsonResponse({'summary': summary_text}, safe=False)
+    return JsonResponse({ 'summary': summary_text,'top_chunks':top_chunks}, safe=False)
 
 
 @api_view(["GET"])

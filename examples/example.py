@@ -11,9 +11,11 @@ import os
 import time
 import nltk
 import os
+
 nltk.download('punkt')
 from langchain.embeddings.openai import OpenAIEmbeddings
-from dive.util.configAPIKey import set_openai_api_key,set_pinecone_api_key,set_pinecone_env,set_pinecone_index_dimentions
+from dive.util.configAPIKey import set_openai_api_key, set_pinecone_api_key, set_pinecone_env, \
+    set_pinecone_index_dimentions
 from langchain import OpenAI
 from langchain.schema import Document
 import importlib
@@ -43,12 +45,11 @@ def index_example_data(chunk_size, chunk_overlap, summarize, embeddings, llm):
     embedding_model.chunk_size = chunk_size
     embedding_model.chunk_overlap = chunk_overlap
     embedding_model.summarize = summarize
-    service_context = ServiceContext.from_defaults(embed_config=embedding_model, embeddings=embeddings,llm=llm)
+    service_context = ServiceContext.from_defaults(embed_config=embedding_model, embeddings=embeddings, llm=llm)
     IndexContext.from_documents(documents=_documents, ids=_ids, service_context=service_context)
 
 
 def query_example_data(question, chunk_size, embeddings, llm, instruction):
-
     service_context = ServiceContext.from_defaults(embeddings=embeddings, llm=llm, instruction=instruction)
     query_context = QueryContext.from_defaults(service_context=service_context)
     data = query_context.query(query=question, k=chunk_size)
@@ -60,17 +61,16 @@ def query_example_data(question, chunk_size, embeddings, llm, instruction):
     print('------------summary -----------------')
     print(summary)
 
+
 def clear_example_data():
-    index_context=IndexContext.from_defaults()
-    index_context.clear_all_data()
+    index_context = IndexContext.from_defaults()
+    index_context.delete(delete_all=True)
 
 
-
-#Use pinecone vector db
+# Use pinecone vector db
 set_pinecone_api_key()
 set_pinecone_env()
 set_pinecone_index_dimentions()
-
 
 # Default free model
 
@@ -85,17 +85,17 @@ query_example_data(question, 4, None, None, None)
 clear_example_data()
 '''
 
-'''
+ 
 # Open AI model
 
 set_openai_api_key()
-index_example_data(256, 20, False, OpenAIEmbeddings(),OpenAI())
+#index_example_data(256, 20, False, OpenAIEmbeddings(), OpenAI())
 print('------------Finish Indexing Data-----------------')
 time.sleep(30)
 print('------------Start Querying Data-----------------')
-question='What did the author do growing up?'
-instruction=None#'summarise your response in no more than 5 lines'
-query_example_data(question,4, OpenAIEmbeddings(),OpenAI(temperature=0),instruction)
+question = 'What did the author do growing up?'
+instruction = None  # 'summarise your response in no more than 5 lines'
+#query_example_data(question, 4, OpenAIEmbeddings(), OpenAI(temperature=0), instruction)
 #clear_example_data()
 '''
 # Llama v2 7B model
@@ -109,3 +109,5 @@ print('------------Start Querying Data-----------------')
 question='What did the author do growing up?'
 instruction='summarise your response in no more than 5 lines'
 query_example_data(question,4, LlamaEmbeddings(),LlamaLLM(),instruction)
+'''
+

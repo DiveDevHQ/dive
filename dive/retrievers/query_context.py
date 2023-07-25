@@ -62,4 +62,5 @@ class QueryContext:
                                              map_prompt=map_prompt_template)
             else:
                 chain = load_summarize_chain(llm=self.service_context.llm, chain_type="map_reduce")
+
         return chain.run(documents)
