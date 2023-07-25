@@ -95,6 +95,7 @@ env.bak/
 venv.bak/
 frontend/.env
 
+
 # Spyder project settings
 .spyderproject
 .spyproject
@@ -111,3 +112,6 @@ frontend/.env
 .elasticbeanstalk/*
 !.elasticbeanstalk/*.cfg.yml
 !.elasticbeanstalk/*.global.yml
+
+# deploy
+.ebextensions
