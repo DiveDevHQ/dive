@@ -31,7 +31,7 @@ from pathlib import Path
 env = environ.Env()
 environ.Env.read_env()
 
-  
+
 
 def index(request):
     context = {
