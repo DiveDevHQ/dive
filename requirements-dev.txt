@@ -55,3 +55,4 @@ accelerate==0.21.0
 bitsandbytes==0.41.0
 transformers>=4.31.0
 chromadb==0.3.26
+scipy==1.11.1
