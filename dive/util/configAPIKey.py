@@ -4,8 +4,15 @@ import os
 def set_openai_api_key():
     os.environ["OPENAI_API_KEY"] = ""
 
+def set_openai_api_key_from_env(OPENAI_API_KEY):
+    os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
+
+
 def set_pinecone_api_key():
     os.environ["PINECONE_API_KEY"] = ""
+
+
+
 
 def set_pinecone_env():
     os.environ["PINECONE_ENV"] = ""

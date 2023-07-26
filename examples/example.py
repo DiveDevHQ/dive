@@ -68,11 +68,11 @@ def clear_example_data():
 
 
 # Use pinecone vector db
-'''
+
 set_pinecone_api_key()
 set_pinecone_env()
 set_pinecone_index_dimentions()
-'''
+
 # Default free model
 
 '''
