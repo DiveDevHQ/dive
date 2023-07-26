@@ -57,3 +57,4 @@ transformers>=4.31.0
 chromadb==0.3.26
 scipy==1.11.1
 nltk==3.8.1
+psycopg2==2.9.6
