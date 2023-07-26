@@ -32,15 +32,16 @@ env = environ.Env()
 environ.Env.read_env()
 
 
-# schema_view = get_swagger_view(title='Dive API')
 
 def index(request):
+    context = {
+        "home_url": env.str('HOME_URL', default='http://localhost:3000'),
+    }
+    return render(request, "index.html", context)
 
-    return render(request, "index.html")
 
 def about(request):
     return HttpResponse(status=204)
-
 
 
 def get_connected_apps(request):
@@ -467,7 +468,8 @@ def index_data(module, connector_id, obj_type, schema, reload, chunking_type, ch
 
     if OPENAI_API_KEY:
         set_openai_api_key_from_env(OPENAI_API_KEY)
-        service_context = ServiceContext.from_defaults(embed_config=embedding_model, embeddings=OpenAIEmbeddings(), llm=OpenAI())
+        service_context = ServiceContext.from_defaults(embed_config=embedding_model, embeddings=OpenAIEmbeddings(),
+                                                       llm=OpenAI())
     else:
         service_context = ServiceContext.from_defaults(embed_config=embedding_model)
 
@@ -531,7 +533,8 @@ def get_index_data(request):
 
     if OPENAI_API_KEY:
         set_openai_api_key_from_env(OPENAI_API_KEY)
-        service_context = ServiceContext.from_defaults(embeddings=OpenAIEmbeddings(), llm=OpenAI(), instruction=instruction)
+        service_context = ServiceContext.from_defaults(embeddings=OpenAIEmbeddings(), llm=OpenAI(),
+                                                       instruction=instruction)
 
     query_context = QueryContext.from_defaults(service_context=service_context)
 
@@ -553,13 +556,13 @@ def get_index_data(request):
         return JsonResponse(error_data, safe=False)
 
     summary_text = ''
-    top_chunks=[]
+    top_chunks = []
     if len(data) > 0:
         for d in data:
             top_chunks.append(d.page_content)
         summary_text = query_context.summarization(documents=data)
 
-    return JsonResponse({ 'summary': summary_text,'top_chunks':top_chunks}, safe=False)
+    return JsonResponse({'summary': summary_text, 'top_chunks': top_chunks}, safe=False)
 
 
 @api_view(["GET"])

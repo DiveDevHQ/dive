@@ -49,14 +49,20 @@ python -m venv venv && source venv/bin/activate
 ```
 
 You can install all the required dependencies by running command
+
+Prod ready:
 ```
 pip install -r requirements.txt
 ```
-If you want to use chromadb as default vector db, please run below command
+
+Test locally:
+```
+pip install -r requirements-dev.txt
+```
+
+If you have issue installing chromadb, try to run below command:
 ```
 export HNSWLIB_NO_NATIVE=1 
-
-pip install chromadb
 ```
 
 You can add a **.env** file under "dive" folder with the following content:
