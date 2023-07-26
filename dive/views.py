@@ -31,8 +31,7 @@ from pathlib import Path
 env = environ.Env()
 environ.Env.read_env()
 
-
-# schema_view = get_swagger_view(title='Dive API')
+  
 
 def index(request):
     context = {
