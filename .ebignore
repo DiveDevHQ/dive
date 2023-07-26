@@ -88,7 +88,6 @@ celerybeat-schedule
 # Environments
 
 .venv
-env/
 venv/
 ENV/
 env.bak/
@@ -108,3 +107,8 @@ frontend/.env
 
 # mypy
 .mypy_cache/
+
+# Elastic Beanstalk Files
+.elasticbeanstalk/*
+!.elasticbeanstalk/*.cfg.yml
+!.elasticbeanstalk/*.global.yml
