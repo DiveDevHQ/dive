@@ -2,29 +2,14 @@
 <html lang="en">
 <head>
 
-    {% include "head.html" %}
-
 </head>
 <body>
-{% include "nav.html" %}
-
 
 <div class="main-page">
-    <div class="page_title">{{title}}</div>
-    {% for i in list %}
-    {{i.name}}<br/>
-    {% for app in i.apps %}
-    <ul>
-        <li>{{app}}</li>
-    </ul>
+  <br/>
+    <h1><a href="{{home_url}}">Home</a></h1><br/><br/>
 
-    {% endfor %}
-    <a href="config/{{i.name}}">Set up {{i.name}} data template</a><br/><br/>
-    <a href="api/v1/documents/sync/{{i.name}}">Sync {{i.name}} data</a><br/><br/>
-    <a href="https://docs.diveapi.co/#{{i.name}}">View {{i.name}} api document</a><br/>
-    <br/><br/>
 
-    {% endfor %}
 </div>
 
 </body>
