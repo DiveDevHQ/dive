@@ -44,6 +44,7 @@ urllib3==1.26.15
 wcwidth==0.1.9
 websocket-client==0.59.0
 pypdf==3.12.1
+sentence-transformers==2.2.2
 tiktoken==0.4.0
 llama-index==0.7.7
 langchain>=0.0.235
@@ -51,4 +52,5 @@ pytest>=7.2.2
 openai>=0.27.8
 docx2txt==0.8
 accelerate==0.21.0
-pinecone-client==2.2.2
+bitsandbytes==0.41.0
+transformers>=4.31.0
