@@ -49,5 +49,4 @@ langchain>=0.0.235
 pytest>=7.2.2
 openai>=0.27.8
 docx2txt==0.8
-accelerate==0.21.0
 pinecone-client==2.2.2
