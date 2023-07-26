@@ -1,6 +1,5 @@
 import numpy as np
 from scipy.sparse.csgraph import connected_components
-from sentence_transformers import SentenceTransformer, util
 import nltk
 nltk.download('punkt')
 
@@ -126,6 +125,14 @@ def degree_centrality_scores(
 
 
 def sentence_transformer_summarize(text):
+    import_err_msg = (
+        "`sentence_transformers` package not found, please run `pip install sentence_transformers==2.2.2`"
+    )
+    try:
+        from sentence_transformers import SentenceTransformer, util
+    except ImportError:
+        raise ImportError(import_err_msg)
+
     model = SentenceTransformer('all-MiniLM-L6-v2')
     sentences = nltk.sent_tokenize(text)
     sentences = [sentence.strip() for sentence in sentences]

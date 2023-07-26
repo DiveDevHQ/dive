@@ -86,9 +86,8 @@ celerybeat-schedule
 *.sage.py
 
 # Environments
-.env
+
 .venv
-env/
 venv/
 ENV/
 env.bak/
@@ -108,11 +107,8 @@ frontend/.env
 
 # mypy
 .mypy_cache/
+
 # Elastic Beanstalk Files
 .elasticbeanstalk/*
 !.elasticbeanstalk/*.cfg.yml
 !.elasticbeanstalk/*.global.yml
-
-# deploy
-
-.ebignore

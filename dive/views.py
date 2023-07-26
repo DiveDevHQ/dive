@@ -24,6 +24,7 @@ import environ
 import copy
 from dive.api.utils import get_params
 from time import sleep
+from django.shortcuts import render
 import os
 from pathlib import Path
 
@@ -34,7 +35,12 @@ environ.Env.read_env()
 # schema_view = get_swagger_view(title='Dive API')
 
 def index(request):
-    return redirect(env.str('HOME_URL', default='http://localhost:3000'))
+
+    return render(request, "index.html")
+
+def about(request):
+    return HttpResponse(status=204)
+
 
 
 def get_connected_apps(request):

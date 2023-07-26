@@ -23,6 +23,7 @@ from . import views
 
 urlpatterns = [
     path("", views.index, name="index"),
+    path("about", views.about, name="about"),
     path("apps", views.get_connected_apps, name="get_connected_apps"),
     path("setup/vector", views.initialize_vector, name="initialize_vector"),
     path("sync/<str:app>/<str:connector_id>", views.sync_instance_data, name="sync_instance_data"),
