@@ -73,8 +73,8 @@ set_pinecone_api_key()
 set_pinecone_env()
 set_pinecone_index_dimentions()
 
-# Default free model
 
+# Default free model
 '''
 index_example_data(256, 20, False, None,None)
 # wait 1 min to run query method
@@ -99,6 +99,7 @@ instruction = None  # 'summarise your response in no more than 5 lines'
 #query_example_data(question, 4, OpenAIEmbeddings(), OpenAI(temperature=0), instruction)
 #clear_example_data()
 '''
+
 '''
 # Llama v2 7B model
 os.environ["PYTORCH_MPS_HIGH_WATERMARK_RATIO"] = "0.0"
