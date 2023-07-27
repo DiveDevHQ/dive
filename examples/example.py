@@ -69,13 +69,13 @@ def clear_example_data():
 
 # Use pinecone vector db
 
-set_pinecone_api_key()
-set_pinecone_env()
-set_pinecone_index_dimentions()
+#set_pinecone_api_key()
+#set_pinecone_env()
+#set_pinecone_index_dimentions()
 
 
 # Default free model
-'''
+
 index_example_data(256, 20, False, None,None)
 # wait 1 min to run query method
 print('------------Finish Indexing Data-----------------')
@@ -84,7 +84,7 @@ print('------------Start Querying Data-----------------')
 question='What did the author do growing up?'
 query_example_data(question, 4, None, None, None)
 #clear_example_data()
-'''
+
 
  
 # Open AI model

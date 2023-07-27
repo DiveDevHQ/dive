@@ -2,7 +2,7 @@ from dive.indices.service_context import ServiceContext
 from dive.storages.storage_context import StorageContext
 from typing import Optional, Any, Dict, List
 from dive.constants import DEFAULT_CHUNKING_TYPE, DEFAULT_COLLECTION_NAME
-from dive.util.text_splitter import SentenceSplitter, TokenTextSplitter
+from dive.util.text_splitter import SentenceSplitter, TokenTextSplitter, ParagraphSplitter
 from dataclasses import dataclass
 from langchain.schema import Document
 
@@ -76,6 +76,18 @@ class IndexContext:
         if not service_context.embed_config.chunking_type or service_context.embed_config.chunking_type == DEFAULT_CHUNKING_TYPE:
             _documents = documents
             _ids = ids
+        elif service_context.embed_config.chunking_type == 'paragraph':
+            paragraph_splitter_default = ParagraphSplitter()
+            for i, document in enumerate(documents):
+                sentence_chunks = paragraph_splitter_default.split_text(document.page_content)
+                for j, d in enumerate(sentence_chunks):
+                    if not d:
+                        continue
+                    _document = Document(metadata=document.metadata,
+                                         page_content=d)
+                    _documents.append(_document)
+                    _ids.append(ids[i] + "_chunk_" + str(j))
+
         else:
             _tokenizer = lambda text: tiktoken.get_encoding("gpt2").encode(text, allowed_special={"<|endoftext|>"})
             sentence_splitter_default = TokenTextSplitter(chunk_size=service_context.embed_config.chunk_size,
