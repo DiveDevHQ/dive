@@ -22,3 +22,6 @@ def set_pinecone_index_dimentions():
 
 def set_chromadb_persist():
     os.environ["CHROMA_PERSIST_DIR"] = ""
+
+def set_hugging_face_auth():
+    os.environ["use_auth_token"]=""
