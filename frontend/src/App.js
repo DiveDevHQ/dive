@@ -80,8 +80,10 @@ function App() {
 
 
   function runSyncData(app, connector_id) {
+    setLoading(true);
     syncData(app, connector_id).then(data => {
       loadApps();
+      setLoading(false);
     });
   }
   function clearSyncData(app, connector_id) {
