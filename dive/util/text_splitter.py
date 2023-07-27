@@ -419,3 +419,23 @@ class SentenceSplitter(TextSplitter):
         chunks = [text_split.text_chunk for text_split in text_splits]
 
         return chunks
+
+
+
+
+class ParagraphSplitter(TextSplitter):
+    """Split text into paragraphs.
+    """
+
+    def __init__(
+            self,
+            paragraph_separator: Optional[str] = "\n\n\n",
+    ):
+        """Initialize with parameters."""
+
+        self.paragraph_separator = paragraph_separator
+
+
+    def split_text(self, text: str, metadata_str: Optional[str] = None) -> List[str]:
+        chunks = text.split(self.paragraph_separator)
+        return chunks

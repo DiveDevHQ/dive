@@ -4,23 +4,27 @@ from dive.storages.storage_context import StorageContext
 from dive.indices.index_context import IndexContext
 from dive.constants import DEFAULT_COLLECTION_NAME
 from dive.types import EmbeddingModel
+from langchain.embeddings import LlamaCppEmbeddings
 from langchain.schema import Document
 import importlib
 from langchain.embeddings import SentenceTransformerEmbeddings
+from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
+from huggingface_hub import  hf_hub_download
 import os
 import time
 import nltk
 import os
+from langchain.llms import LlamaCpp
+from langchain.callbacks.manager import CallbackManager
 
 nltk.download('punkt')
 from langchain.embeddings.openai import OpenAIEmbeddings
 from dive.util.configAPIKey import set_openai_api_key, set_pinecone_api_key, set_pinecone_env, \
-    set_pinecone_index_dimentions
+    set_pinecone_index_dimentions,set_hugging_face_auth
 from langchain import OpenAI
 from langchain.schema import Document
 import importlib
-from dive.embeddings.llama_embeddings import LlamaEmbeddings
-from dive.llms.llama_llm import LlamaLLM
+
 
 
 def index_example_data(chunk_size, chunk_overlap, summarize, embeddings, llm):
@@ -69,9 +73,9 @@ def clear_example_data():
 
 # Use pinecone vector db
 
-set_pinecone_api_key()
-set_pinecone_env()
-set_pinecone_index_dimentions()
+#set_pinecone_api_key()
+#set_pinecone_env()
+#set_pinecone_index_dimentions()
 
 
 # Default free model
@@ -84,8 +88,8 @@ print('------------Start Querying Data-----------------')
 question='What did the author do growing up?'
 query_example_data(question, 4, None, None, None)
 #clear_example_data()
-'''
 
+'''
  
 # Open AI model
 '''
@@ -100,17 +104,28 @@ instruction = None  # 'summarise your response in no more than 5 lines'
 #clear_example_data()
 '''
 
-'''
+set_hugging_face_auth()
 # Llama v2 7B model
-os.environ["PYTORCH_MPS_HIGH_WATERMARK_RATIO"] = "0.0"
-os.environ["COMMANDLINE_ARGS"] = "--skip-torch-cuda-test --upcast-sampling --no-half-vae --no-half --opt-sub-quad-attention --use-cpu interrogate"
-os.environ["use_auth_token"] = "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"
-index_example_data(256, 20, False, LlamaEmbeddings(),LlamaLLM())
+#os.environ["PYTORCH_MPS_HIGH_WATERMARK_RATIO"] = "0.0"
+#os.environ["COMMANDLINE_ARGS"] = "--skip-torch-cuda-test --upcast-sampling --no-half-vae --no-half --opt-sub-quad-attention --use-cpu interrogate"
+
+hf_auth = os.environ.get('use_auth_token', '')
+model_path = hf_hub_download(repo_id='TheBloke/Llama-2-7B-GGML', filename='llama-2-7b.ggmlv3.q5_1.bin', use_auth_token=hf_auth)
+callback_manager = CallbackManager([StreamingStdOutCallbackHandler()])
+llama_embeddings = LlamaCppEmbeddings(model_path=model_path)
+llm = LlamaCpp(
+    model_path=model_path,
+    input={"temperature": 0.75, "max_length": 2000, "top_p": 1},
+    callback_manager=callback_manager,
+    verbose=True,
+)
+
+index_example_data(256, 20, False, llama_embeddings,llm)
 print('------------Finish Indexing Data-----------------')
 time.sleep(30)
 print('------------Start Querying Data-----------------')
 question='What did the author do growing up?'
 instruction='summarise your response in no more than 5 lines'
-query_example_data(question,4, LlamaEmbeddings(),LlamaLLM(),instruction)
-'''
+query_example_data(question,4, llama_embeddings,llm,instruction)
+
 

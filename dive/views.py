@@ -535,7 +535,8 @@ def get_index_data(request):
         set_openai_api_key_from_env(OPENAI_API_KEY)
         service_context = ServiceContext.from_defaults(embeddings=OpenAIEmbeddings(), llm=OpenAI(temperature=0),
                                                        instruction=instruction)
-
+    else:
+        service_context=ServiceContext.from_defaults()
     query_context = QueryContext.from_defaults(service_context=service_context)
 
     k = None
