@@ -469,7 +469,7 @@ def index_data(module, connector_id, obj_type, schema, reload, chunking_type, ch
     if OPENAI_API_KEY:
         set_openai_api_key_from_env(OPENAI_API_KEY)
         service_context = ServiceContext.from_defaults(embed_config=embedding_model, embeddings=OpenAIEmbeddings(),
-                                                       llm=OpenAI())
+                                                       llm=OpenAI(temperature=0))
     else:
         service_context = ServiceContext.from_defaults(embed_config=embedding_model)
 
@@ -533,7 +533,7 @@ def get_index_data(request):
 
     if OPENAI_API_KEY:
         set_openai_api_key_from_env(OPENAI_API_KEY)
-        service_context = ServiceContext.from_defaults(embeddings=OpenAIEmbeddings(), llm=OpenAI(),
+        service_context = ServiceContext.from_defaults(embeddings=OpenAIEmbeddings(), llm=OpenAI(temperature=0),
                                                        instruction=instruction)
 
     query_context = QueryContext.from_defaults(service_context=service_context)
