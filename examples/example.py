@@ -88,8 +88,8 @@ print('------------Start Querying Data-----------------')
 question='What did the author do growing up?'
 query_example_data(question, 4, None, None, None)
 #clear_example_data()
-
 '''
+
  
 # Open AI model
 '''
@@ -104,11 +104,12 @@ instruction = None  # 'summarise your response in no more than 5 lines'
 #clear_example_data()
 '''
 
-set_hugging_face_auth()
+
 # Llama v2 7B model
 #os.environ["PYTORCH_MPS_HIGH_WATERMARK_RATIO"] = "0.0"
 #os.environ["COMMANDLINE_ARGS"] = "--skip-torch-cuda-test --upcast-sampling --no-half-vae --no-half --opt-sub-quad-attention --use-cpu interrogate"
 
+set_hugging_face_auth()
 hf_auth = os.environ.get('use_auth_token', '')
 model_path = hf_hub_download(repo_id='TheBloke/Llama-2-7B-GGML', filename='llama-2-7b.ggmlv3.q5_1.bin', use_auth_token=hf_auth)
 callback_manager = CallbackManager([StreamingStdOutCallbackHandler()])
@@ -119,7 +120,7 @@ llm = LlamaCpp(
     callback_manager=callback_manager,
     verbose=True,
 )
-
+ 
 index_example_data(256, 20, False, llama_embeddings,llm)
 print('------------Finish Indexing Data-----------------')
 time.sleep(30)
@@ -127,5 +128,4 @@ print('------------Start Querying Data-----------------')
 question='What did the author do growing up?'
 instruction='summarise your response in no more than 5 lines'
 query_example_data(question,4, llama_embeddings,llm,instruction)
-
 
