@@ -61,6 +61,9 @@ def query_example_data(question, chunk_size, embeddings, llm, instruction):
     for d in data:
         print(d.page_content)
         print('')
+    short_answer=query_context.question_answer(query=question,documents=data)
+    print('------------short answer -----------------')
+    print(short_answer)
     summary = query_context.summarization(documents=data)
     print('------------summary -----------------')
     print(summary)
@@ -94,16 +97,15 @@ query_example_data(question, 4, None, None, None)
 # Open AI model
 '''
 set_openai_api_key()
-#index_example_data(256, 20, False, OpenAIEmbeddings(), OpenAI())
+index_example_data(256, 20, False, OpenAIEmbeddings(), OpenAI())
 print('------------Finish Indexing Data-----------------')
 time.sleep(30)
 print('------------Start Querying Data-----------------')
 question = 'What did the author do growing up?'
-instruction = None  # 'summarise your response in no more than 5 lines'
-#query_example_data(question, 4, OpenAIEmbeddings(), OpenAI(temperature=0), instruction)
+instruction = None # 'summarise your response in no more than 5 lines' or 'answer this question in Indonesian'
+query_example_data(question, 4, OpenAIEmbeddings(), OpenAI(temperature=0), instruction)
 #clear_example_data()
 '''
-
 
 # Llama v2 7B model
 #os.environ["PYTORCH_MPS_HIGH_WATERMARK_RATIO"] = "0.0"
@@ -120,12 +122,11 @@ llm = LlamaCpp(
     callback_manager=callback_manager,
     verbose=True,
 )
- 
 index_example_data(256, 20, False, llama_embeddings,llm)
 print('------------Finish Indexing Data-----------------')
 time.sleep(30)
 print('------------Start Querying Data-----------------')
 question='What did the author do growing up?'
-instruction='summarise your response in no more than 5 lines'
-query_example_data(question,4, llama_embeddings,llm,instruction)
-
+instruction=None #'summarise your response in no more than 5 lines'
+query_example_data(question,1, llama_embeddings,llm,instruction)
+#clear_example_data()
