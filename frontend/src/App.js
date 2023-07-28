@@ -185,7 +185,7 @@ function App() {
     loadApps();
   }
 
-  function queryDocuments() {
+  function queryDocuments(query_type) {
     setError('');
     if (!selectAccountId && !selectConnectorId) {
       setError('Please select either accountId, or connectorId to search.');
@@ -212,7 +212,7 @@ function App() {
     setQueryResult(null);
     setLoading(true);
     queryData(selectAccountId ? selectAccountId : "", selectConnectorId ? selectConnectorId : "", 
-    queryText, chunkSize ? chunkSize : "", instruction? instruction: "").then(data => {
+    queryText, chunkSize ? chunkSize : "", instruction? instruction: "",query_type).then(data => {
       setQueryResult(data);
       setLoading(false);
 
@@ -368,7 +368,8 @@ function App() {
             <br />
             <div className='red-text'>{error}</div>
             <br />
-            <button type="button" className="btn btn-grey mr-3" onClick={() => queryDocuments()} >Search</button>
+            <button type="button" className="btn btn-grey mr-5" onClick={() => queryDocuments()} >Short Answer</button>
+            <button type="button" className="btn btn-grey mr-5" onClick={() => queryDocuments('summary')} >Summary</button>
             <br />
             {queryResult && (<pre className='json-copy mt-3'>{JSON.stringify(queryResult, null, 2)}</pre>)}
            

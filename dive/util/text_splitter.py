@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from langchain.text_splitter import TextSplitter
 from dive.constants import DEFAULT_CHUNK_OVERLAP, DEFAULT_CHUNK_SIZE
 
+
 @dataclass
 class TextSplit:
     """Text split with overlap.
@@ -95,10 +96,10 @@ class TokenTextSplitter(TextSplitter):
                         end_idx = len(cur_split)
                         while len(self.tokenizer(cur_split[0:end_idx])) > chunk_size:
                             for i in range(1, end_idx):
-                                tmp_split = cur_split[0 : end_idx - i]
+                                tmp_split = cur_split[0: end_idx - i]
                                 if len(self.tokenizer(tmp_split)) <= chunk_size:
                                     cur_split_chunks.append(tmp_split)
-                                    cur_split = cur_split[end_idx - i : end_idx]
+                                    cur_split = cur_split[end_idx - i: end_idx]
                                     end_idx = len(cur_split)
                                     break
                         cur_split_chunks.append(cur_split)
@@ -421,21 +422,19 @@ class SentenceSplitter(TextSplitter):
         return chunks
 
 
-
-
 class ParagraphSplitter(TextSplitter):
     """Split text into paragraphs.
     """
 
     def __init__(
             self,
-            paragraph_separator: Optional[str] = "\n\n\n",
+            paragraph_separator: Optional[str] = "\n\n",
     ):
         """Initialize with parameters."""
 
         self.paragraph_separator = paragraph_separator
 
-
     def split_text(self, text: str, metadata_str: Optional[str] = None) -> List[str]:
         chunks = text.split(self.paragraph_separator)
+        chunks = [x for x in chunks if x]
         return chunks
