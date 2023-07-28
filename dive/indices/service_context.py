@@ -8,6 +8,7 @@ from langchain.chains.llm import BaseLanguageModel
 from langchain.embeddings import SentenceTransformerEmbeddings
 
 
+
 @dataclass
 class ServiceContext:
     embed_config: BaseModel
@@ -26,6 +27,7 @@ class ServiceContext:
 
         if not embeddings:
             embeddings = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
+
 
         return cls(
             embed_config=embed_config,

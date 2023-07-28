@@ -512,6 +512,7 @@ def get_index_data(request):
     query = None
     chunk_size = None
     instruction = None
+    query_type = None
     if url_params:
         url_params_dict = parse_qs(url_params)
         if 'connector_id' in url_params_dict and url_params_dict['connector_id'][0]:
@@ -524,6 +525,8 @@ def get_index_data(request):
             chunk_size = url_params_dict['chunk_size'][0]
         if 'instruction' in url_params_dict:
             instruction = url_params_dict['instruction'][0]
+        if 'query_type' in url_params_dict:
+            query_type = url_params_dict['query_type'][0]
     if not connector_id and not account_id:
         raise BadRequestException("Please include either connector_id or account_id in the query parameter.")
     if not query:
@@ -556,14 +559,17 @@ def get_index_data(request):
         error_data['error']['status_code'] = 404
         return JsonResponse(error_data, safe=False)
 
-    summary_text = ''
+    result_text = ''
     top_chunks = []
     if len(data) > 0:
         for d in data:
             top_chunks.append(d.page_content)
-        summary_text = query_context.summarization(documents=data)
+        if query_type == 'summary':
+            result_text = query_context.summarization(documents=data)
+        else:
+            result_text = query_context.question_answer(query=query, documents=data)
 
-    return JsonResponse({'summary': summary_text, 'top_chunks': top_chunks}, safe=False)
+    return JsonResponse({'result': result_text, 'top_chunks': top_chunks}, safe=False)
 
 
 @api_view(["GET"])

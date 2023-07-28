@@ -6,6 +6,7 @@ from langchain.schema import Document
 from dive.constants import DEFAULT_QUERY_CHUNK_SIZE
 from dive.util.power_method import sentence_transformer_summarize
 from langchain.chains.summarize import load_summarize_chain
+from langchain.chains.question_answering import load_qa_chain
 from langchain import PromptTemplate
 
 
@@ -64,3 +65,22 @@ class QueryContext:
                 chain = load_summarize_chain(llm=self.service_context.llm, chain_type="map_reduce")
 
         return chain.run(documents)
+
+    def question_answer(self, query: str, documents: [Document]):
+        if self.service_context.instruction:
+            prompt = f'{self.service_context.instruction}' """
+            "{context}"
+            Question: {question}:
+            """
+            prompt_template = PromptTemplate(template=prompt, input_variables=["context", "question"])
+
+        if not self.service_context.llm:
+            return self.summarization(documents=documents)
+        else:
+            if self.service_context.instruction:
+                chain = load_qa_chain(llm=self.service_context.llm, chain_type="stuff", verbose=True,
+                                      prompt=prompt_template)
+            else:
+                chain = load_qa_chain(llm=self.service_context.llm, chain_type="stuff")
+
+            return chain.run(input_documents=documents, question=query)
