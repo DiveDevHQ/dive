@@ -5,6 +5,7 @@ from huggingface_hub import login
 from transformers import AutoTokenizer, AutoModelForCausalLM,AutoModel
 import time
 import torch
+import os
 import ssl
 from torch import cuda, bfloat16,no_grad
 import transformers
@@ -41,7 +42,7 @@ class LlamaEmbeddings(Embeddings):
             bnb_4bit_compute_dtype=bfloat16
         )
         # begin initializing HF items, need auth token for these
-        hf_auth = ""
+        hf_auth = env.str('HUGGING_FACE_AUTH', default='') or os.environ.get('use_auth_token', '')
         model_config = transformers.AutoConfig.from_pretrained(
             model_id,
             use_auth_token=hf_auth
