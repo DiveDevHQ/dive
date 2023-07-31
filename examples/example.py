@@ -1,9 +1,12 @@
+from transformers import AutoTokenizer
+
 from dive.retrievers.query_context import QueryContext
 from dive.indices.service_context import ServiceContext
 from dive.storages.storage_context import StorageContext
 from dive.indices.index_context import IndexContext
 from dive.constants import DEFAULT_COLLECTION_NAME
 from dive.types import EmbeddingModel
+from dive.embeddings.llama_embeddings import LlamaEmbeddings
 from langchain.embeddings import LlamaCppEmbeddings
 from langchain.schema import Document
 import importlib
@@ -16,6 +19,7 @@ import nltk
 import os
 from langchain.llms import LlamaCpp
 from langchain.callbacks.manager import CallbackManager
+import transformers
 
 nltk.download('punkt')
 from langchain.embeddings.openai import OpenAIEmbeddings
@@ -36,6 +40,7 @@ def index_example_data(chunk_size, chunk_overlap, summarize, embeddings, llm):
                 'obj_type': 'paul_graham_essay'}
     _ids = []
     _documents = []
+
     for d in data['results']:
         _metadata = metadata
         if 'metadata' in d:
@@ -82,7 +87,7 @@ def clear_example_data():
 
 
 # Default free model
-'''
+
 index_example_data(256, 20, False, None,None)
 # wait 1 min to run query method
 print('------------Finish Indexing Data-----------------')
@@ -91,9 +96,8 @@ print('------------Start Querying Data-----------------')
 question='What did the author do growing up?'
 query_example_data(question, 4, None, None, None)
 #clear_example_data()
-'''
 
- 
+
 # Open AI model
 '''
 set_openai_api_key()
@@ -111,14 +115,18 @@ query_example_data(question, 4, OpenAIEmbeddings(), OpenAI(temperature=0), instr
 #os.environ["PYTORCH_MPS_HIGH_WATERMARK_RATIO"] = "0.0"
 #os.environ["COMMANDLINE_ARGS"] = "--skip-torch-cuda-test --upcast-sampling --no-half-vae --no-half --opt-sub-quad-attention --use-cpu interrogate"
 
+'''
 set_hugging_face_auth()
 hf_auth = os.environ.get('use_auth_token', '')
-model_path = hf_hub_download(repo_id='TheBloke/Llama-2-7B-GGML', filename='llama-2-7b.ggmlv3.q5_1.bin', use_auth_token=hf_auth)
+#model_path = hf_hub_download(repo_id='TheBloke/Llama-2-7B-GGML', filename='llama-2-7b.ggmlv3.q5_1.bin', use_auth_token=hf_auth)
+model_path = hf_hub_download(repo_id='TheBloke/Upstage-Llama-2-70B-instruct-v2-GGML', filename='', use_auth_token=hf_auth)
+
+
 callback_manager = CallbackManager([StreamingStdOutCallbackHandler()])
 llama_embeddings = LlamaCppEmbeddings(model_path=model_path)
 llm = LlamaCpp(
     model_path=model_path,
-    input={"temperature": 0.75, "max_length": 2000, "top_p": 1},
+    input={"temperature": 0, "max_length": 2000, "top_p": 1},
     callback_manager=callback_manager,
     verbose=True,
 )
@@ -128,5 +136,7 @@ time.sleep(30)
 print('------------Start Querying Data-----------------')
 question='What did the author do growing up?'
 instruction=None #'summarise your response in no more than 5 lines'
-query_example_data(question,1, llama_embeddings,llm,instruction)
+query_example_data(question,4, llama_embeddings,llm,instruction)
 #clear_example_data()
+
+'''

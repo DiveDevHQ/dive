@@ -87,8 +87,10 @@ function App() {
     });
   }
   function clearSyncData(app, connector_id) {
+    setLoading(true);
     clearData(app, connector_id).then(data => {
       loadApps();
+      setLoading(false);
     });
   }
 
