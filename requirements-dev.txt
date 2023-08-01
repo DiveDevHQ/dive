@@ -44,7 +44,6 @@ urllib3==1.26.15
 wcwidth==0.1.9
 websocket-client==0.59.0
 pypdf==3.12.1
-torch>=1.6.0 --no-cache-dir
 sentence-transformers==2.2.2
 tiktoken==0.4.0
 langchain>=0.0.235
