@@ -44,8 +44,6 @@ urllib3==1.26.15
 wcwidth==0.1.9
 websocket-client==0.59.0
 pypdf==3.12.1
-torch>=1.6.0 --no-cache-dir
-sentence-transformers==2.2.2
 tiktoken==0.4.0
 langchain>=0.0.235
 pytest>=7.2.2
@@ -57,3 +55,4 @@ transformers>=4.31.0
 chromadb==0.3.26
 scipy==1.11.1
 nltk==3.8.1
+llama-cpp-python==0.1.77 --no-cache-dir
