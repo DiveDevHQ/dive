@@ -43,6 +43,15 @@ class QueryContext:
                 "Could not find the index"
             )
 
+    def get(self, filter: Dict[str, str]):
+        try:
+            return self.storage_context.vector_store.get_data(filter=filter)
+        except KeyError:
+            raise ValueError(
+                "Could not find the index"
+            )
+
+
     def summarization(self, documents: [Document]) -> str:
         chunks_text = ''
         for d in documents:

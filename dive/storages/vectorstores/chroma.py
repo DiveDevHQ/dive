@@ -49,6 +49,7 @@ def _results_to_docs_and_scores(results: Any) -> List[Tuple[Document, float]]:
     ]
 
 
+
 class Chroma(VectorStore):
     """Wrapper around ChromaDB embeddings platform.
 
@@ -85,7 +86,6 @@ class Chroma(VectorStore):
                 "Could not import chromadb python package. "
                 "Please install it with `pip install chromadb`."
             )
-
 
         if client is not None:
             self._client_settings = client_settings
@@ -485,7 +485,6 @@ class Chroma(VectorStore):
             metadatas=[metadata],
         )
 
-
     def from_texts(
             self: Type[Chroma],
             texts: List[str],
@@ -530,7 +529,6 @@ class Chroma(VectorStore):
         chroma_collection.add_texts(texts=texts, metadatas=metadatas, ids=ids)
         return chroma_collection
 
-
     def from_documents(
             self: Type[Chroma],
             documents: List[Document],
@@ -567,7 +565,6 @@ class Chroma(VectorStore):
         if persist_directory:
             self.persist()
 
-
     def delete(self, ids: Optional[List[str]] = None,
                delete_all: Optional[bool] = None,
                filter: Optional[dict] = None, **kwargs: Any) -> None:
@@ -580,8 +577,15 @@ class Chroma(VectorStore):
             self._client.reset()
         elif filter:
             self._collection.delete(where=filter)
-        elif ids and len(ids)>0:
+        elif ids and len(ids) > 0:
             self._collection.delete(ids=ids)
 
+    def get_data(self, filter: dict) -> List[Document]:
+        data = self.get(where=filter)
+        results = []
+        documents = data["documents"]
+        metadatas = data["metadatas"]
+        for i, document in enumerate(documents):
+            results.append(Document(page_content=document, metadata=metadatas[i] or {}))
 
-
+        return results

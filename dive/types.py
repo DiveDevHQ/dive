@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from dive.constants import DEFAULT_CHUNK_OVERLAP, DEFAULT_CHUNK_SIZE, DEFAULT_CHUNKING_TYPE, DEFAULT_QUERY_CHUNK_SIZE
 
 
-class EmbeddingModel(BaseModel):
+class EmbeddingConfig(BaseModel):
     chunking_type: str = DEFAULT_CHUNKING_TYPE
     chunk_size: int = DEFAULT_CHUNK_SIZE
     chunk_overlap: int = DEFAULT_CHUNK_OVERLAP
