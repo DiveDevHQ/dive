@@ -16,7 +16,7 @@ We believe **open-source** is the best way to solve every growth integrations pa
 
 ### Managed data sources
 
-CRM, Ticketing, Documentations, Payment, KYC, Databases
+CRM, Documentations, Payment, KYC, Databases
 
 ### Demo
 <p align="center">
