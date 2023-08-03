@@ -33,6 +33,34 @@ def index_example_data(chunk_size, chunk_overlap, summarize, embeddings, llm):
     IndexContext.from_documents(documents=_documents, ids=_ids, service_context=service_context)
 
 
+def index_example_yc_safe_user_guide_data(chunk_size, chunk_overlap, summarize, embeddings, llm):
+    package_name = "integrations.connectors.example.filestorage.request_data"
+    mod = importlib.import_module(package_name)
+    data = mod.load_objects(None, None, "yc_safe_user_guide", None, None, None)
+
+    metadata = {'account_id': 'self', 'connector_id': 'example',
+                'obj_type': 'yc_safe_user_guide'}
+    _ids = []
+    _documents = []
+
+    for d in data['results']:
+        _metadata = metadata
+        if 'metadata' in d:
+            _metadata.update(d['metadata'])
+        document = Document(page_content=str(d['data']), metadata=_metadata)
+        _documents.append(document)
+        _ids.append(d['id'])
+
+    embedding_model = EmbeddingModel()
+    embedding_model.chunking_type = "custom"
+    embedding_model.chunk_size = chunk_size
+    embedding_model.chunk_overlap = chunk_overlap
+    embedding_model.summarize = summarize
+    service_context = ServiceContext.from_defaults(embed_config=embedding_model, embeddings=embeddings, llm=llm)
+    IndexContext.from_documents(documents=_documents, ids=_ids, service_context=service_context)
+
+
+
 def query_example_data(question, chunk_size, embeddings, llm, instruction):
     service_context = ServiceContext.from_defaults(embeddings=embeddings, llm=llm, instruction=instruction)
     query_context = QueryContext.from_defaults(service_context=service_context)
