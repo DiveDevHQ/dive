@@ -13,7 +13,7 @@ from django.http import HttpResponse
 from dive.indices.service_context import ServiceContext
 from dive.retrievers.query_context import QueryContext
 from dive.indices.index_context import IndexContext
-from dive.types import EmbeddingModel
+from dive.types import EmbeddingConfig
 from langchain.schema import Document
 from dive.constants import DEFAULT_COLLECTION_NAME, DEFAULT_CHUNKING_TYPE
 from langchain.embeddings.openai import OpenAIEmbeddings
@@ -459,7 +459,7 @@ def index_data(module, connector_id, obj_type, schema, reload, chunking_type, ch
 
     metadata = {'account_id': integration.account_id, 'connector_id': connector_id,
                 'obj_type': obj_type}
-    embedding_model = EmbeddingModel()
+    embedding_model = EmbeddingConfig()
     embedding_model.chunking_type = chunking_type
     embedding_model.chunk_size = chunk_size
     embedding_model.chunk_overlap = chunk_overlap

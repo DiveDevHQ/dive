@@ -354,7 +354,6 @@ class Pinecone(VectorStore):
             index.upsert(vectors=list(to_upsert), namespace=namespace, **_upsert_kwargs)
         return cls(index, embedding.embed_query, text_key, namespace, **kwargs)
 
-
     def from_documents(
             self,
             documents: List[Document],
@@ -366,7 +365,7 @@ class Pinecone(VectorStore):
             namespace: Optional[str] = None,
             upsert_kwargs: Optional[dict] = None,
             **kwargs: Any,
-    )->None:
+    ) -> None:
 
         metadatas = []
         texts = []
@@ -415,17 +414,15 @@ class Pinecone(VectorStore):
                 metadata = metadatas[i:i_end]
             else:
                 metadata = [{} for _ in range(i, i_end)]
-            metadata_list=[]
+            metadata_list = []
             for j, line in enumerate(lines_batch):
-                metadata_list.append(metadata[j] | {text_key:line})
-
+                metadata_list.append(metadata[j] | {text_key: line})
 
             to_upsert = zip(ids_batch, embeds, metadata_list)
 
             # upsert to Pinecone
             _upsert_kwargs = upsert_kwargs or {}
             index.upsert(vectors=list(to_upsert), namespace=namespace, **_upsert_kwargs)
-
 
     @classmethod
     def from_existing_index(
@@ -470,7 +467,7 @@ class Pinecone(VectorStore):
         elif ids is not None:
             chunk_size = 1000
             for i in range(0, len(ids), chunk_size):
-                chunk = ids[i : i + chunk_size]
+                chunk = ids[i: i + chunk_size]
                 self._index.delete(ids=chunk, namespace=namespace, **kwargs)
         elif filter is not None:
             self._index.delete(filter=filter, namespace=namespace, **kwargs)
@@ -478,3 +475,18 @@ class Pinecone(VectorStore):
             raise ValueError("Either ids, delete_all, or filter must be provided.")
 
         return None
+
+    def get_data(self, filter: dict) -> List[Document]:
+        docs = []
+        results = self._index.query(filter=filter)
+        for res in results["matches"]:
+            metadata = res["metadata"]
+            if self._text_key in metadata:
+                text = metadata.pop(self._text_key)
+                docs.append(Document(page_content=text, metadata=metadata))
+                # docs.append((Document(page_content=text, metadata=metadata), score))
+            else:
+                logger.warning(
+                    f"Found document with no `{self._text_key}` key. Skipping."
+                )
+        return docs

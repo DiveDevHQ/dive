@@ -50,5 +50,6 @@ openai>=0.27.8
 docx2txt==0.8
 pinecone-client==2.2.2
 scipy==1.11.1
+scipy==1.11.1
 nltk==3.8.1
 psycopg2-binary==2.9.6

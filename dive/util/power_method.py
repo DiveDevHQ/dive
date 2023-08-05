@@ -1,7 +1,9 @@
 import numpy as np
 from scipy.sparse.csgraph import connected_components
 import nltk
+
 nltk.download('punkt')
+
 
 def _power_method(transition_matrix, increase_power=True):
     eigenvector = np.ones(len(transition_matrix))
@@ -144,3 +146,17 @@ def sentence_transformer_summarize(text):
     for idx in most_central_sentence_indices[0:5]:
         summary_text += sentences[idx].strip() + '\n'
     return summary_text
+
+
+def sentence_transformer_question_answer(question, text):
+    import_err_msg = (
+        "`transformers` package not found, please run `pip install transformers`"
+    )
+    try:
+        from transformers import pipeline
+    except ImportError:
+        raise ImportError(import_err_msg)
+    question_answerer = pipeline("question-answering", model="sentence-transformers/all-MiniLM-L6-v2")
+    result = question_answerer(question=question, context=text)
+    if 'answer' in result:
+        return result['answer']
