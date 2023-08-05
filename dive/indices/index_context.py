@@ -11,6 +11,7 @@ import uuid
 import tiktoken
 import environ
 
+
 env = environ.Env()
 environ.Env.read_env()  # reading .env file
 import os
@@ -106,6 +107,7 @@ class IndexContext:
                     _documents.append(_document)
                     _ids.append(ids[i] + "_summary_" + str(i))
 
+                #to do, if using LLM-based retrieval, no need to index chunks into vector db, should put somewhere else, to save embeddings cost.
                 for j, d in enumerate(sentence_chunks):
                     _metadata = document.metadata
                     if service_context.embed_config.summarize:
@@ -147,7 +149,9 @@ class IndexContext:
 
 def summarization(service_context:ServiceContext, document: Document) -> str:
 
+
     if not service_context.llm:
+
         return sentence_transformer_summarize(document.page_content)
     else:
         chain = load_summarize_chain(llm=service_context.llm, chain_type="map_reduce")
