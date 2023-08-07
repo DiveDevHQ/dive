@@ -13,7 +13,6 @@ def set_pinecone_api_key():
 
 
 
-
 def set_pinecone_env():
     os.environ["PINECONE_ENV"] = ""
 
@@ -25,3 +24,6 @@ def set_chromadb_persist():
 
 def set_hugging_face_auth():
     os.environ["use_auth_token"]=""
+
+def set_hugging_face_auth_from_env(HUGGING_FACE_AUTH):
+    os.environ["use_auth_token"] = HUGGING_FACE_AUTH
