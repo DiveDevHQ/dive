@@ -17,9 +17,8 @@ from dive.indices.index_context import IndexContext
 from dive.types import EmbeddingConfig
 from langchain.schema import Document
 from dive.constants import DEFAULT_COLLECTION_NAME, DEFAULT_CHUNKING_TYPE
-from langchain.embeddings.openai import OpenAIEmbeddings
-from langchain import OpenAI
-from dive.util.configAPIKey import set_openai_api_key_from_env
+from dive.util.model_util import get_llm,get_embeddings
+
 import json
 import environ
 import copy
@@ -28,7 +27,6 @@ from time import sleep
 from django.shortcuts import render
 import os
 from pathlib import Path
-
 
 env = environ.Env()
 environ.Env.read_env()
@@ -465,15 +463,7 @@ def index_data(module, connector_id, obj_type, schema, reload, chunking_type, ch
     embedding_model.chunk_size = chunk_size
     embedding_model.chunk_overlap = chunk_overlap
 
-    OPENAI_API_KEY = env.str('OPENAI_API_KEY', default='') or os.environ.get('OPENAI_API_KEY', '')
-
-    if OPENAI_API_KEY:
-        set_openai_api_key_from_env(OPENAI_API_KEY)
-        service_context = ServiceContext.from_defaults(embed_config=embedding_model, embeddings=OpenAIEmbeddings(),
-                                                       llm=OpenAI(temperature=0))
-    else:
-        service_context = ServiceContext.from_defaults(embed_config=embedding_model)
-
+    service_context=ServiceContext.from_defaults(embed_config=embedding_model,embeddings=get_embeddings(),llm=get_llm())
     load_data(module, token, integration, obj_type, schema, None, obj_last_sync_at, metadata, service_context)
     auth.update_last_sync(connector_id, obj_type, True)
 
@@ -533,14 +523,7 @@ def get_query_data(request):
     if not query:
         raise BadRequestException("Please include query_text in query parameter.")
 
-    OPENAI_API_KEY = env.str('OPENAI_API_KEY', default='') or os.environ.get('OPENAI_API_KEY', '')
-
-    if OPENAI_API_KEY:
-        set_openai_api_key_from_env(OPENAI_API_KEY)
-        service_context = ServiceContext.from_defaults(embeddings=OpenAIEmbeddings(), llm=OpenAI(temperature=0),
-                                                       instruction=instruction)
-    else:
-        service_context = ServiceContext.from_defaults()
+    service_context=ServiceContext.from_defaults(embeddings=get_embeddings(),llm=get_llm(),  instruction=instruction)
     query_context = QueryContext.from_defaults(service_context=service_context)
 
     k = None
@@ -569,67 +552,6 @@ def get_query_data(request):
             result_text = query_context.summarization(documents=data)
         else:
             result_text = query_context.question_answer(query=query, documents=data)
-
-    return JsonResponse({'result': result_text, 'top_chunks': top_chunks}, safe=False)
-
-
-@api_view(["GET"])
-def get_chat_data(request):
-    url_params = request.GET.urlencode()
-    connector_id = None
-    account_id = None
-    query = None
-    top_k = None
-
-    if url_params:
-        url_params_dict = parse_qs(url_params)
-        if 'connector_id' in url_params_dict and url_params_dict['connector_id'][0]:
-            connector_id = url_params_dict['connector_id'][0]
-        if 'account_id' in url_params_dict and url_params_dict['account_id'][0]:
-            account_id = url_params_dict['account_id'][0]
-        if 'query_text' in url_params_dict:
-            query = url_params_dict['query_text'][0]
-        if 'top_k' in url_params_dict:
-            top_k = url_params_dict['top_k'][0]
-
-    if not connector_id and not account_id:
-        raise BadRequestException("Please include either connector_id or account_id in the query parameter.")
-    if not query:
-        raise BadRequestException("Please include query_text in query parameter.")
-
-    OPENAI_API_KEY = env.str('OPENAI_API_KEY', default='') or os.environ.get('OPENAI_API_KEY', '')
-
-    if OPENAI_API_KEY:
-        set_openai_api_key_from_env(OPENAI_API_KEY)
-        service_context = ServiceContext.from_defaults(embeddings=OpenAIEmbeddings(), llm=OpenAI(temperature=0),
-                                                       instruction=None)
-    else:
-        service_context = ServiceContext.from_defaults()
-    query_context = QueryContext.from_defaults(service_context=service_context)
-
-    k = None
-    if top_k:
-        k = int(top_k)
-    where = None
-    if connector_id:
-        where = {'connector_id': connector_id}
-    elif account_id:
-        where = {'account_id': account_id}
-    try:
-        data = query_context.query(query=query, k=k, filter=where)
-    except ValueError:
-        error_data = {'error': {}}
-        error_data['error']['id'] = 'Not Found'
-        error_data['error']['message'] = 'Requested vector data does not exist'
-        error_data['error']['status_code'] = 404
-        return JsonResponse(error_data, safe=False)
-
-    result_text = ''
-    top_chunks = []
-    if len(data) > 0:
-        for d in data:
-            top_chunks.append(d.page_content)
-        result_text = query_context.question_answer(query=query, documents=data)
 
     return JsonResponse({'result': result_text, 'top_chunks': top_chunks}, safe=False)
 
@@ -668,19 +590,11 @@ def add_message(request):
     if not user_id in chat_history:
         chat_history[user_id] = []
 
-    timestamp = int((datetime.now() - datetime(1970, 1, 1)).total_seconds()*1000)
-
-    OPENAI_API_KEY = env.str('OPENAI_API_KEY', default='') or os.environ.get('OPENAI_API_KEY', '')
-
-    if OPENAI_API_KEY:
-        set_openai_api_key_from_env(OPENAI_API_KEY)
-        service_context = ServiceContext.from_defaults(embeddings=OpenAIEmbeddings(), llm=OpenAI(temperature=0),
-                                                       instruction=None)
-    else:
-        service_context = ServiceContext.from_defaults()
+    timestamp = int((datetime.now() - datetime(1970, 1, 1)).total_seconds() * 1000)
+    service_context=ServiceContext.from_defaults(embeddings=get_embeddings(),llm=get_llm(),instruction=None)
     query_context = QueryContext.from_defaults(service_context=service_context)
 
-    data = query_context.query(query=text, k=4, filter={'connector_id':'example'})
+    data = query_context.query(query=text, k=4, filter={'connector_id': 'example'})
 
     result_text = ''
     top_chunks = []
