@@ -22,7 +22,6 @@ def index_example_data(chunk_size, chunk_overlap, summarize, embeddings, llm):
         document = Document(page_content=str(d['data']), metadata=_metadata)
         _documents.append(document)
         _ids.append(d['id'])
-
     embedding_config = EmbeddingConfig()
     embedding_config.chunking_type = "custom"
     embedding_config.chunk_size = chunk_size

@@ -39,5 +39,22 @@
       To begin the development, run `npm start` or `yarn start`.
       To create a production bundle, use `npm run build` or `yarn build`.
     -->
+    <script  src="https://chat.diveapi.co/sdk/disco.js"></script>
+  <script>
+     function generateUUID() {
+    return ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c =>
+      (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+    );
+  
+  }
+
+    var D = new Disco({
+      token: 'none',
+      client: generateUUID()
+
+    })
+    D.init();
+ 
+  </script>
   </body>
 </html>

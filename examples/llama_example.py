@@ -1,5 +1,5 @@
 import time
-from dive.util.configAPIKey import set_hugging_face_auth
+from dive.util.configAPIKey import set_hugging_face_auth,set_pinecone_api_key,set_pinecone_env,set_pinecone_index_dimentions
 from huggingface_hub import hf_hub_download
 import os
 from langchain.callbacks.manager import CallbackManager
@@ -14,6 +14,9 @@ set_hugging_face_auth()
 hf_auth = os.environ.get('use_auth_token', '')
 model_path = hf_hub_download(repo_id='TheBloke/Llama-2-7B-GGML', filename='llama-2-7b.ggmlv3.q5_1.bin', use_auth_token=hf_auth)
 
+set_pinecone_api_key()
+set_pinecone_env()
+set_pinecone_index_dimentions()
 
 callback_manager = CallbackManager([StreamingStdOutCallbackHandler()])
 llama_embeddings = LlamaCppEmbeddings(model_path=model_path)

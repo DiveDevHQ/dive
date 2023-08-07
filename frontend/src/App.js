@@ -345,7 +345,7 @@ function App() {
               <div className='col-4'>
                 <span className="svg-icon-sm svg-text cursor-pointer" simple-title='Top K chunks from the result, K between 2 to 10' >
                   <InfoIcon />
-                </span> Chunk size:<input className='form-control-short ml-2' value={chunkSize || ""} onChange={e => setChunkSize(e.target.value)}
+                </span> Top K:<input className='form-control-short ml-2' value={chunkSize || ""} onChange={e => setChunkSize(e.target.value)}
                   type="text" />
 
               </div>

@@ -2,6 +2,7 @@ from integrations.models import Integration
 from integrations.models import Template
 from integrations import authentication as auth
 from django.shortcuts import redirect
+import uuid
 from django.http import JsonResponse
 from datetime import datetime, timezone, timedelta
 from dive.api.exceptions import UnauthorizedException
@@ -16,13 +17,12 @@ from dive.indices.index_context import IndexContext
 from dive.types import EmbeddingConfig
 from langchain.schema import Document
 from dive.constants import DEFAULT_COLLECTION_NAME, DEFAULT_CHUNKING_TYPE
-from langchain.embeddings.openai import OpenAIEmbeddings
-from langchain import OpenAI
-from dive.util.configAPIKey import set_openai_api_key_from_env
+from dive.util.model_util import get_llm,get_embeddings
+
 import json
 import environ
 import copy
-from dive.api.utils import get_params
+from dive.api.utils import send_message_socket
 from time import sleep
 from django.shortcuts import render
 import os
@@ -30,7 +30,6 @@ from pathlib import Path
 
 env = environ.Env()
 environ.Env.read_env()
-
 
 
 def index(request):
@@ -464,15 +463,7 @@ def index_data(module, connector_id, obj_type, schema, reload, chunking_type, ch
     embedding_model.chunk_size = chunk_size
     embedding_model.chunk_overlap = chunk_overlap
 
-    OPENAI_API_KEY = env.str('OPENAI_API_KEY', default='') or os.environ.get('OPENAI_API_KEY', '')
-
-    if OPENAI_API_KEY:
-        set_openai_api_key_from_env(OPENAI_API_KEY)
-        service_context = ServiceContext.from_defaults(embed_config=embedding_model, embeddings=OpenAIEmbeddings(),
-                                                       llm=OpenAI(temperature=0))
-    else:
-        service_context = ServiceContext.from_defaults(embed_config=embedding_model)
-
+    service_context=ServiceContext.from_defaults(embed_config=embedding_model,embeddings=get_embeddings(),llm=get_llm())
     load_data(module, token, integration, obj_type, schema, None, obj_last_sync_at, metadata, service_context)
     auth.update_last_sync(connector_id, obj_type, True)
 
@@ -505,12 +496,12 @@ def load_data(module, token, integration, obj_type, schema, cursor, last_sync_at
 
 
 @api_view(["GET"])
-def get_index_data(request):
+def get_query_data(request):
     url_params = request.GET.urlencode()
     connector_id = None
     account_id = None
     query = None
-    chunk_size = None
+    top_k = None
     instruction = None
     query_type = None
     if url_params:
@@ -521,8 +512,8 @@ def get_index_data(request):
             account_id = url_params_dict['account_id'][0]
         if 'query_text' in url_params_dict:
             query = url_params_dict['query_text'][0]
-        if 'chunk_size' in url_params_dict:
-            chunk_size = url_params_dict['chunk_size'][0]
+        if 'top_k' in url_params_dict:
+            top_k = url_params_dict['top_k'][0]
         if 'instruction' in url_params_dict:
             instruction = url_params_dict['instruction'][0]
         if 'query_type' in url_params_dict:
@@ -532,19 +523,12 @@ def get_index_data(request):
     if not query:
         raise BadRequestException("Please include query_text in query parameter.")
 
-    OPENAI_API_KEY = env.str('OPENAI_API_KEY', default='') or os.environ.get('OPENAI_API_KEY', '')
-
-    if OPENAI_API_KEY:
-        set_openai_api_key_from_env(OPENAI_API_KEY)
-        service_context = ServiceContext.from_defaults(embeddings=OpenAIEmbeddings(), llm=OpenAI(temperature=0),
-                                                       instruction=instruction)
-    else:
-        service_context=ServiceContext.from_defaults()
+    service_context=ServiceContext.from_defaults(embeddings=get_embeddings(),llm=get_llm(),  instruction=instruction)
     query_context = QueryContext.from_defaults(service_context=service_context)
 
     k = None
-    if chunk_size:
-        k = int(chunk_size)
+    if top_k:
+        k = int(top_k)
     where = None
     if connector_id:
         where = {'connector_id': connector_id}
@@ -570,6 +554,76 @@ def get_index_data(request):
             result_text = query_context.question_answer(query=query, documents=data)
 
     return JsonResponse({'result': result_text, 'top_chunks': top_chunks}, safe=False)
+
+
+chat_history = {}
+chat_queue = {}
+
+
+@api_view(["GET", "DELETE"])
+def get_or_delete_message_queue(request, user_id):
+    if request.method == 'GET':
+        if user_id in chat_queue:
+            return JsonResponse({'hasMessage': True, 'incomingAt': chat_queue[user_id]}, safe=False)
+        return JsonResponse({'hasMessage': False}, safe=False)
+    elif request.method == 'DELETE':
+        if user_id in chat_queue:
+            del chat_queue[user_id]
+        return HttpResponse(status=204)
+
+
+@api_view(["POST"])
+def add_message(request):
+    user_id = None
+    text = None
+    message_id = None
+    input_data = request.data
+    if 'userId' in input_data and input_data['userId']:
+        user_id = input_data['userId']
+    if 'text' in input_data and input_data['text']:
+        text = input_data['text']
+    if 'messageId' in input_data and input_data['messageId']:
+        message_id = input_data['messageId']
+    if not message_id:
+        message_id = str(uuid.uuid4())
+
+    if not user_id in chat_history:
+        chat_history[user_id] = []
+
+    timestamp = int((datetime.now() - datetime(1970, 1, 1)).total_seconds() * 1000)
+    service_context=ServiceContext.from_defaults(embeddings=get_embeddings(),llm=get_llm(),instruction=None)
+    query_context = QueryContext.from_defaults(service_context=service_context)
+
+    data = query_context.query(query=text, k=4, filter={'connector_id': 'example'})
+
+    result_text = ''
+    top_chunks = []
+    if len(data) > 0:
+        for d in data:
+            top_chunks.append(d.page_content)
+        result_text = query_context.question_answer(query=text, documents=data)
+
+    if result_text:
+        chat_history[user_id].append({'messageId': str(uuid.uuid4()), 'text': result_text, 'createdAt': timestamp})
+        if not user_id in chat_queue:
+            chat_queue[user_id] = timestamp
+    send_message_socket(user_id)
+    return JsonResponse([], safe=False)
+
+
+
+@api_view(["POST"])
+def get_message(request, user_id):
+    incoming_at = 0
+    input_data = request.data
+    if 'incomingAt' in input_data and input_data['incomingAt']:
+        incoming_at = input_data['incomingAt']
+    print(incoming_at)
+    if not user_id in chat_history:
+        return JsonResponse({'messages': []}, safe=False)
+
+    messages = [x for x in chat_history[user_id] if int(x['createdAt']) >= int(incoming_at)]
+    return JsonResponse(messages, safe=False)
 
 
 @api_view(["GET"])

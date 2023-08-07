@@ -1,5 +1,7 @@
 from rest_framework.views import exception_handler
 import re
+import websocket
+
 
 def custom_exception_handler(exc, context):
     # Call REST framework's default exception handler first,
@@ -28,3 +30,13 @@ def custom_exception_handler(exc, context):
 def get_params(text):
     variables = re.findall(r'\{\{(.*?)\}\}', text)
     return variables
+
+
+def send_message_socket(user_id):
+    ws = websocket.WebSocket()
+    ws.connect("wss://socket.diveapi.co/ws")
+    login = '{"channel":"login","name":"admin"}'
+    ws.send(login)
+    message = '{"channel":"message","otherPerson":"'+user_id+'"}'
+    ws.send(message)
+    ws.close()
