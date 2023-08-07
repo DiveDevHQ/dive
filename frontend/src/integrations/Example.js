@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { authWithPublicData, getConfig } from '../api';
 
-export default function Example() {
+export default function Example({account_id}) {
     const app = 'example';
  
 
     function connect() {
-        authWithPublicData(app).then(data => {
+      
+        authWithPublicData(app,account_id).then(data => {
             window.open(data.redirect, "_self");
         })
     }

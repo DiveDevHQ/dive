@@ -553,3 +553,14 @@ pre {
 .small-font{
   font-size: 0.875rem;
 }
+
+
+.login-content {
+  margin: auto;
+  width: 70%;
+ 
+}
+
+.logo-content{
+  width: 70%;
+}

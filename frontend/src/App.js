@@ -2,6 +2,7 @@ import logo from './logo.svg';
 import './App.css';
 import React, { useEffect, useReducer, useState } from 'react';
 import Logo from './assets/images/logo.png';
+import LogoDark from './assets/images/logo_dark.png';
 import axios from 'axios';
 import Badge from './controls/Badge';
 import Modal from 'react-modal';
@@ -11,8 +12,16 @@ import XIcon from './icons/XIcon';
 import InfoIcon from './icons/InfoIcon';
 import SelectCtrl from './controls/SelectCtrl';
 import { PulseLoader } from 'react-spinners';
+import './index.css'
 
+import { createClient } from '@supabase/supabase-js'
+import { Auth } from '@supabase/auth-ui-react'
+import { ThemeSupa } from '@supabase/auth-ui-shared'
 import { getApps, getConnectors, clearData, syncData, queryData, setupVector } from './api';
+
+const supabase = createClient(process.env.REACT_APP_SUPABASE_CLIENT, process.env.REACT_APP_SUPABASE_ANON_KEY)
+const auth=process.env.REACT_APP_AUTH
+
 
 function App() {
   const [page, setPage] = useState(1);
@@ -22,14 +31,32 @@ function App() {
   const [connectIds, setConnectIds] = useState([]);
   const [selectAccountId, setSelectAccountId] = useState();
   const [chunkSize, setChunkSize] = useState(4);
-  const [selectConnectorId, setSelectConnectorId] = useState();
+  const [selectConnectorId, setSelectConnectorId] = useState('all');
   const [queryResult, setQueryResult] = useState();
   const [queryText, setQueryText] = useState();
   const [error, setError] = useState();
   const [loading, setLoading] = useState(true);
   const [instruction, setInstruction] = useState();
+  const [session, setSession] = useState(null);
 
-  function setup(){
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session)
+     
+    })
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
+
+
+
+  function setup() {
     setupVector().then(data => {
       setLoading(false);
     });
@@ -43,7 +70,8 @@ function App() {
 
 
   function loadApps() {
-    getApps().then(data => {
+    
+    getApps(session.user.id).then(data => {
       setApps(data);
       if (data.length === 0) {
         setPage(2);
@@ -65,6 +93,7 @@ function App() {
               { 'label': data[i].account_id, 'value': data[i].account_id });
           }
         }
+        _connectIds.unshift({ 'label': 'All documents', 'value': 'all'});
         setConnectIds([..._connectIds]);
         setAccountIds([..._accountIds]);
       }
@@ -73,22 +102,29 @@ function App() {
 
   useEffect(() => {
     setup();
-    loadConnectors();
-    loadApps();
 
   }, []);
 
+  useEffect(() => {
+    if(session){
+      loadConnectors();
+      loadApps();
+    }
+    
+  }, [session]);
 
-  function runSyncData(app, connector_id) {
+
+
+  function runSyncData(app,  connector_id) {
     setLoading(true);
-    syncData(app, connector_id).then(data => {
+    syncData(app, session.user.id,connector_id).then(data => {
       loadApps();
       setLoading(false);
     });
   }
   function clearSyncData(app, connector_id) {
     setLoading(true);
-    clearData(app, connector_id).then(data => {
+    clearData(app, session.user.id,connector_id).then(data => {
       loadApps();
       setLoading(false);
     });
@@ -183,16 +219,13 @@ function App() {
 
   }
 
-  function refreshApps(){
+  function refreshApps() {
     loadApps();
   }
 
   function queryDocuments(query_type) {
     setError('');
-    if (!selectAccountId && !selectConnectorId) {
-      setError('Please select either accountId, or connectorId to search.');
-      return;
-    }
+    
 
     if (!queryText) {
       setError('Please enter query text to search.');
@@ -204,33 +237,56 @@ function App() {
     }
 
     var _chunkSize = parseInt(chunkSize);
-    if (_chunkSize >= 2  && _chunkSize <= 10) {
+    if (_chunkSize >= 2 && _chunkSize <= 10) {
 
     }
-    else{
+    else {
       setError('Please enter chunk size between 2 to 10.');
       return;
     }
     setQueryResult(null);
     setLoading(true);
-    queryData(selectAccountId ? selectAccountId : "", selectConnectorId ? selectConnectorId : "", 
-    queryText, chunkSize ? chunkSize : "", instruction? instruction: "",query_type).then(data => {
-      setQueryResult(data);
-      setLoading(false);
+    var connectId='';
+    if (selectConnectorId=='all'){
+      connectId='';
+    }
+    else{
+      connectId=selectConnectorId;
+    }
 
-    }).catch(function (error) {
-      if (error.response) {
-        setQueryResult(error.response.data);
+    queryData(session.user.id,  connectId,
+      queryText, chunkSize ? chunkSize : "", instruction ? instruction : "", query_type).then(data => {
+        setQueryResult(data);
         setLoading(false);
-      }
 
-    });
+      }).catch(function (error) {
+        if (error.response) {
+          setQueryResult(error.response.data);
+          setLoading(false);
+        }
 
-    
+      });
+
+
 
   }
 
-  
+
+  if (!session) {
+    return (<div>
+      <div className='row'>
+        <div className='col-6'><div className='login-content' > 
+        <Auth supabaseClient={supabase} appearance={{ theme: ThemeSupa }}  providers={['google']}/></div></div>
+        <div className='col-6'> <div className='logo-content mt-5'>  <img src={LogoDark} width="350px" />
+        <div className='mt-5 '><h5>LLM Powered Tool For Venture Capitalists</h5></div></div>
+    
+        </div>
+      </div>
+
+     
+
+    </div>)
+  }
 
   return (
     <div>
@@ -270,18 +326,18 @@ function App() {
         </nav>
       </div>
       <div className='main-content'>
-      <div >
-                  <PulseLoader color="#2598d6" loading={loading} />
-                </div>
+        <div >
+          <PulseLoader color="#2598d6" loading={loading} />
+        </div>
         {page && page === 1 && (
           <div><h2>Your Apps</h2>
-          <button type="button" className="btn btn-grey fr" onClick={() => refreshApps()} >Refresh</button>
+            <button type="button" className="btn btn-grey fr" onClick={() => refreshApps()} >Refresh</button>
             {
               apps && apps.length > 0 && (
                 <table className="table table-striped">
                   <thead  >
                     <tr>
-                      <th scope="col">Account Id</th>
+                   {/*   <th scope="col">Account Id</th> */}
                       <th scope="col">Connector Id</th>
                       <th scope="col">App</th>
                       <th scope="col">Status</th>
@@ -295,7 +351,7 @@ function App() {
                     {apps && apps.map(a => (
 
                       <tr key={a.connector_id}>
-                        <td> <span> {a.account_id} </span></td>
+                      {/*<td> <span> {a.account_id} </span></td> */}
                         <td> <span> {a.connector_id} </span></td>
                         <td> <span> {a.app} </span></td>
                         <td> <span> {a.sync_status} </span></td>
@@ -336,11 +392,11 @@ function App() {
             <button type="button" className="btn btn-grey" onClick={() => openSearchApiDoc()} >Open API Doc</button><br />
             <br />
             <div className='row'>
-              <div className='col-4'>     <SelectCtrl dataSource={accountIds} onSelectChange={handleSelectAccountChange} label={"Select accountId"} selectedValue={selectAccountId} />
+              {/*<div className='col-4'>     <SelectCtrl dataSource={accountIds} onSelectChange={handleSelectAccountChange} label={"Select accountId"} selectedValue={selectAccountId} />
 
-              </div>
+        </div>*/}
 
-              <div className='col-4'>     <SelectCtrl dataSource={connectIds} onSelectChange={handleSelectConnectorChange} label={"Select connectorId"} selectedValue={selectConnectorId} />
+              <div className='col-4'>     <SelectCtrl dataSource={connectIds} onSelectChange={handleSelectConnectorChange} label={"Select Data Source"} selectedValue={selectConnectorId} />
               </div>
               <div className='col-4'>
                 <span className="svg-icon-sm svg-text cursor-pointer" simple-title='Top K chunks from the result, K between 2 to 10' >
@@ -354,18 +410,18 @@ function App() {
             <h4>Search query</h4>
             <br />
             <div className='row'><div className='col-8'>
-            Instructions (optional):  <input className='form-control  ml-2' value={instruction || ""} onChange={e => setInstruction(e.target.value)}
-            placeholder='Enter prompt for your question'
-                  type="text" /> 
-              </div>
+              Instructions (optional):  <input className='form-control  ml-2' value={instruction || ""} onChange={e => setInstruction(e.target.value)}
+                placeholder='Enter prompt for your question'
+                type="text" />
+            </div>
               <div className='col-4'>
-              <span className='small-grey-text'>e.g. Summerize your response in no more than 5 lines</span> 
+                <span className='small-grey-text'>e.g. Summerize your response in no more than 5 lines</span>
               </div>
-              </div>
-         
-                  <br /> 
-                  <br />
-                  Question: <br />
+            </div>
+
+            <br />
+            <br />
+            Question: <br />
             <textarea rows="5" cols="60" value={queryText || ""} onChange={e => setQueryText(e.target.value)}></textarea>
             <br />
             <div className='red-text'>{error}</div>
@@ -374,8 +430,8 @@ function App() {
             <button type="button" className="btn btn-grey mr-5" onClick={() => queryDocuments('summary')} >Summary</button>
             <br />
             {queryResult && (<pre className='json-copy mt-3'>{JSON.stringify(queryResult, null, 2)}</pre>)}
-           
-           
+
+
           </div>
         )}
 
@@ -396,13 +452,13 @@ function App() {
         <br />
         {modalType == 'integration' && modalParam && (
           <div >
-            <Integration name={modalParam}></Integration>
+            <Integration name={modalParam} account_id={session.user.id}></Integration>
           </div>
 
         )}
         {modalType == 'schema' && modalParam && (
           <div >
-            <Schema config={modalParam}></Schema>
+            <Schema config={modalParam} account_id={session.user.id}></Schema>
           </div>
 
         )}

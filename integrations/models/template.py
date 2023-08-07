@@ -8,3 +8,4 @@ class Template(models.Model):
     schema = models.TextField(blank=True, null=True)
     chunking_type = models.TextField(blank=True, null=True)
     deleted = models.BooleanField(default=False)
+    account_id = models.CharField(max_length=200, blank=True)

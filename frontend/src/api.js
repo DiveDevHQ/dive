@@ -11,9 +11,9 @@ export function getConnectors() {
 
 }
 
-export function getApps() {
+export function getApps(account_id) {
     return axios
-        .get(`${serviceUrl}/apps`)
+        .get(`${serviceUrl}/apps/${account_id}`)
         .then(res => res.data)
         .catch(err => console.log(err));
 
@@ -27,9 +27,9 @@ export function getConfig(app) {
 
 }
 
-export function getTemplates(app, module) {
+export function getTemplates(app, module, account_id) {
     return axios
-        .get(`${serviceUrl}/templates/${app}/${module}`)
+        .get(`${serviceUrl}/templates/${app}/${module}/${account_id}`)
         .then(res => res.data)
         .catch(err => console.log(err));
 
@@ -44,22 +44,23 @@ export function getSchemas(app, module) {
 }
 
 
-export function authWithOAuth2(app, client_id, client_secret, object_scopes) {
-    const auth = { 'client_id': client_id, 'client_secret': client_secret, 'redirect_uri': window.location.protocol + '//' + window.location.host + '/oauth-callback/' + app, 'object_scopes': object_scopes, 'connector_id': app, 'account_id':'self' };
+export function authWithOAuth2(app, client_id, client_secret, object_scopes, account_id) {
+    const auth = { 'client_id': client_id, 'client_secret': client_secret, 'redirect_uri': window.location.protocol + '//' + window.location.host + '/oauth-callback/' + app, 'object_scopes': object_scopes, 'connector_id': app, 'account_id':account_id };
     return axios.post(`${serviceUrl}/api/authorize/${app}`, auth)
         .then(res => res.data);
 
 }
 
-export function authWithApiKey(app, api_key) {
-    const auth = { 'redirect_uri': window.location.protocol + '//' + window.location.host , 'api_key': api_key, 'connector_id': app, 'account_id':'self' };
+export function authWithApiKey(app, api_key,account_id) {
+    const auth = { 'redirect_uri': window.location.protocol + '//' + window.location.host , 'api_key': api_key, 'connector_id': app, 'account_id':account_id };
     return axios.post(`${serviceUrl}/api/authorize/${app}`, auth)
         .then(res => res.data);
 
 }
 
-export function authWithPublicData(app) {
-    const auth = { 'redirect_uri': window.location.protocol + '//' + window.location.host , 'connector_id': app, 'account_id':'self' };
+export function authWithPublicData(app,account_id) {
+ 
+    const auth = { 'redirect_uri': window.location.protocol + '//' + window.location.host , 'connector_id': app, 'account_id':account_id };
     return axios.post(`${serviceUrl}/api/authorize/${app}`, auth)
         .then(res => res.data);
 
@@ -72,8 +73,8 @@ export function callbackWithOAuth2(app, code) {
 
 }
 
-export function addTemplate(app, module, obj_type, schema) {
-    const template = { 'app': app, 'module': module, 'obj_type': obj_type, 'schema': schema };
+export function addTemplate(app, module, obj_type, schema, account_id) {
+    const template = { 'app': app, 'module': module, 'obj_type': obj_type, 'schema': schema,'account_id':account_id };
     return axios.post(`${serviceUrl}/template`, template)
         .then(res => res.data);
 }
@@ -93,16 +94,16 @@ export function updateTemplate(template_id, chunking_type) {
 }
 
 
-export function syncData(app, connector_id) {
+export function syncData(app, account_id, connector_id) {
 
-    return axios.put(`${serviceUrl}/sync/${app}/${connector_id}`)
+    return axios.put(`${serviceUrl}/sync/${app}/${account_id}/${connector_id}`)
         .then(res => res.data);
 }
 
 
-export function clearData(app, connector_id) {
+export function clearData(app, account_id,connector_id) {
 
-    return axios.put(`${serviceUrl}/clear/${app}/${connector_id}`)
+    return axios.put(`${serviceUrl}/clear/${app}/${account_id}/${connector_id}`)
         .then(res => res.data);
 }
 
