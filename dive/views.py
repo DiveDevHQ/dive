@@ -17,7 +17,7 @@ from dive.indices.index_context import IndexContext
 from dive.types import EmbeddingConfig
 from langchain.schema import Document
 from dive.constants import DEFAULT_COLLECTION_NAME, DEFAULT_CHUNKING_TYPE
-from dive.util.model_util import get_llm,get_embeddings
+from dive.util.model_util import get_llm, get_embeddings
 
 import json
 import environ
@@ -43,8 +43,8 @@ def about(request):
     return HttpResponse(status=204)
 
 
-def get_connected_apps(request):
-    integrations = Integration.objects.filter(enabled=True)
+def get_connected_apps(request, account_id):
+    integrations = Integration.objects.filter(enabled=True, account_id=account_id)
     connectors = []
     for i in integrations:
         connectors.append(
@@ -109,6 +109,7 @@ def authorization_api(request, app):
     if not connector_id:
         raise BadRequestException('connector_id is required')
     account_id = request.data.get('account_id', '')
+
     if not account_id:
         raise BadRequestException('account_id is required')
     redirect_uri = request.data.get('redirect_uri', '')
@@ -256,7 +257,8 @@ def get_or_patch_crm_data_by_id(request, obj_type, obj_id):
             raise BadRequestException("Please include connector_id in the request body.")
         if input_data:
             connector_id = input_data.get('connector_id', None)
-        integration, token = auth.get_auth(connector_id)
+            account_id = input_data.get('account_id', 'self')
+        integration, token = auth.get_auth(account_id, connector_id)
         if not token or not integration:
             raise UnauthorizedException("You have not connected the app " + connector_id)
         package_name = "integrations.connectors." + integration.name + "." + module + ".request_data"
@@ -273,6 +275,7 @@ def get_or_patch_crm_data_by_id(request, obj_type, obj_id):
         custom_fields = []
         include_field_properties = False
         connector_id = None
+        account_id = 'self'
         if url_params:
             url_params_dict = parse_qs(url_params)
             if 'include_field_properties' in url_params_dict and url_params_dict['include_field_properties'][
@@ -282,9 +285,11 @@ def get_or_patch_crm_data_by_id(request, obj_type, obj_id):
                 custom_fields = url_params_dict['fields']
             if 'connector_id' in url_params_dict:
                 connector_id = url_params_dict['connector_id'][0]
+            if 'account_id' in url_params_dict:
+                account_id = url_params_dict['account_id'][0]
         if not connector_id:
             raise BadRequestException("Please include connector_id in the query parameter.")
-        integration, token = auth.get_auth(connector_id)
+        integration, token = auth.get_auth(account_id, connector_id)
         if not integration or not token:
             raise UnauthorizedException("You have not connected the app " + connector_id)
 
@@ -309,9 +314,11 @@ def get_or_create_crm_data(request, obj_type):
         if 'connector_id' not in input_data:
             raise BadRequestException("Please include connector_id in the request body.")
         connector_id = None
+        account_id = 'self'
         if input_data:
             connector_id = input_data.get('connector_id', None)
-        integration, token = auth.get_auth(connector_id)
+            account_id = input_data.get('account_id', 'self')
+        integration, token = auth.get_auth(account_id, connector_id)
         if not token or not integration:
             raise UnauthorizedException("You have not connected the app " + connector_id)
         package_name = "integrations.connectors." + integration.name + "." + module + ".request_data"
@@ -330,6 +337,7 @@ def get_or_create_crm_data(request, obj_type):
         obj_ids = []
         include_field_properties = False
         connector_id = None
+        account_id = 'self'
         owner_id = None
         page_size = None
         cursor = None
@@ -346,6 +354,8 @@ def get_or_create_crm_data(request, obj_type):
                 custom_fields = url_params_dict['fields']
             if 'connector_id' in url_params_dict:
                 connector_id = url_params_dict['connector_id'][0]
+            if 'account_id' in url_params_dict:
+                account_id = url_params_dict['account_id'][0]
             if 'ids' in url_params_dict:
                 obj_ids = url_params_dict['ids']
                 if len(obj_ids) > 100:
@@ -368,7 +378,7 @@ def get_or_create_crm_data(request, obj_type):
                 modified_after = url_params_dict['modified_after'][0]
         if not connector_id:
             raise BadRequestException("Please include connector_id in the query parameter.")
-        integration, token = auth.get_auth(connector_id)
+        integration, token = auth.get_auth(account_id, connector_id)
         if not token or not integration:
             raise UnauthorizedException("You have not connected the app " + connector_id)
         package_name = "integrations.connectors." + integration.name + "." + module + ".request_data"
@@ -390,14 +400,16 @@ def get_crm_field_properties(request, obj_type):
     module = 'crm'
     url_params = request.GET.urlencode()
     connector_id = None
+    account_id = 'self'
     if url_params:
         url_params_dict = parse_qs(url_params)
         if 'connector_id' in url_params_dict:
             connector_id = url_params_dict['connector_id'][0]
-
+        if 'account_id' in url_params_dict:
+            account_id = url_params_dict['account_id'][0]
     if not connector_id:
         raise BadRequestException("Please include connector_id in the query parameter.")
-    integration, token = auth.get_auth(connector_id)
+    integration, token = auth.get_auth(account_id, connector_id)
     if not token or not integration:
         raise UnauthorizedException("You have not connected the app " + connector_id)
     package_name = "integrations.connectors." + integration.name + "." + module + ".request_data"
@@ -412,11 +424,11 @@ def get_crm_field_properties(request, obj_type):
 
 
 @api_view(["PUT"])
-def sync_instance_data(request, app, connector_id):
-    templates = Template.objects.filter(app=app, deleted=False)
+def sync_instance_data(request, app, account_id, connector_id):
+    templates = Template.objects.filter(app=app, account_id=account_id, deleted=False)
     if len(templates) == 0:
-        auth.update_sync_error(connector_id, {'id': 'Missing data schema', 'status_code': 400,
-                                              'message': 'Please add schema from Connectors tab'})
+        auth.update_sync_error(account_id, connector_id, {'id': 'Missing data schema', 'status_code': 400,
+                                                          'message': 'Please add schema from Connectors tab'})
 
     for template in templates:
         chunking_type = None
@@ -434,38 +446,40 @@ def sync_instance_data(request, app, connector_id):
                 chunk_size = int(chunk_size)
             if chunk_overlap:
                 chunk_overlap = int(chunk_overlap)
-        index_data(template.module, connector_id, template.obj_type, template.schema, False, chunking_type, chunk_size,
+        index_data(template.module, account_id, connector_id, template.obj_type, template.schema, False, chunking_type,
+                   chunk_size,
                    chunk_overlap)
     return HttpResponse(status=204)
 
 
 @api_view(["PUT"])
-def clear_instance_data(request, app, connector_id):
-    auth.clear_sync_status(connector_id)
+def clear_instance_data(request, app, account_id, connector_id):
+    auth.clear_sync_status(account_id, connector_id)
     index_context = IndexContext.from_defaults()
-    index_context.delete(filter={'connector_id': connector_id})
+    index_context.delete(filter={'data_id': str(account_id) + str(connector_id)})
     return HttpResponse(status=204)
 
 
-def index_data(module, connector_id, obj_type, schema, reload, chunking_type, chunk_size,
+def index_data(module, account_id, connector_id, obj_type, schema, reload, chunking_type, chunk_size,
                chunk_overlap):
-    integration, token = auth.get_auth(connector_id)
+    integration, token = auth.get_auth(account_id, connector_id)
     obj_last_sync_at = None
     if not reload:
-        obj_last_sync_at = auth.get_last_sync_at(connector_id, obj_type)
+        obj_last_sync_at = auth.get_last_sync_at(account_id, connector_id, obj_type)
 
-    auth.update_last_sync(connector_id, obj_type, False)
-
-    metadata = {'account_id': integration.account_id, 'connector_id': connector_id,
+    auth.update_last_sync(account_id, connector_id, obj_type, False)
+    data_id = str(integration.account_id) + str(connector_id)
+    metadata = {'account_id': integration.account_id, 'connector_id': connector_id, 'data_id': data_id,
                 'obj_type': obj_type}
     embedding_model = EmbeddingConfig()
     embedding_model.chunking_type = chunking_type
-    embedding_model.chunk_size = chunk_size
-    embedding_model.chunk_overlap = chunk_overlap
+    embedding_model.chunk_size = chunk_size or embedding_model.chunk_size
+    embedding_model.chunk_overlap = chunk_overlap or embedding_model.chunk_overlap
 
-    service_context=ServiceContext.from_defaults(embed_config=embedding_model,embeddings=get_embeddings(),llm=get_llm())
+    service_context = ServiceContext.from_defaults(embed_config=embedding_model, embeddings=get_embeddings(),
+                                                   llm=get_llm())
     load_data(module, token, integration, obj_type, schema, None, obj_last_sync_at, metadata, service_context)
-    auth.update_last_sync(connector_id, obj_type, True)
+    auth.update_last_sync(account_id, connector_id, obj_type, True)
 
 
 def load_data(module, token, integration, obj_type, schema, cursor, last_sync_at, metadata, service_context):
@@ -518,22 +532,22 @@ def get_query_data(request):
             instruction = url_params_dict['instruction'][0]
         if 'query_type' in url_params_dict:
             query_type = url_params_dict['query_type'][0]
-    if not connector_id and not account_id:
-        raise BadRequestException("Please include either connector_id or account_id in the query parameter.")
+
+    if not account_id:
+        raise BadRequestException("Please include account_id in the query parameter.")
     if not query:
         raise BadRequestException("Please include query_text in query parameter.")
 
-    service_context=ServiceContext.from_defaults(embeddings=get_embeddings(),llm=get_llm(),  instruction=instruction)
+    service_context = ServiceContext.from_defaults(embeddings=get_embeddings(), llm=get_llm(), instruction=instruction)
     query_context = QueryContext.from_defaults(service_context=service_context)
 
     k = None
     if top_k:
         k = int(top_k)
-    where = None
     if connector_id:
-        where = {'connector_id': connector_id}
-    elif account_id:
-        where = {'account_id': account_id}
+        where = {'data_id': str(account_id)+str(connector_id)}
+    else:
+        where = {'account_id': str(account_id)}
     try:
         data = query_context.query(query=query, k=k, filter=where)
     except ValueError:
@@ -591,7 +605,7 @@ def add_message(request):
         chat_history[user_id] = []
 
     timestamp = int((datetime.now() - datetime(1970, 1, 1)).total_seconds() * 1000)
-    service_context=ServiceContext.from_defaults(embeddings=get_embeddings(),llm=get_llm(),instruction=None)
+    service_context = ServiceContext.from_defaults(embeddings=get_embeddings(), llm=get_llm(), instruction=None)
     query_context = QueryContext.from_defaults(service_context=service_context)
 
     data = query_context.query(query=text, k=4, filter={'connector_id': 'example'})
@@ -609,7 +623,6 @@ def add_message(request):
             chat_queue[user_id] = timestamp
     send_message_socket(user_id)
     return JsonResponse([], safe=False)
-
 
 
 @api_view(["POST"])
@@ -640,8 +653,8 @@ def get_obj_schemas(request, app, module):
 
 
 @api_view(["GET"])
-def get_obj_templates(request, app, module):
-    templates = Template.objects.filter(module=module, app=app, deleted=False)
+def get_obj_templates(request, app, module, account_id):
+    templates = Template.objects.filter(module=module, app=app, deleted=False, account_id=account_id)
     schemas = []
     for template in templates:
         schemas.append({'template_id': template.id, 'app': app, 'module': module, 'obj_type': template.obj_type,
@@ -656,12 +669,14 @@ def add_obj_template(request):
     module = request.data.get('module', '')
     obj_type = request.data.get('obj_type', '')
     schema = json.dumps(request.data.get('schema', ''))
+    account_id = request.data.get('account_id', '')
     chunking_type = json.dumps(request.data.get('chunking_type', None))
-    result = {'app': app, 'module': module, 'obj_type': obj_type,
+    result = {'app': app, 'module': module, 'obj_type': obj_type,'chunking_type':json.loads(chunking_type),
               'schema': json.loads(schema)}
     try:
-        template = Template.objects.get(module=module, app=app, obj_type=obj_type)
+        template = Template.objects.get(module=module, app=app, obj_type=obj_type, account_id=account_id)
         template.schema = schema
+        template.account_id = account_id
         template.chunking_type = chunking_type
         template.deleted = False
         template.save()
@@ -672,6 +687,7 @@ def add_obj_template(request):
                             module=module,
                             obj_type=obj_type,
                             schema=schema,
+                            account_id=account_id,
                             chunking_type=chunking_type)
         template.save()
 

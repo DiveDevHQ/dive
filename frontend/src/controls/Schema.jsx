@@ -8,7 +8,7 @@ import RemoveIcon from '../icons/RemoveIcon';
 import SchemaEditor from './SchemaEditor';
 import { ChunkingTypes } from '../references';
 
-export default function Schema({ config }) {
+export default function Schema({ config, account_id }) {
     const [schemas, setSchemas] = useState();
     const [templates, setTemplates] = useState();
     const [showSchemas, setShowSchemas] = useState([]);
@@ -22,7 +22,7 @@ export default function Schema({ config }) {
             var app = config['name'];
             var module = config['modules'][i];
 
-            getTemplates(app, module).then(data => {
+            getTemplates(app, module,account_id).then(data => {
                 var _templates = templates ? templates : [];
                 var obj_types = []
                 for (var j = 0; j < data.length; j++) {
@@ -78,7 +78,14 @@ export default function Schema({ config }) {
     }
 
     function addSchema(item) {
-        addTemplate(item.app, item.module, item.obj_type, item.schema).then(data => {
+        var chunking_type='';
+        if (item.module=='filestorage'){
+            chunking_type= { 'chunking_type': 'custom' }
+        }
+        else{
+            chunking_type= { 'chunking_type': 'document' }
+        }
+        addTemplate(item.app, item.module, item.obj_type, item.schema, account_id, chunking_type).then(data => {
 
             var _templates = templates ? templates : [];
             _templates.push(data);
@@ -110,8 +117,8 @@ export default function Schema({ config }) {
         if (!chunking_type) {
             return "chuking - Per document";
         }
-        var chunk_size = type.chunking_type ? type.chunking_type.chunk_size : null;
-        var chunk_overlap = type.chunking_type ? type.chunking_type.chunk_overlap : null;
+        var chunk_size = type.chunking_type.chunk_size ? type.chunking_type.chunk_size : 256;
+        var chunk_overlap = type.chunking_type.chunk_overlap ? type.chunking_type.chunk_overlap : 20;
 
         for (var i = 0; i < ChunkingTypes.length; i++) {
             if (ChunkingTypes[i].value === chunking_type) {

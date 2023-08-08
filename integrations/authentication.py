@@ -29,9 +29,9 @@ def get_config(app):
     return proj_apps.get_app_config('integrations').integration_config.get(app, None)
 
 
-def get_auth(connector_id):
+def get_auth(account_id, connector_id):
     try:
-        integration = Integration.objects.get(connector_id=connector_id, enabled=True)
+        integration = Integration.objects.get(account_id=account_id, connector_id=connector_id, enabled=True)
         integration_config = proj_apps.get_app_config('integrations').integration_config.get(integration.name, None)
         if not integration_config:
             return None, None
@@ -121,9 +121,9 @@ def request_token_with_code(url, grant_type, token_request: TokenRequest):
     return token_result
 
 
-def get_last_sync_at(connector_id, obj_type):
+def get_last_sync_at(account_id, connector_id, obj_type):
     try:
-        integration = Integration.objects.get(connector_id=connector_id, enabled=True)
+        integration = Integration.objects.get(account_id=account_id, connector_id=connector_id, enabled=True)
         if integration.sync_status:
             sync_status = json.loads(integration.sync_status)
             if 'obj_status' in sync_status and obj_type in sync_status['obj_status']:
@@ -133,9 +133,9 @@ def get_last_sync_at(connector_id, obj_type):
     return
 
 
-def update_last_sync(connector_id, obj_type, completed):
+def update_last_sync(account_id, connector_id, obj_type, completed):
     try:
-        integration = Integration.objects.get(connector_id=connector_id, enabled=True)
+        integration = Integration.objects.get(account_id=account_id, connector_id=connector_id, enabled=True)
         sync_status = {'obj_status': {}}
         if integration.sync_status:
             sync_status = json.loads(integration.sync_status)
@@ -154,9 +154,9 @@ def update_last_sync(connector_id, obj_type, completed):
         return
 
 
-def update_sync_error(connector_id, error):
+def update_sync_error(account_id, connector_id, error):
     try:
-        integration = Integration.objects.get(connector_id=connector_id, enabled=True)
+        integration = Integration.objects.get(account_id=account_id, connector_id=connector_id, enabled=True)
         sync_status = {'error': {}}
         if integration.sync_status:
             sync_status = json.loads(integration.sync_status)
@@ -167,9 +167,9 @@ def update_sync_error(connector_id, error):
         return
 
 
-def clear_sync_status(connector_id):
+def clear_sync_status(account_id, connector_id):
     try:
-        integration = Integration.objects.get(connector_id=connector_id, enabled=True)
+        integration = Integration.objects.get(account_id=account_id, connector_id=connector_id, enabled=True)
         integration.sync_status = None
         integration.save()
     except Integration.DoesNotExist:

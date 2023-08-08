@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { authWithOAuth2, getConfig } from '../api';
 
-export default function Salesforce() {
+export default function Salesforce({account_id}) {
 
   const app='salesforce';
   const [instanceType, setInstanceType] = useState(0);
@@ -24,7 +24,7 @@ export default function Salesforce() {
   }
 
   function connect(){
-    authWithOAuth2(app,clientId,clientSecret,'').then(data=>{
+    authWithOAuth2(app,clientId,clientSecret,'',account_id).then(data=>{
       window.open(data.redirect, "_self");
     })
   }

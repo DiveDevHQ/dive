@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { authWithOAuth2, getConfig } from '../api';
 
-export default function Hubspot() {
+export default function Hubspot({account_id}) {
 
   const app='hubspot';
   const [instanceType, setInstanceType] = useState(0);
@@ -11,6 +11,7 @@ export default function Hubspot() {
   const [clientSecret, setClientSecret] = useState();
   const [selectScopes, setSelectScopes] = useState([]);
   const [scopeString, setScopeString] = useState();
+
 
   const permissionTypes = Object.freeze([
     { name: 'Contacts', value: 1, scope: 'crm.schemas.contacts.read crm.objects.contacts.read crm.objects.contacts.write', selected: true },
@@ -86,7 +87,7 @@ export default function Hubspot() {
   }
 
   function connect(){
-    authWithOAuth2(app,clientId,clientSecret,getScopeString()).then(data=>{
+    authWithOAuth2(app,clientId,clientSecret,getScopeString(),account_id).then(data=>{
       window.open(data.redirect, "_self");
     })
   }

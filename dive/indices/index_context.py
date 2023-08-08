@@ -99,6 +99,7 @@ class IndexContext:
             for i, document in enumerate(documents):
                 sentence_chunks = sentence_splitter_default.split_text(document.page_content)
                 summary_id = None
+
                 if service_context.embed_config.summarize:
                     summary_id = str(uuid.uuid4())
                     summary_text = summarization(service_context, document)
@@ -114,6 +115,7 @@ class IndexContext:
                         _metadata = {'summary_id': summary_id}
                     _document = Document(metadata=_metadata,
                                          page_content=d)
+
                     _documents.append(_document)
                     _ids.append(ids[i] + "_chunk_" + str(j))
 
