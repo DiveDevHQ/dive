@@ -73,8 +73,8 @@ export function callbackWithOAuth2(app, code) {
 
 }
 
-export function addTemplate(app, module, obj_type, schema, account_id) {
-    const template = { 'app': app, 'module': module, 'obj_type': obj_type, 'schema': schema,'account_id':account_id };
+export function addTemplate(app, module, obj_type, schema, account_id,chunking_type) {
+    const template = { 'app': app, 'module': module, 'obj_type': obj_type, 'schema': schema,'account_id':account_id,'chunking_type': chunking_type  };
     return axios.post(`${serviceUrl}/template`, template)
         .then(res => res.data);
 }

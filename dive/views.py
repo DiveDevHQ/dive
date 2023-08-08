@@ -473,8 +473,8 @@ def index_data(module, account_id, connector_id, obj_type, schema, reload, chunk
                 'obj_type': obj_type}
     embedding_model = EmbeddingConfig()
     embedding_model.chunking_type = chunking_type
-    embedding_model.chunk_size = chunk_size
-    embedding_model.chunk_overlap = chunk_overlap
+    embedding_model.chunk_size = chunk_size or embedding_model.chunk_size
+    embedding_model.chunk_overlap = chunk_overlap or embedding_model.chunk_overlap
 
     service_context = ServiceContext.from_defaults(embed_config=embedding_model, embeddings=get_embeddings(),
                                                    llm=get_llm())
@@ -671,7 +671,7 @@ def add_obj_template(request):
     schema = json.dumps(request.data.get('schema', ''))
     account_id = request.data.get('account_id', '')
     chunking_type = json.dumps(request.data.get('chunking_type', None))
-    result = {'app': app, 'module': module, 'obj_type': obj_type,
+    result = {'app': app, 'module': module, 'obj_type': obj_type,'chunking_type':json.loads(chunking_type),
               'schema': json.loads(schema)}
     try:
         template = Template.objects.get(module=module, app=app, obj_type=obj_type, account_id=account_id)
