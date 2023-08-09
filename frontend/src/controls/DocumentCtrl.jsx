@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 
-import { getObjTypes, clearData, syncData } from '../api';
+import { getObjTypes, clearData, syncConnectorData } from '../api';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { ChunkingTypes } from '../references';
@@ -68,13 +68,13 @@ export default function DocumentCtrl({ app, account_id, connector_id, onSchemaEd
         if (app === 'example') {
             clearData(app, account_id, connector_id).then(data => {
 
-                syncData(app, account_id, connector_id).then(data => {
+                syncConnectorData(app, account_id, connector_id).then(data => {
                     setLoading(false);
                 });
             });
         }
         else{
-            syncData(app, account_id, connector_id).then(data => {
+            syncConnectorData(app, account_id, connector_id).then(data => {
                 setLoading(false);
             });
         }
@@ -97,9 +97,8 @@ export default function DocumentCtrl({ app, account_id, connector_id, onSchemaEd
                         <div key={a}  >
                             <span>{a}</span>
                         </div>
-
-
                     ))}
+               
                     <span className='red-text'>{error}</span>
                 </div>
 

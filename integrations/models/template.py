@@ -9,3 +9,5 @@ class Template(models.Model):
     chunking_type = models.TextField(blank=True, null=True)
     deleted = models.BooleanField(default=False)
     account_id = models.CharField(max_length=200, blank=True)
+    created_at = models.DateTimeField(null=True)
+    updated_at = models.DateTimeField(null=True)

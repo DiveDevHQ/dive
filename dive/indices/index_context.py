@@ -118,6 +118,7 @@ class IndexContext:
 
                     _documents.append(_document)
                     _ids.append(ids[i] + "_chunk_" + str(j))
+                    print(d)
 
         PINECONE_API_KEY = env.str('PINECONE_API_KEY', default='') or os.environ.get('PINECONE_API_KEY', '')
 
@@ -152,7 +153,6 @@ class IndexContext:
 
 
 def summarization(service_context:ServiceContext, document: Document) -> str:
-
 
     if not service_context.llm:
 

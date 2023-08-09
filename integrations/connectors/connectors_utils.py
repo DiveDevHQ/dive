@@ -114,12 +114,12 @@ DEFAULT_FILE_READER_CLS: Dict[str, Type[BaseReader]] = {
 }
 
 
-def load_file_from_url(doc_id, file_name, file_url, mime_type, extra_info):
+def load_file_from_url(doc_id, file_name, file_url, mime_type, extra_info, token):
     supported_suffix = list(DEFAULT_FILE_READER_CLS.keys())
     docs = []
     if mime_type in supported_suffix:
         reader = DEFAULT_FILE_READER_CLS[mime_type]()
-        docs = reader.load_data_from_url(doc_id, file_name, file_url, extra_info)
+        docs = reader.load_data_from_url(doc_id, file_name, file_url, extra_info,token)
     return docs
 
 

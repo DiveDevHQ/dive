@@ -427,30 +427,44 @@ def get_crm_field_properties(request, obj_type):
 @api_view(["PUT"])
 def sync_instance_data(request, app, account_id, connector_id):
     templates = Template.objects.filter(app=app, account_id=account_id, deleted=False)
-    if len(templates) == 0:
-        auth.update_sync_error(account_id, connector_id, {'id': 'Missing data schema', 'status_code': 400,
-                                                          'message': 'Please add at least one schema'})
-
-    for template in templates:
-        chunking_type = None
-        chunk_size = None
-        chunk_overlap = None
-        if template.chunking_type:
-            ct = json.loads(template.chunking_type)
-            if not ct:
-                chunking_type = DEFAULT_CHUNKING_TYPE
-            else:
-                chunking_type = ct.get('chunking_type', None)
-                chunk_size = ct.get('chunk_size', None)
-                chunk_overlap = ct.get('chunk_overlap', None)
-            if chunk_size:
-                chunk_size = int(chunk_size)
-            if chunk_overlap:
-                chunk_overlap = int(chunk_overlap)
-        index_data(template.module, account_id, connector_id, template.obj_type, template.schema, False, chunking_type,
-                   chunk_size,
-                   chunk_overlap)
+    if len(templates) > 0:
+        for template in templates:
+            sync_template(template,connector_id)
     return HttpResponse(status=204)
+
+
+def sync_template(template, connector_id):
+    chunking_type = None
+    chunk_size = None
+    chunk_overlap = None
+    if template.chunking_type:
+        ct = json.loads(template.chunking_type)
+        if not ct:
+            chunking_type = DEFAULT_CHUNKING_TYPE
+        else:
+            chunking_type = ct.get('chunking_type', None)
+            chunk_size = ct.get('chunk_size', None)
+            chunk_overlap = ct.get('chunk_overlap', None)
+        if chunk_size:
+            chunk_size = int(chunk_size)
+        if chunk_overlap:
+            chunk_overlap = int(chunk_overlap)
+    index_data(template.module, template.account_id, connector_id, template.obj_type, template.schema, False, chunking_type,
+               chunk_size,
+               chunk_overlap)
+
+
+@api_view(["PUT"])
+def sync_account_data(request, account_id):
+    integrations = Integration.objects.filter(enabled=True, account_id=account_id)
+    for integration in integrations:
+        if not integration.sync_status:
+            templates = Template.objects.filter(app=integration.name, account_id=account_id, deleted=False)
+            if len(templates) > 0:
+                for template in templates:
+                    sync_template(template, integration.connector_id)
+    return HttpResponse(status=204)
+
 
 
 @api_view(["PUT"])
@@ -546,7 +560,7 @@ def get_query_data(request):
     if top_k:
         k = int(top_k)
     if connector_id:
-        where = {'data_id': str(account_id)+str(connector_id)}
+        where = {'data_id': str(account_id) + str(connector_id)}
     else:
         where = {'account_id': str(account_id)}
     try:
@@ -687,7 +701,7 @@ def add_obj_template(request):
     schema = json.dumps(request.data.get('schema', ''))
     account_id = request.data.get('account_id', '')
     chunking_type = json.dumps(request.data.get('chunking_type', None))
-    result = {'app': app, 'module': module, 'obj_type': obj_type,'chunking_type':json.loads(chunking_type),
+    result = {'app': app, 'module': module, 'obj_type': obj_type, 'chunking_type': json.loads(chunking_type),
               'schema': json.loads(schema)}
     try:
         template = Template.objects.get(module=module, app=app, obj_type=obj_type, account_id=account_id)
@@ -695,6 +709,7 @@ def add_obj_template(request):
         template.account_id = account_id
         template.chunking_type = chunking_type
         template.deleted = False
+        template.updated_at = datetime.now(timezone.utc)
         template.save()
         result['template_id'] = template.id
 
@@ -704,7 +719,9 @@ def add_obj_template(request):
                             obj_type=obj_type,
                             schema=schema,
                             account_id=account_id,
-                            chunking_type=chunking_type)
+                            chunking_type=chunking_type,
+                            created_at=datetime.now(timezone.utc),
+                            updated_at=datetime.now(timezone.utc))
         template.save()
 
         result['template_id'] = Template.objects.last().id
@@ -718,7 +735,7 @@ def patch_or_delete_template(request, template_id):
         try:
             template = Template.objects.get(id=template_id)
             template.chunking_type = json.dumps(request.data.get('chunking_type', None))
-
+            template.updated_at = datetime.now(timezone.utc)
             template.save()
 
         except Template.DoesNotExist:
@@ -727,6 +744,7 @@ def patch_or_delete_template(request, template_id):
         try:
             template = Template.objects.get(id=template_id)
             template.deleted = True
+            template.updated_at = datetime.now(timezone.utc)
             template.save()
         except Template.DoesNotExist:
             return HttpResponse(status=404)

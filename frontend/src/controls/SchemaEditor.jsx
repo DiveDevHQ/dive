@@ -76,7 +76,7 @@ export default function SchemaEditor({ item }) {
                         type="text" /></>)}
                 </div>
                 <div className='col-3'>
-                    {(chukingType === 'custom') && (<>Chunk overlap: <input className='form-control-short' value={chunkOverlap || "20"} onChange={e => setChunkOverlap(e.target.value)}
+                    {(chukingType === 'custom') && (<>Chunk overlap: <input className='form-control-short' value={chunkOverlap || ""} onChange={e => setChunkOverlap(e.target.value)}
                         type="text" /></>)}
                 </div>
                 <div className='col-2'>

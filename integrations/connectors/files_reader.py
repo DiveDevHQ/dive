@@ -28,9 +28,9 @@ class PDFReader(BaseReader):
     """PDF parser."""
 
     def load_data_from_url(
-            self, doc_id, file_name, file_url, extra_info
+            self, doc_id, file_name, file_url, extra_info,token
     ):
-        r = requests.get(file_url)
+        r = get_file_data(file_url,token)
         with BytesIO(r.content) as data:
             docs = []
             read_pdf = pypdf.PdfReader(data)
@@ -49,27 +49,29 @@ class PDFReader(BaseReader):
 class PDFVisualReader(BaseReader):
     """PDF OCR parser."""
 
-
     def load_data_from_url(
-            self, doc_id, file_name, file_url, extra_info
+            self, doc_id, file_name, file_url, extra_info,token
     ):
+        '''
         OCR_API_KEY = env.str('OCR_API_KEY', default='') or os.environ.get('OCR_API_KEY', '')
         headers = {
             'apikey': OCR_API_KEY,
         }
-        r = requests.get(file_url)
+        r = get_file_data(file_url,token)
         encoded_string = 'data:application/pdf;base64,'+base64.b64encode(r.content).decode("utf-8")
         print(encoded_string[0:100])
         body={'language':'eng', 'filetype':'pdf','base64Image': encoded_string}
         r = requests.post("https://api.ocr.space/parse/image", data=body, headers=headers)
         print(r.content)
         '''
+
         import pytesseract
         from pdf2image import convert_from_bytes
 
-        r = requests.get(file_url)
+        r = get_file_data(file_url,token)
         docs = []
         doc = convert_from_bytes(r.content)
+
         part = 0
         for page_number, page_data in enumerate(doc):
             result = pytesseract.image_to_string(page_data).encode("utf-8")
@@ -80,16 +82,16 @@ class PDFVisualReader(BaseReader):
             part += 1
 
         return docs
-        '''
+
 
 
 class TxtReader(BaseReader):
     """Txt parser."""
 
     def load_data_from_url(
-            self, doc_id, file_name, file_url, extra_info
+            self, doc_id, file_name, file_url, extra_info,token
     ):
-        r = requests.get(file_url)
+        r = get_file_data(file_url,token)
         docs = []
         with BytesIO(r.content) as data:
             metadata = {"file_name": file_name}
@@ -103,10 +105,10 @@ class DocxReader(BaseReader):
     """Docx parser."""
 
     def load_data_from_url(
-            self, doc_id, file_name, file_url, extra_info
+            self, doc_id, file_name, file_url, extra_info,token
     ):
         """Parse file."""
-        r = requests.get(file_url)
+        r = get_file_data(file_url,token)
         docs = []
         with BytesIO(r.content) as data:
             text = docx2txt.process(data)
@@ -115,3 +117,16 @@ class DocxReader(BaseReader):
                 metadata.update(extra_info)
             docs.append({'id': f"{str(doc_id)}", 'data': text, 'metadata': metadata})
         return docs
+
+
+def get_file_data(file_url, token):
+
+    if token:
+        headers = {
+            'Authorization': 'Bearer ' + token
+        }
+        r = requests.get(url=file_url,
+                         headers=headers)
+        return r
+    else:
+        return requests.get(file_url)

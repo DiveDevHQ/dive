@@ -348,6 +348,7 @@
 
 
 
+
 .mt-2 {
   margin-top: 0.05rem;
 }
@@ -364,8 +365,21 @@
   margin-right: 0.35rem;
 }
 
+.mb-1 {
+  margin-bottom: 0.02rem;
+}
+
+.mb-5 {
+  margin-bottom: 0.5rem;
+}
+
 .red-text{
   color: red;
+}
+
+.blue-text-large{
+  color: #2598d6;
+ 
 }
 
 .form-control-normal {
@@ -597,4 +611,8 @@ pre {
   color: #403f40;
   font-weight: 600;
   font-size: 20px;
+}
+
+.loading{
+  display: flex;
 }

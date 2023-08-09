@@ -104,12 +104,17 @@ export function updateTemplate(template_id, chunking_type) {
 }
 
 
-export function syncData(app, account_id, connector_id) {
+export function syncConnectorData(app, account_id, connector_id) {
 
     return axios.put(`${serviceUrl}/sync/${app}/${account_id}/${connector_id}`)
         .then(res => res.data);
 }
 
+export function syncAccountData(account_id) {
+
+    return axios.put(`${serviceUrl}/sync/${account_id}`)
+        .then(res => res.data);
+}
 
 export function clearData(app, account_id,connector_id) {
 

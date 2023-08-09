@@ -19,7 +19,7 @@ import './index.css'
 import { createClient } from '@supabase/supabase-js'
 import { Auth } from '@supabase/auth-ui-react'
 import { ThemeSupa, ThemeMinimal } from '@supabase/auth-ui-shared'
-import { getApps, getConnectors, clearData, syncData, queryData, setupVector, authWithPublicData } from './api';
+import { getApps, getConnectors, clearData, syncConnectorData, queryData, setupVector, authWithPublicData, syncAccountData } from './api';
 
 const supabase = createClient(process.env.REACT_APP_SUPABASE_CLIENT, process.env.REACT_APP_SUPABASE_ANON_KEY)
 
@@ -39,7 +39,8 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [instruction, setInstruction] = useState();
   const [session, setSession] = useState(null);
-
+  const [initialized, setInitialized] = useState(false);
+  const [message, setMessage] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -52,6 +53,9 @@ function App() {
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
     })
+    setTimeout(() => {
+      setInitialized(true);
+    }, 500);
 
     return () => subscription.unsubscribe()
   }, [])
@@ -119,7 +123,7 @@ function App() {
 
   function runSyncData(app, connector_id) {
     setLoading(true);
-    syncData(app, session.user.id, connector_id).then(data => {
+    syncConnectorData(app, session.user.id, connector_id).then(data => {
       loadApps();
       setLoading(false);
     });
@@ -212,8 +216,8 @@ function App() {
     );
 
   }
-  
-  function hanldeSchemaEdit(app){
+
+  function hanldeSchemaEdit(app) {
     openSchema(getSchema(app));
   }
 
@@ -309,8 +313,24 @@ function App() {
 
   }
 
+  function prepareQueryData() {
+    setLoading(true);
+    setMessage('Peparing your data, it can take up to 3 mins...');
+    syncAccountData(session.user.id).then(
+      data => {
+        setLoading(false);
+        setMessage('');
+        setPage(3);
+      }
+    )
 
-  if (!session) {
+  }
+
+  if (!initialized) {
+    return (<></>)
+  }
+
+  if (initialized && !session) {
     return (<div>
       <div className='row'>
         <div className='col-6'><div className='login-content' >
@@ -341,10 +361,10 @@ function App() {
                   setPage(4)
                 } className="nav__link">
                   <i className='bx bx-compass nav__icon' ></i>
-                  <span className={page === 4 ? "nav__name cursor-pointer active-menu" : "nav__name cursor-pointer inactive-menu"}>Playground</span>
+                  <span className={page === 4 ? "nav__name cursor-pointer active-menu" : "nav__name cursor-pointer inactive-menu"}>Documents</span>
                 </a>
 
-                <a onClick={() =>
+                {/*  <a onClick={() =>
                   setPage(1)
                 } className="nav__link">
                   <i className='bx bx-compass nav__icon' ></i>
@@ -355,12 +375,12 @@ function App() {
                 } className="nav__link">
                   <i className='bx bx-compass nav__icon' ></i>
                   <span className={page === 2 ? "nav__name cursor-pointer active-menu" : "nav__name cursor-pointer inactive-menu"}>Connectors</span>
-                </a>
+                </a>*/}
                 <a onClick={() =>
                   setPage(3)
                 } className="nav__link">
                   <i className='bx bx-compass nav__icon' ></i>
-                  <span className={page === 3 ? "nav__name cursor-pointer active-menu" : "nav__name cursor-pointer inactive-menu"}>Search</span>
+                  <span className={page === 3 ? "nav__name cursor-pointer active-menu" : "nav__name cursor-pointer inactive-menu"}>Playground</span>
                 </a>
               </div>
             </div>
@@ -369,8 +389,16 @@ function App() {
         </nav>
       </div>
       <div className='main-content'>
-        <div >
-          <PulseLoader color="#2598d6" loading={loading} />
+        <div className='mb-1'>
+          <div className='loading'>
+
+            <PulseLoader color="#2598d6" loading={loading} /> &nbsp;
+            <span className='blue-text-large ml-5'>{message}</span>
+          </div>
+
+
+
+
         </div>
         {page && page === 1 && (
           <div><h2>Your Apps</h2>
@@ -489,7 +517,7 @@ function App() {
               <div className='col-4'>
                 <button type="button" className="btn btn-grey mr-5" onClick={() => openFileUploader()} >Upload Files</button>
               </div>
-            
+
             </div>
             <div className='mt-5'>
               {
@@ -503,9 +531,9 @@ function App() {
                         <DocumentCtrl account_id={session.user.id} connector_id={a.connector_id} app={a.app} onSchemaEdit={hanldeSchemaEdit} />
 
                       </div>
-
-
                     ))}
+                    <button type="button" className="btn btn-grey mr-5" onClick={() => prepareQueryData()} >Query My Data</button>
+
                   </>
                 )
               }
@@ -539,11 +567,11 @@ function App() {
           </div>
 
         )}
-      
+
         {modalType == 'file' && modalParam && (
           <div >
             <h4>Deck</h4>
-            <FileUpload fileType="deck" account_id={session.user.id} onUploadFile={refreshApps}/>
+            <FileUpload fileType="deck" account_id={session.user.id} onUploadFile={refreshApps} />
           </div>
 
         )}

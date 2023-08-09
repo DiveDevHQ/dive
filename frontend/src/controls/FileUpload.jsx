@@ -26,14 +26,19 @@ const FileUpload = ({ fileType, account_id, onUploadFile }) => {
     try {
 
       const supabase = createClient(process.env.REACT_APP_SUPABASE_CLIENT, process.env.REACT_APP_SUPABASE_ANON_KEY)
+      const { bucket_data, bucket_error } = await supabase.storage.createBucket(account_id);
 
-
+      if (bucket_error) {
+        setError('Upload failed. Please try again!');
+        return;
+      }
       const { data, error } = await supabase.storage
-        .from('files/user_files')
+        .from('files/user_files/' + account_id)
         .upload(generateUUID() + '_' + filename, file);
 
       if (error) {
         setError('Upload failed. Please try again!');
+        return;
       }
       else {
         setError('')
@@ -51,7 +56,7 @@ const FileUpload = ({ fileType, account_id, onUploadFile }) => {
             }
           }
           setUploadPercentage(90);
-          var schema = { 'name': schema_name, 'file_url': path, 'mime_type': mime_type };
+          var schema = { 'name': schema_name, 'file_url': account_id + '/' + path, 'mime_type': mime_type };
           addTemplate('upload', 'filestorage', schema_name, schema, account_id, chunking_type).then(data => {
             setUploadPercentage(100);
             onUploadFile();

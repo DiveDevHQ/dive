@@ -27,6 +27,7 @@ urlpatterns = [
     path("apps/<str:account_id>", views.get_connected_apps, name="get_connected_apps"),
     path("setup/vector", views.initialize_vector, name="initialize_vector"),
     path("sync/<str:app>/<str:account_id>/<str:connector_id>", views.sync_instance_data, name="sync_instance_data"),
+    path("sync/<str:account_id>", views.sync_account_data, name="sync_account_data"),
     path("clear/<str:app>/<str:account_id>/<str:connector_id>", views.clear_instance_data, name="clear_instance_data"),
     path("api/authorize/<str:app>", views.authorization_api, name="authorization_api"),
     path("api/callback", views.callback_api, name="callback_api"),
