@@ -76,8 +76,8 @@ def initialize_vector(request):
 
         except ImportError:
             raise ImportError(import_err_msg)
-    '''
-    else:
+
+    '''else:
         CHROMA_PERSIST_DIR = env.str('CHROMA_PERSIST_DIR', default='db') or os.environ.get('CHROMA_PERSIST_DIR', 'db')
         import_err_msg = (
             "`chromadb` package not found, please run `pip install chromadb`"
@@ -94,9 +94,9 @@ def initialize_vector(request):
             client.get_collection(DEFAULT_COLLECTION_NAME)
         except ImportError:
             raise ImportError(import_err_msg)
-        except KeyError:
-            client.create_collection(DEFAULT_COLLECTION_NAME)
-    '''
+        except ValueError:
+            client.create_collection(DEFAULT_COLLECTION_NAME)'''
+
     return HttpResponse(status=204)
 
 
@@ -109,7 +109,7 @@ def authorization_api(request, app):
     if not connector_id:
         raise BadRequestException('connector_id is required')
     account_id = request.data.get('account_id', '')
-
+    print(connector_id)
     if not account_id:
         raise BadRequestException('account_id is required')
     redirect_uri = request.data.get('redirect_uri', '')
@@ -184,6 +184,7 @@ def authorization_api(request, app):
 
             integration.save()
     if integration_config['auth_method'] == 'NOAUTH':
+
         try:
             integration = Integration.objects.get(name=app, connector_id=connector_id)
             integration.enabled = True
@@ -428,7 +429,7 @@ def sync_instance_data(request, app, account_id, connector_id):
     templates = Template.objects.filter(app=app, account_id=account_id, deleted=False)
     if len(templates) == 0:
         auth.update_sync_error(account_id, connector_id, {'id': 'Missing data schema', 'status_code': 400,
-                                                          'message': 'Please add schema from Connectors tab'})
+                                                          'message': 'Please add at least one schema'})
 
     for template in templates:
         chunking_type = None
@@ -643,8 +644,12 @@ def get_message(request, user_id):
 def get_obj_schemas(request, app, module):
     base_path = Path(__file__).parent.parent
     folder_path = str(base_path) + '/integrations/connectors/' + app + '/' + module + '/schemas/'
-    dir_list = os.listdir(folder_path)
     schemas = []
+    if not os.path.isdir(folder_path):
+        return JsonResponse(schemas, safe=False)
+
+    dir_list = os.listdir(folder_path)
+
     for path in dir_list:
         with open(folder_path + path) as f:
             field_dict = json.load(f)
@@ -653,11 +658,22 @@ def get_obj_schemas(request, app, module):
 
 
 @api_view(["GET"])
-def get_obj_templates(request, app, module, account_id):
+def get_obj_module_templates(request, app, module, account_id):
     templates = Template.objects.filter(module=module, app=app, deleted=False, account_id=account_id)
     schemas = []
     for template in templates:
         schemas.append({'template_id': template.id, 'app': app, 'module': module, 'obj_type': template.obj_type,
+                        'schema': json.loads(template.schema) if template.schema else None,
+                        'chunking_type': json.loads(template.chunking_type) if template.chunking_type else None})
+    return JsonResponse(schemas, safe=False)
+
+
+@api_view(["GET"])
+def get_obj_templates(request, app, account_id):
+    templates = Template.objects.filter(app=app, deleted=False, account_id=account_id)
+    schemas = []
+    for template in templates:
+        schemas.append({'template_id': template.id, 'app': app, 'obj_type': template.obj_type,
                         'schema': json.loads(template.schema) if template.schema else None,
                         'chunking_type': json.loads(template.chunking_type) if template.chunking_type else None})
     return JsonResponse(schemas, safe=False)

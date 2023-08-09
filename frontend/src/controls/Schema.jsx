@@ -12,37 +12,40 @@ export default function Schema({ config, account_id }) {
     const [schemas, setSchemas] = useState();
     const [templates, setTemplates] = useState();
     const [showSchemas, setShowSchemas] = useState([]);
-    /*const [chunkingTypes, setChunkingTypes] = useState([
-        { 'label': 'Per document', 'value': 'document' },
-        { 'label': 'Custom', 'value': 'custom' }
-    ]);*/
+
 
     function loadSchemaTemplates() {
         for (var i = 0; i < config['modules'].length; i++) {
             var app = config['name'];
             var module = config['modules'][i];
 
-            getTemplates(app, module,account_id).then(data => {
-                var _templates = templates ? templates : [];
-                var obj_types = []
-                for (var j = 0; j < data.length; j++) {
-                    _templates.push(data[j]);
-                    obj_types.push(data[j].obj_type)
-                }
+            getTemplates(app, module, account_id).then(data => {
 
-                setTemplates(_templates);
-
-                getSchemas(app, module).then(cdata => {
-
-                    var _schemas = schemas ? schemas : [];
-                    for (var z = 0; z < cdata.length; z++) {
-                        if (obj_types.indexOf(cdata[z].obj_type) === -1) {
-                            _schemas.push(cdata[z]);
-                        }
+                if (data) {
+                    var _templates = templates ? templates : [];
+                    var obj_types = []
+                    for (var j = 0; j < data.length; j++) {
+                        _templates.push(data[j]);
+                        obj_types.push(data[j].obj_type)
                     }
 
-                    setSchemas(_schemas);
-                })
+                    setTemplates(_templates);
+
+                    getSchemas(app, module).then(cdata => {
+                        if (cdata) {
+                            var _schemas = schemas ? schemas : [];
+                            for (var z = 0; z < cdata.length; z++) {
+                                if (obj_types.indexOf(cdata[z].obj_type) === -1) {
+                                    _schemas.push(cdata[z]);
+                                }
+                            }
+
+                            setSchemas(_schemas);
+                        }
+
+                    })
+                }
+
             })
         }
     }
@@ -50,7 +53,6 @@ export default function Schema({ config, account_id }) {
 
 
     useEffect(() => {
-
 
         loadSchemaTemplates();
 
@@ -78,12 +80,12 @@ export default function Schema({ config, account_id }) {
     }
 
     function addSchema(item) {
-        var chunking_type='';
-        if (item.module=='filestorage'){
-            chunking_type= { 'chunking_type': 'custom' }
+        var chunking_type = '';
+        if (item.module === 'filestorage') {
+            chunking_type = { 'chunking_type': 'custom' }
         }
-        else{
-            chunking_type= { 'chunking_type': 'document' }
+        else {
+            chunking_type = { 'chunking_type': 'document' }
         }
         addTemplate(item.app, item.module, item.obj_type, item.schema, account_id, chunking_type).then(data => {
 
@@ -135,10 +137,10 @@ export default function Schema({ config, account_id }) {
 
     return (
         <div>
-            <div className='red-text'>If you make changes to schema settings, you will need to reindex your data to reflect the changes.</div>
+            <div className='red-text'>If you make any changes below, you will need to reload your data.</div>
             <br />
             {templates && templates.length > 0 && (<fieldset>
-                <legend>Your data schema to index</legend>
+                <legend>Your data sources</legend>
                 {templates && templates.map(a => (
 
                     <div key={a.template_id}>
@@ -170,7 +172,7 @@ export default function Schema({ config, account_id }) {
 
             <br />
             <fieldset>
-                <legend>Available data schema</legend>
+                <legend>Available data sources</legend>
 
                 {schemas && schemas.map(a => (
 
@@ -184,7 +186,7 @@ export default function Schema({ config, account_id }) {
                                 <ShowIcon />
                             </span>}
 
-                        <button type="button" className="btn btn-blue ml-5" onClick={() => addSchema(a)} >Select Schema</button>
+                        <button type="button" className="btn btn-blue ml-5" onClick={() => addSchema(a)} >Add Data Source</button>
                         {checkShowSchema(a.obj_type) &&
                             (<pre className='json-copy mt-3'>{JSON.stringify(a.schema, null, 2)}</pre>)}
 

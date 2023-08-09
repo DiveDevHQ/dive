@@ -145,8 +145,10 @@ class IndexContext:
     def delete(self, ids: Optional[List[str]] = None,
                delete_all: Optional[bool] = None,
                filter: Optional[dict] = None):
-
-        self.storage_context.vector_store.delete(ids=ids, delete_all=delete_all, filter=filter)
+        try:
+            self.storage_context.vector_store.delete(ids=ids, delete_all=delete_all, filter=filter)
+        except KeyError as e:
+            print(str(e))
 
 
 def summarization(service_context:ServiceContext, document: Document) -> str:

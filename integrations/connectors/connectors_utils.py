@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import Dict, Type
 from integrations.connectors.files_reader import BaseReader
 from integrations.connectors.files_reader import PDFReader
+from integrations.connectors.files_reader import PDFVisualReader
 from integrations.connectors.files_reader import TxtReader
 from integrations.connectors.files_reader import DocxReader
 from io import StringIO
@@ -108,7 +109,8 @@ def get_params_keys(text):
 DEFAULT_FILE_READER_CLS: Dict[str, Type[BaseReader]] = {
     "pdf": PDFReader,
     "txt": TxtReader,
-    "docx": DocxReader
+    "docx": DocxReader,
+    "pdf_image": PDFReader
 }
 
 

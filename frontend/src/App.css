@@ -556,11 +556,45 @@ pre {
 
 
 .login-content {
-  margin: auto;
+ float:right;
   width: 70%;
+  margin-top: 100px;
+  margin-right: 0px;
  
 }
 
 .logo-content{
+  float:left;
   width: 70%;
+  margin-left: 80px;
+  margin-top: 150px;
+}
+
+
+
+.c-egTDuJ-cmFMMs-color-primary {
+  background-color: #403f40 !important;
+  color: white !important;
+  border-color: #403f40 !important;
+}
+
+
+.logo {
+  vertical-align: top;
+  display: inline-block;
+  text-align: center;
+ 
+}
+.logo-image {
+  width: 100px;
+ 
+  
+}
+.logo-text {
+  width: 300px;
+  margin-top: 50px;
+  display: block;
+  color: #403f40;
+  font-weight: 600;
+  font-size: 20px;
 }
