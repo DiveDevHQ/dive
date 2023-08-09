@@ -118,7 +118,7 @@ class IndexContext:
 
                     _documents.append(_document)
                     _ids.append(ids[i] + "_chunk_" + str(j))
-                    print(d)
+
 
         PINECONE_API_KEY = env.str('PINECONE_API_KEY', default='') or os.environ.get('PINECONE_API_KEY', '')
 
@@ -148,7 +148,7 @@ class IndexContext:
                filter: Optional[dict] = None):
         try:
             self.storage_context.vector_store.delete(ids=ids, delete_all=delete_all, filter=filter)
-        except KeyError as e:
+        except Exception as e:
             print(str(e))
 
 

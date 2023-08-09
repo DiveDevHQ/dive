@@ -36,31 +36,20 @@ export default function DocumentCtrl({ app, account_id, connector_id, onSchemaEd
     );
 
     function handleReloadData() {
-        if (error){
-            getObjTypes(app, account_id).then(data => {
-                var _objTypes = [];
-                for (var i = 0; i < data.length; i++) {
-                    _objTypes.push(data[i]['obj_type']);
-                }
-                setObjTypes([..._objTypes]);
-                if (_objTypes.length===0){
-                    setError('Please add data source.');
-                    return;
-                }
-                setError('');
-                reloadData();
-            })
-        }
-        else{
-            if (!objTypes || objTypes.length===0){
+        getObjTypes(app, account_id).then(data => {
+            var _objTypes = [];
+            for (var i = 0; i < data.length; i++) {
+                _objTypes.push(data[i]['obj_type']);
+            }
+            setObjTypes([..._objTypes]);
+            if (_objTypes.length===0){
                 setError('Please add data source.');
                 return;
             }
             setError('');
             reloadData();
-        }
+        })
       
-
     }
 
     function reloadData(){
