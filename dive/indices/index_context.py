@@ -119,6 +119,7 @@ class IndexContext:
                     _documents.append(_document)
                     _ids.append(ids[i] + "_chunk_" + str(j))
 
+
         PINECONE_API_KEY = env.str('PINECONE_API_KEY', default='') or os.environ.get('PINECONE_API_KEY', '')
 
         if PINECONE_API_KEY:
@@ -145,12 +146,13 @@ class IndexContext:
     def delete(self, ids: Optional[List[str]] = None,
                delete_all: Optional[bool] = None,
                filter: Optional[dict] = None):
-
-        self.storage_context.vector_store.delete(ids=ids, delete_all=delete_all, filter=filter)
+        try:
+            self.storage_context.vector_store.delete(ids=ids, delete_all=delete_all, filter=filter)
+        except Exception as e:
+            print(str(e))
 
 
 def summarization(service_context:ServiceContext, document: Document) -> str:
-
 
     if not service_context.llm:
 

@@ -76,8 +76,8 @@ def initialize_vector(request):
 
         except ImportError:
             raise ImportError(import_err_msg)
-    '''
-    else:
+
+    '''else:
         CHROMA_PERSIST_DIR = env.str('CHROMA_PERSIST_DIR', default='db') or os.environ.get('CHROMA_PERSIST_DIR', 'db')
         import_err_msg = (
             "`chromadb` package not found, please run `pip install chromadb`"
@@ -94,9 +94,9 @@ def initialize_vector(request):
             client.get_collection(DEFAULT_COLLECTION_NAME)
         except ImportError:
             raise ImportError(import_err_msg)
-        except KeyError:
-            client.create_collection(DEFAULT_COLLECTION_NAME)
-    '''
+        except ValueError:
+            client.create_collection(DEFAULT_COLLECTION_NAME)'''
+
     return HttpResponse(status=204)
 
 
@@ -109,7 +109,7 @@ def authorization_api(request, app):
     if not connector_id:
         raise BadRequestException('connector_id is required')
     account_id = request.data.get('account_id', '')
-
+    print(connector_id)
     if not account_id:
         raise BadRequestException('account_id is required')
     redirect_uri = request.data.get('redirect_uri', '')
@@ -184,6 +184,7 @@ def authorization_api(request, app):
 
             integration.save()
     if integration_config['auth_method'] == 'NOAUTH':
+
         try:
             integration = Integration.objects.get(name=app, connector_id=connector_id)
             integration.enabled = True
@@ -426,29 +427,43 @@ def get_crm_field_properties(request, obj_type):
 @api_view(["PUT"])
 def sync_instance_data(request, app, account_id, connector_id):
     templates = Template.objects.filter(app=app, account_id=account_id, deleted=False)
-    if len(templates) == 0:
-        auth.update_sync_error(account_id, connector_id, {'id': 'Missing data schema', 'status_code': 400,
-                                                          'message': 'Please add schema from Connectors tab'})
+    if len(templates) > 0:
+        for template in templates:
+            sync_template(template, connector_id)
+    return HttpResponse(status=204)
 
-    for template in templates:
-        chunking_type = None
-        chunk_size = None
-        chunk_overlap = None
-        if template.chunking_type:
-            ct = json.loads(template.chunking_type)
-            if not ct:
-                chunking_type = DEFAULT_CHUNKING_TYPE
-            else:
-                chunking_type = ct.get('chunking_type', None)
-                chunk_size = ct.get('chunk_size', None)
-                chunk_overlap = ct.get('chunk_overlap', None)
-            if chunk_size:
-                chunk_size = int(chunk_size)
-            if chunk_overlap:
-                chunk_overlap = int(chunk_overlap)
-        index_data(template.module, account_id, connector_id, template.obj_type, template.schema, False, chunking_type,
-                   chunk_size,
-                   chunk_overlap)
+
+def sync_template(template, connector_id):
+    chunking_type = None
+    chunk_size = None
+    chunk_overlap = None
+    if template.chunking_type:
+        ct = json.loads(template.chunking_type)
+        if not ct:
+            chunking_type = DEFAULT_CHUNKING_TYPE
+        else:
+            chunking_type = ct.get('chunking_type', None)
+            chunk_size = ct.get('chunk_size', None)
+            chunk_overlap = ct.get('chunk_overlap', None)
+        if chunk_size:
+            chunk_size = int(chunk_size)
+        if chunk_overlap:
+            chunk_overlap = int(chunk_overlap)
+    index_data(template.module, template.account_id, connector_id, template.obj_type, template.schema, False,
+               chunking_type,
+               chunk_size,
+               chunk_overlap)
+
+
+@api_view(["PUT"])
+def sync_account_data(request, account_id):
+    integrations = Integration.objects.filter(enabled=True, account_id=account_id)
+    for integration in integrations:
+        if not integration.sync_status:
+            templates = Template.objects.filter(app=integration.name, account_id=account_id, deleted=False)
+            if len(templates) > 0:
+                for template in templates:
+                    sync_template(template, integration.connector_id)
     return HttpResponse(status=204)
 
 
@@ -469,8 +484,8 @@ def index_data(module, account_id, connector_id, obj_type, schema, reload, chunk
 
     auth.update_last_sync(account_id, connector_id, obj_type, False)
     data_id = str(integration.account_id) + str(connector_id)
-    metadata = {'account_id': integration.account_id, 'connector_id': connector_id, 'data_id': data_id,
-                'obj_type': obj_type}
+    metadata = {'account_id': integration.account_id, 'data_id': data_id,
+                'obj_type': str(integration.account_id) + obj_type}
     embedding_model = EmbeddingConfig()
     embedding_model.chunking_type = chunking_type
     embedding_model.chunk_size = chunk_size or embedding_model.chunk_size
@@ -518,12 +533,15 @@ def get_query_data(request):
     top_k = None
     instruction = None
     query_type = None
+    obj_type = None
     if url_params:
         url_params_dict = parse_qs(url_params)
         if 'connector_id' in url_params_dict and url_params_dict['connector_id'][0]:
             connector_id = url_params_dict['connector_id'][0]
         if 'account_id' in url_params_dict and url_params_dict['account_id'][0]:
             account_id = url_params_dict['account_id'][0]
+        if 'obj_type' in url_params_dict and url_params_dict['obj_type'][0]:
+            obj_type = url_params_dict['obj_type'][0]
         if 'query_text' in url_params_dict:
             query = url_params_dict['query_text'][0]
         if 'top_k' in url_params_dict:
@@ -544,8 +562,10 @@ def get_query_data(request):
     k = None
     if top_k:
         k = int(top_k)
-    if connector_id:
-        where = {'data_id': str(account_id)+str(connector_id)}
+    if obj_type:
+        where = {'obj_type': str(account_id) + obj_type}
+    elif connector_id:
+        where = {'data_id': str(account_id) + str(connector_id)}
     else:
         where = {'account_id': str(account_id)}
     try:
@@ -643,8 +663,12 @@ def get_message(request, user_id):
 def get_obj_schemas(request, app, module):
     base_path = Path(__file__).parent.parent
     folder_path = str(base_path) + '/integrations/connectors/' + app + '/' + module + '/schemas/'
-    dir_list = os.listdir(folder_path)
     schemas = []
+    if not os.path.isdir(folder_path):
+        return JsonResponse(schemas, safe=False)
+
+    dir_list = os.listdir(folder_path)
+
     for path in dir_list:
         with open(folder_path + path) as f:
             field_dict = json.load(f)
@@ -653,7 +677,7 @@ def get_obj_schemas(request, app, module):
 
 
 @api_view(["GET"])
-def get_obj_templates(request, app, module, account_id):
+def get_obj_module_templates(request, app, module, account_id):
     templates = Template.objects.filter(module=module, app=app, deleted=False, account_id=account_id)
     schemas = []
     for template in templates:
@@ -661,6 +685,29 @@ def get_obj_templates(request, app, module, account_id):
                         'schema': json.loads(template.schema) if template.schema else None,
                         'chunking_type': json.loads(template.chunking_type) if template.chunking_type else None})
     return JsonResponse(schemas, safe=False)
+
+
+@api_view(["GET"])
+def get_obj_templates(request, app, account_id):
+    templates = Template.objects.filter(app=app, deleted=False, account_id=account_id)
+    schemas = []
+    for template in templates:
+        schemas.append({'template_id': template.id, 'app': app, 'module':template.module, 'obj_type': template.obj_type,
+                        'schema': json.loads(template.schema) if template.schema else None,
+                        'chunking_type': json.loads(template.chunking_type) if template.chunking_type else None})
+    return JsonResponse(schemas, safe=False)
+
+
+@api_view(["GET"])
+def get_account_templates(request, account_id):
+    templates = Template.objects.filter(deleted=False, account_id=account_id)
+    schemas = []
+    for template in templates:
+        schemas.append({'template_id': template.id, 'app': template.app,'module':template.module, 'obj_type': template.obj_type,
+                        'schema': json.loads(template.schema) if template.schema else None,
+                        'chunking_type': json.loads(template.chunking_type) if template.chunking_type else None})
+    return JsonResponse(schemas, safe=False)
+
 
 
 @api_view(["POST"])
@@ -671,7 +718,7 @@ def add_obj_template(request):
     schema = json.dumps(request.data.get('schema', ''))
     account_id = request.data.get('account_id', '')
     chunking_type = json.dumps(request.data.get('chunking_type', None))
-    result = {'app': app, 'module': module, 'obj_type': obj_type,'chunking_type':json.loads(chunking_type),
+    result = {'app': app, 'module': module, 'obj_type': obj_type, 'chunking_type': json.loads(chunking_type),
               'schema': json.loads(schema)}
     try:
         template = Template.objects.get(module=module, app=app, obj_type=obj_type, account_id=account_id)
@@ -679,6 +726,7 @@ def add_obj_template(request):
         template.account_id = account_id
         template.chunking_type = chunking_type
         template.deleted = False
+        template.updated_at = datetime.now(timezone.utc)
         template.save()
         result['template_id'] = template.id
 
@@ -688,7 +736,9 @@ def add_obj_template(request):
                             obj_type=obj_type,
                             schema=schema,
                             account_id=account_id,
-                            chunking_type=chunking_type)
+                            chunking_type=chunking_type,
+                            created_at=datetime.now(timezone.utc),
+                            updated_at=datetime.now(timezone.utc))
         template.save()
 
         result['template_id'] = Template.objects.last().id
@@ -702,7 +752,7 @@ def patch_or_delete_template(request, template_id):
         try:
             template = Template.objects.get(id=template_id)
             template.chunking_type = json.dumps(request.data.get('chunking_type', None))
-
+            template.updated_at = datetime.now(timezone.utc)
             template.save()
 
         except Template.DoesNotExist:
@@ -711,7 +761,27 @@ def patch_or_delete_template(request, template_id):
         try:
             template = Template.objects.get(id=template_id)
             template.deleted = True
+            template.updated_at = datetime.now(timezone.utc)
             template.save()
         except Template.DoesNotExist:
             return HttpResponse(status=404)
+    return HttpResponse(status=204)
+
+
+@api_view(["POST"])
+def upload_file(request):
+    import boto3
+    AWS_S3_BUCKET_NAME = env.str('AWS_S3_BUCKET_NAME', default='') or os.environ.get('AWS_S3_BUCKET_NAME', '')
+    AWS_ADMIN_ACCESS_KEY = env.str('AWS_ADMIN_ACCESS_KEY', default='') or os.environ.get('AWS_ADMIN_ACCESS_KEY', '')
+    AWS_ADMIN_SECRET_KEY = env.str('AWS_ADMIN_SECRET_KEY', default='') or os.environ.get('AWS_ADMIN_SECRET_KEY', '')
+    AWS_S3_BUCKET_REGION = env.str('AWS_S3_BUCKET_REGION', default='') or os.environ.get('AWS_S3_BUCKET_REGION', '')
+    file = request.FILES["file"]
+    account_id = request.POST.get('account_id')
+    file_name = request.POST.get('file_name')
+    client = boto3.client('s3', aws_access_key_id=AWS_ADMIN_ACCESS_KEY,
+                          aws_secret_access_key=AWS_ADMIN_SECRET_KEY,
+                          region_name=AWS_S3_BUCKET_REGION)
+    client.put_object(Body=file, Bucket=AWS_S3_BUCKET_NAME, Key=account_id + '/' + file_name)
+    file_process = request.POST.get('file_process', '')
+
     return HttpResponse(status=204)

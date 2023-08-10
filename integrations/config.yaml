@@ -3,6 +3,11 @@ example:
     - schema: filestorage
   auth_method: NOAUTH
 
+upload:
+  module:
+    - schema: filestorage
+  auth_method: NOAUTH
+
 hubspot:
   module:
     - schema: crm

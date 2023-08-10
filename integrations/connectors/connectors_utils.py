@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import Dict, Type
 from integrations.connectors.files_reader import BaseReader
 from integrations.connectors.files_reader import PDFReader
+from integrations.connectors.files_reader import PDFVisualReader
 from integrations.connectors.files_reader import TxtReader
 from integrations.connectors.files_reader import DocxReader
 from io import StringIO
@@ -108,16 +109,17 @@ def get_params_keys(text):
 DEFAULT_FILE_READER_CLS: Dict[str, Type[BaseReader]] = {
     "pdf": PDFReader,
     "txt": TxtReader,
-    "docx": DocxReader
+    "docx": DocxReader,
+    "pdf_image": PDFReader
 }
 
 
-def load_file_from_url(doc_id, file_name, file_url, mime_type, extra_info):
+def load_file_from_url(doc_id, file_name, file_url, mime_type, extra_info, token):
     supported_suffix = list(DEFAULT_FILE_READER_CLS.keys())
     docs = []
     if mime_type in supported_suffix:
         reader = DEFAULT_FILE_READER_CLS[mime_type]()
-        docs = reader.load_data_from_url(doc_id, file_name, file_url, extra_info)
+        docs = reader.load_data_from_url(doc_id, file_name, file_url, extra_info,token)
     return docs
 
 

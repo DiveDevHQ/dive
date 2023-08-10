@@ -11,38 +11,40 @@ import Schema from './controls/Schema';
 import XIcon from './icons/XIcon';
 import InfoIcon from './icons/InfoIcon';
 import SelectCtrl from './controls/SelectCtrl';
+import DocumentCtrl from './controls/DocumentCtrl';
+import FileUpload from './controls/FileUpload'
 import { PulseLoader } from 'react-spinners';
 import './index.css'
 
 import { createClient } from '@supabase/supabase-js'
 import { Auth } from '@supabase/auth-ui-react'
-import { ThemeSupa } from '@supabase/auth-ui-shared'
-import { getApps, getConnectors, clearData, syncData, queryData, setupVector } from './api';
+import { ThemeSupa, ThemeMinimal } from '@supabase/auth-ui-shared'
+import { getApps, getConnectors, clearData, syncConnectorData, queryData, setupVector, authWithPublicData, syncAccountData, getAccountTemplates } from './api';
 
 const supabase = createClient(process.env.REACT_APP_SUPABASE_CLIENT, process.env.REACT_APP_SUPABASE_ANON_KEY)
-const auth=process.env.REACT_APP_AUTH
 
 
 function App() {
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(4);
   const [apps, setApps] = useState([]);
   const [connectors, setConnectors] = useState([]);
-  const [accountIds, setAccountIds] = useState([]);
-  const [connectIds, setConnectIds] = useState([]);
+  const [filters, setFilters] = useState([]);
   const [selectAccountId, setSelectAccountId] = useState();
   const [chunkSize, setChunkSize] = useState(4);
-  const [selectConnectorId, setSelectConnectorId] = useState('all');
+  const [selectedFilter, setSelectedFilter] = useState();
   const [queryResult, setQueryResult] = useState();
   const [queryText, setQueryText] = useState();
   const [error, setError] = useState();
   const [loading, setLoading] = useState(true);
   const [instruction, setInstruction] = useState();
   const [session, setSession] = useState(null);
+  const [initialized, setInitialized] = useState(false);
+  const [message, setMessage] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
-     
+
     })
 
     const {
@@ -50,6 +52,9 @@ function App() {
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
     })
+    setTimeout(() => {
+      setInitialized(true);
+    }, 500);
 
     return () => subscription.unsubscribe()
   }, [])
@@ -64,40 +69,42 @@ function App() {
 
   function loadConnectors() {
     getConnectors().then(data => {
-      setConnectors(data)
+      setConnectors(data);
+      loadApps();
     });
   }
 
 
   function loadApps() {
-    
+
     getApps(session.user.id).then(data => {
       setApps(data);
       if (data.length === 0) {
-        setPage(2);
+        setPage(4);
       }
       else {
-        var _connectIds = [];
-        var _accountIds = [];
+        
+        var _filters=[];
+        _filters.unshift({ 'label': 'All documents', 'value': 'account_id|'+session.user.id });
+     
         for (var i = 0; i < data.length; i++) {
-          _connectIds.push(
-            { 'label': data[i].connector_id, 'value': data[i].connector_id }
+          _filters.push(
+            { 'label': 'All documents from '+data[i].connector_id, 'value': 'connector_id|'+data[i].connector_id }
           );
-
-          const accountIndex = _accountIds.findIndex(
-            item => item.value === data[i].account_id
-          );
-          if (accountIndex === -1) {
-
-            _accountIds.push(
-              { 'label': data[i].account_id, 'value': data[i].account_id });
-          }
         }
-        _connectIds.unshift({ 'label': 'All documents', 'value': 'all'});
-        setConnectIds([..._connectIds]);
-        setAccountIds([..._accountIds]);
+        getAccountTemplates(session.user.id).then(data => {
+  
+          for (var i = 0; i < data.length; i++) {
+            _filters.push(
+              { 'label': data[i]['obj_type'], 'value': 'obj_type|'+data[i]['obj_type'] });
+          }
+          setFilters([..._filters]);
+          
+        })
+    
       }
     });
+    
   }
 
   useEffect(() => {
@@ -106,25 +113,24 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if(session){
+    if (session) {
       loadConnectors();
-      loadApps();
     }
-    
+
   }, [session]);
 
 
 
-  function runSyncData(app,  connector_id) {
+  function runSyncData(app, connector_id) {
     setLoading(true);
-    syncData(app, session.user.id,connector_id).then(data => {
+    syncConnectorData(app, session.user.id, connector_id).then(data => {
       loadApps();
       setLoading(false);
     });
   }
   function clearSyncData(app, connector_id) {
     setLoading(true);
-    clearData(app, session.user.id,connector_id).then(data => {
+    clearData(app, session.user.id, connector_id).then(data => {
       loadApps();
       setLoading(false);
     });
@@ -186,6 +192,36 @@ function App() {
     handleOpenModal('integration', name, "Connect " + name, modalStyle);
   }
 
+
+  function openFileUploader() {
+
+    var modalStyle = {
+      content: {
+        top: '50%',
+        left: '50%',
+        right: 'auto',
+        bottom: 'auto',
+        marginRight: '-50%',
+        height: '700px',
+        width: '800px',
+        transform: 'translate(-50%, -50%)',
+      },
+    };
+    handleOpenModal('file', 'file', "File Uploader ", modalStyle);
+  }
+
+  function getSchema(name) {
+    return connectors.find(
+      item => item.name === name
+    );
+
+  }
+
+  function hanldeSchemaEdit(app) {
+    openSchema(getSchema(app));
+  }
+
+
   function openSchema(app) {
 
     var modalStyle = {
@@ -201,7 +237,7 @@ function App() {
       },
     };
 
-    handleOpenModal('schema', app, "Schema " + app.name, modalStyle);
+    handleOpenModal('schema', app, app.name + " settings", modalStyle);
   }
 
   function closeModal() {
@@ -215,17 +251,25 @@ function App() {
   }
 
   function handleSelectConnectorChange(id, text, value) {
-    setSelectConnectorId(value);
+    setSelectedFilter(value);
 
   }
 
   function refreshApps() {
+    setApps([]);
     loadApps();
+  }
+
+  function testDocuments() {
+    authWithPublicData('example', session.user.id).then(data => {
+      loadApps();
+      openSchema(getSchema('example'));
+    })
   }
 
   function queryDocuments(query_type) {
     setError('');
-    
+
 
     if (!queryText) {
       setError('Please enter query text to search.');
@@ -246,15 +290,23 @@ function App() {
     }
     setQueryResult(null);
     setLoading(true);
-    var connectId='';
-    if (selectConnectorId=='all'){
-      connectId='';
-    }
-    else{
-      connectId=selectConnectorId;
-    }
+    var connectorId = '';
+    var obj_type='';
+    var filterParts= selectedFilter.split('|');
 
-    queryData(session.user.id,  connectId,
+    if (filterParts[0] == 'account_id') {
+      connectorId = '';
+    }
+    else if(filterParts[0] == 'connector_id'){
+      connectorId = filterParts[1];
+    }
+    else if (filterParts[0] == 'obj_type') {
+      obj_type =filterParts[1];
+    }
+ 
+
+ 
+    queryData(session.user.id, connectorId,obj_type,
       queryText, chunkSize ? chunkSize : "", instruction ? instruction : "", query_type).then(data => {
         setQueryResult(data);
         setLoading(false);
@@ -265,26 +317,39 @@ function App() {
           setLoading(false);
         }
 
-      });
-
-
+      }); 
 
   }
 
+  function prepareQueryData() {
+    setLoading(true);
+    setMessage('Peparing your data, it can take up to 3 mins...');
+    syncAccountData(session.user.id).then(
+      data => {
+        setLoading(false);
+        setMessage('');
+        setPage(3);
+      }
+    )
 
-  if (!session) {
+  }
+
+  if (!initialized) {
+    return (<></>)
+  }
+
+  if (initialized && !session) {
     return (<div>
       <div className='row'>
-        <div className='col-6'><div className='login-content' > 
-        <Auth supabaseClient={supabase} appearance={{ theme: ThemeSupa }}  providers={['google']}/></div></div>
-        <div className='col-6'> <div className='logo-content mt-5'>  <img src={LogoDark} width="350px" />
-        <div className='mt-5 '><h5>LLM Powered Tool For Venture Capitalists</h5></div></div>
-    
+        <div className='col-6'><div className='login-content' >
+          <Auth supabaseClient={supabase} appearance={{ theme: ThemeSupa }} providers={['google']} /></div></div>
+        <div className='col-6'> <div className='logo-content'><div className='logo'>
+          <div className='logo-image'><img src={LogoDark} width="300px" /></div>
+          <div className='logo-text'>LLM Powered Tool For Venture Capitalists</div>
+        </div> </div>
+
         </div>
       </div>
-
-     
-
     </div>)
   }
 
@@ -300,8 +365,14 @@ function App() {
 
                 <h3 className="nav__subtitle">Menu</h3>
 
-
                 <a onClick={() =>
+                  setPage(4)
+                } className="nav__link">
+                  <i className='bx bx-compass nav__icon' ></i>
+                  <span className={page === 4 ? "nav__name cursor-pointer active-menu" : "nav__name cursor-pointer inactive-menu"}>Documents</span>
+                </a>
+
+                {/*  <a onClick={() =>
                   setPage(1)
                 } className="nav__link">
                   <i className='bx bx-compass nav__icon' ></i>
@@ -312,12 +383,12 @@ function App() {
                 } className="nav__link">
                   <i className='bx bx-compass nav__icon' ></i>
                   <span className={page === 2 ? "nav__name cursor-pointer active-menu" : "nav__name cursor-pointer inactive-menu"}>Connectors</span>
-                </a>
+                </a>*/}
                 <a onClick={() =>
                   setPage(3)
                 } className="nav__link">
                   <i className='bx bx-compass nav__icon' ></i>
-                  <span className={page === 3 ? "nav__name cursor-pointer active-menu" : "nav__name cursor-pointer inactive-menu"}>Search</span>
+                  <span className={page === 3 ? "nav__name cursor-pointer active-menu" : "nav__name cursor-pointer inactive-menu"}>Playground</span>
                 </a>
               </div>
             </div>
@@ -326,8 +397,16 @@ function App() {
         </nav>
       </div>
       <div className='main-content'>
-        <div >
-          <PulseLoader color="#2598d6" loading={loading} />
+        <div className='mb-1'>
+          <div className='loading'>
+
+            <PulseLoader color="#2598d6" loading={loading} /> &nbsp;
+            <span className='blue-text-large ml-5'>{message}</span>
+          </div>
+
+
+
+
         </div>
         {page && page === 1 && (
           <div><h2>Your Apps</h2>
@@ -337,9 +416,10 @@ function App() {
                 <table className="table table-striped">
                   <thead  >
                     <tr>
-                   {/*   <th scope="col">Account Id</th> */}
+                      {/*   <th scope="col">Account Id</th> */}
                       <th scope="col">Connector Id</th>
                       <th scope="col">App</th>
+                      <th scope="col">Data</th>
                       <th scope="col">Status</th>
                       <th scope="col">Sync</th>
                       <th scope="col">Clear</th>
@@ -351,9 +431,10 @@ function App() {
                     {apps && apps.map(a => (
 
                       <tr key={a.connector_id}>
-                      {/*<td> <span> {a.account_id} </span></td> */}
+                        {/*<td> <span> {a.account_id} </span></td> */}
                         <td> <span> {a.connector_id} </span></td>
                         <td> <span> {a.app} </span></td>
+                        <td> <button type="button" className="btn btn-blue-short ml-5" onClick={() => openSchema(getSchema(a.app))} >Data Source</button></td>
                         <td> <span> {a.sync_status} </span></td>
                         <td>    <button type="button" className="btn btn-blue-short ml-5" onClick={() => runSyncData(a.app, a.connector_id)} >Sync now</button>
                         </td>
@@ -389,14 +470,14 @@ function App() {
         )}
         {page && page === 3 && (
           <div> <h2>Search</h2>
-            <button type="button" className="btn btn-grey" onClick={() => openSearchApiDoc()} >Open API Doc</button><br />
+            {/*<button type="button" className="btn btn-grey" onClick={() => openSearchApiDoc()} >Open API Doc</button><br />*/}
             <br />
             <div className='row'>
               {/*<div className='col-4'>     <SelectCtrl dataSource={accountIds} onSelectChange={handleSelectAccountChange} label={"Select accountId"} selectedValue={selectAccountId} />
 
         </div>*/}
 
-              <div className='col-4'>     <SelectCtrl dataSource={connectIds} onSelectChange={handleSelectConnectorChange} label={"Select Data Source"} selectedValue={selectConnectorId} />
+              <div className='col-4'>     <SelectCtrl dataSource={filters} onSelectChange={handleSelectConnectorChange} label={"Select Data Source"} selectedValue={setSelectedFilter} />
               </div>
               <div className='col-4'>
                 <span className="svg-icon-sm svg-text cursor-pointer" simple-title='Top K chunks from the result, K between 2 to 10' >
@@ -435,6 +516,38 @@ function App() {
           </div>
         )}
 
+        {page && page === 4 && (
+          <>
+            <div className='row'>
+              <div className='col-4'>
+                <button type="button" className="btn btn-grey mr-5" onClick={() => testDocuments()} >Try Test Docs</button>
+              </div>
+              <div className='col-4'>
+                <button type="button" className="btn btn-grey mr-5" onClick={() => openFileUploader()} >Upload Files</button>
+              </div>
+
+            </div>
+            <div className='mt-5'>
+              {
+                apps && apps.length > 0 && (
+                  <>
+                    <h4> Your documents</h4>
+
+                    {apps && apps.map(a => (
+
+                      <div key={a.connector_id} className=' mt-3'>
+                        <DocumentCtrl account_id={session.user.id} connector_id={a.connector_id} app={a.app} onSchemaEdit={hanldeSchemaEdit} />
+
+                      </div>
+                    ))}
+                    <button type="button" className="btn btn-grey mr-5" onClick={() => prepareQueryData()} >Query My Data</button>
+
+                  </>
+                )
+              }
+            </div>
+          </>
+        )}
       </div>
       <Modal
         isOpen={modalIsOpen}
@@ -462,6 +575,15 @@ function App() {
           </div>
 
         )}
+
+        {modalType == 'file' && modalParam && (
+          <div >
+            <h4>Deck</h4>
+            <FileUpload fileType="deck" account_id={session.user.id} onUploadFile={refreshApps} />
+          </div>
+
+        )}
+
       </Modal>
 
     </div>

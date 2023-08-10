@@ -12,7 +12,7 @@ index_example_data(256, 20, False, OpenAIEmbeddings(), OpenAI())
 print('------------Finish Indexing Data-----------------')
 time.sleep(30)
 print('------------Start Querying Data-----------------')
-question = 'What did the author do growing up?'
+question='What is airbnb\'s revenue?'
 instruction = None # 'summarise your response in no more than 5 lines' or 'answer this question in Indonesian'
 query_example_data(question, 4, OpenAIEmbeddings(), OpenAI(temperature=0), instruction)
 #clear_example_data()
