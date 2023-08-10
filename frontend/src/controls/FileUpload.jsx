@@ -31,9 +31,6 @@ const FileUpload = ({ fileType, account_id, onUploadFile }) => {
     formData.append('file', file);
     formData.append('account_id', account_id);
     formData.append('file_name', unique_filename);
-    if (fileType === 'deck') {
-      formData.append('file_process', 'ocr');
-    }
 
 
     try {

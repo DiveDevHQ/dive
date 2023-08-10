@@ -115,7 +115,6 @@ class IndexContext:
                         _metadata = {'summary_id': summary_id}
                     _document = Document(metadata=_metadata,
                                          page_content=d)
-
                     _documents.append(_document)
                     _ids.append(ids[i] + "_chunk_" + str(j))
 

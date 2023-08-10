@@ -110,7 +110,7 @@ DEFAULT_FILE_READER_CLS: Dict[str, Type[BaseReader]] = {
     "pdf": PDFReader,
     "txt": TxtReader,
     "docx": DocxReader,
-    "pdf_image": PDFReader
+    "pdf_image": PDFVisualReader
 }
 
 

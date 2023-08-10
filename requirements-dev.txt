@@ -55,3 +55,5 @@ chromadb==0.3.29
 transformers>=4.31.0
 boto3==1.28.23
 botocore==1.31.23
+pytesseract==0.3.10
+pdf2image==1.16.3

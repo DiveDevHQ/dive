@@ -3,7 +3,7 @@ from dive.indices.service_context import ServiceContext
 from typing import Optional, List, Any, Dict
 from dataclasses import dataclass
 from langchain.schema import Document
-from dive.constants import DEFAULT_QUERY_CHUNK_SIZE
+from dive.constants import DEFAULT_TOP_K_SIZE
 from dive.util.power_method import sentence_transformer_summarize,sentence_transformer_question_answer
 from langchain.chains.summarize import load_summarize_chain
 from langchain.chains.question_answering import load_qa_chain
@@ -33,7 +33,7 @@ class QueryContext:
                    service_context=service_context,
                    **kwargs, )
 
-    def query(self, query: str, k: int = DEFAULT_QUERY_CHUNK_SIZE, filter: Optional[Dict[str, str]] = None) -> List[
+    def query(self, query: str, k: int = DEFAULT_TOP_K_SIZE, filter: Optional[Dict[str, str]] = None) -> List[
         Document]:
 
         try:

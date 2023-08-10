@@ -30,7 +30,7 @@ function App() {
   const [connectors, setConnectors] = useState([]);
   const [filters, setFilters] = useState([]);
   const [selectAccountId, setSelectAccountId] = useState();
-  const [chunkSize, setChunkSize] = useState(4);
+  const [chunkSize, setChunkSize] = useState();
   const [selectedFilter, setSelectedFilter] = useState();
   const [queryResult, setQueryResult] = useState();
   const [queryText, setQueryText] = useState();
@@ -83,28 +83,28 @@ function App() {
         setPage(4);
       }
       else {
-        
-        var _filters=[];
-        _filters.unshift({ 'label': 'All documents', 'value': 'account_id|'+session.user.id });
-     
+
+        var _filters = [];
+        _filters.unshift({ 'label': 'All documents', 'value': 'account_id|' + session.user.id });
+
         for (var i = 0; i < data.length; i++) {
           _filters.push(
-            { 'label': 'All documents from '+data[i].connector_id, 'value': 'connector_id|'+data[i].connector_id }
+            { 'label': 'All documents from ' + data[i].connector_id, 'value': 'connector_id|' + data[i].connector_id }
           );
         }
         getAccountTemplates(session.user.id).then(data => {
-  
+
           for (var i = 0; i < data.length; i++) {
             _filters.push(
-              { 'label': data[i]['obj_type'], 'value': 'obj_type|'+data[i]['obj_type'] });
+              { 'label': data[i]['obj_type'], 'value': 'obj_type|' + data[i]['obj_type'] });
           }
           setFilters([..._filters]);
-          
+
         })
-    
+
       }
     });
-    
+
   }
 
   useEffect(() => {
@@ -275,11 +275,12 @@ function App() {
       setError('Please enter query text to search.');
       return;
     }
-    if (!chunkSize) {
-      setError('Please enter chunk size between 2 to 10.');
+   
+    if (!selectedFilter) {
+      setError('Please select a data source.');
       return;
     }
-
+    /*
     var _chunkSize = parseInt(chunkSize);
     if (_chunkSize >= 2 && _chunkSize <= 10) {
 
@@ -287,27 +288,27 @@ function App() {
     else {
       setError('Please enter chunk size between 2 to 10.');
       return;
-    }
+    }*/
     setQueryResult(null);
     setLoading(true);
     var connectorId = '';
-    var obj_type='';
-    var filterParts= selectedFilter.split('|');
+    var obj_type = '';
+    var filterParts = selectedFilter.split('|');
 
     if (filterParts[0] == 'account_id') {
       connectorId = '';
     }
-    else if(filterParts[0] == 'connector_id'){
+    else if (filterParts[0] == 'connector_id') {
       connectorId = filterParts[1];
     }
     else if (filterParts[0] == 'obj_type') {
-      obj_type =filterParts[1];
+      obj_type = filterParts[1];
     }
- 
 
- 
-    queryData(session.user.id, connectorId,obj_type,
-      queryText, chunkSize ? chunkSize : "", instruction ? instruction : "", query_type).then(data => {
+
+
+    queryData(session.user.id, connectorId, obj_type,
+      queryText, chunkSize ? chunkSize : "", instruction ? instruction : "", query_type?query_type:"").then(data => {
         setQueryResult(data);
         setLoading(false);
 
@@ -317,7 +318,7 @@ function App() {
           setLoading(false);
         }
 
-      }); 
+      });
 
   }
 
@@ -333,6 +334,8 @@ function App() {
     )
 
   }
+
+
 
   if (!initialized) {
     return (<></>)
@@ -372,13 +375,13 @@ function App() {
                   <span className={page === 4 ? "nav__name cursor-pointer active-menu" : "nav__name cursor-pointer inactive-menu"}>Documents</span>
                 </a>
 
-                {/*  <a onClick={() =>
+                 <a onClick={() =>
                   setPage(1)
                 } className="nav__link">
                   <i className='bx bx-compass nav__icon' ></i>
                   <span className={page === 1 ? "nav__name cursor-pointer active-menu" : "nav__name cursor-pointer inactive-menu"}>Your Apps</span>
                 </a>
-                <a onClick={() =>
+              {/*   <a onClick={() =>
                   setPage(2)
                 } className="nav__link">
                   <i className='bx bx-compass nav__icon' ></i>
@@ -473,28 +476,44 @@ function App() {
             {/*<button type="button" className="btn btn-grey" onClick={() => openSearchApiDoc()} >Open API Doc</button><br />*/}
             <br />
             <div className='row'>
-              {/*<div className='col-4'>     <SelectCtrl dataSource={accountIds} onSelectChange={handleSelectAccountChange} label={"Select accountId"} selectedValue={selectAccountId} />
-
-        </div>*/}
-
-              <div className='col-4'>     <SelectCtrl dataSource={filters} onSelectChange={handleSelectConnectorChange} label={"Select Data Source"} selectedValue={setSelectedFilter} />
+              <div className='col-6'>
+                <input className='form-control  ml-2' value={queryText || ""} onChange={e => setQueryText(e.target.value)}
+                  placeholder='Enter your question'
+                  type="text" />
               </div>
-              <div className='col-4'>
+              <div className='col-5'>
+                <SelectCtrl dataSource={filters} onSelectChange={handleSelectConnectorChange} label={"Select Data Source"} selectedValue={selectedFilter} />
+              </div>
+              <div className='col-1'>
+
+              <button type="button" className="btn btn-grey mr-5" onClick={() => queryDocuments()} >Search</button>
+       
+              </div>
+            </div>
+
+            <br />
+
+           {/* <div className='row'>
+              <div className='col-4'>     <SelectCtrl dataSource={accountIds} onSelectChange={handleSelectAccountChange} label={"Select accountId"} selectedValue={selectAccountId} />
+
+        </div> 
+
+ <div className='col-4'>
                 <span className="svg-icon-sm svg-text cursor-pointer" simple-title='Top K chunks from the result, K between 2 to 10' >
                   <InfoIcon />
                 </span> Top K:<input className='form-control-short ml-2' value={chunkSize || ""} onChange={e => setChunkSize(e.target.value)}
                   type="text" />
+              </div> 
+             
+            </div>*/}
+            <br />
 
-              </div>
-            </div>
-            <br />
-            <h4>Search query</h4>
-            <br />
-            <div className='row'><div className='col-8'>
+
+            {/*<div className='row'><div className='col-8'>
               Instructions (optional):  <input className='form-control  ml-2' value={instruction || ""} onChange={e => setInstruction(e.target.value)}
                 placeholder='Enter prompt for your question'
                 type="text" />
-            </div>
+      </div>
               <div className='col-4'>
                 <span className='small-grey-text'>e.g. Summerize your response in no more than 5 lines</span>
               </div>
@@ -502,15 +521,15 @@ function App() {
 
             <br />
             <br />
-            Question: <br />
-            <textarea rows="5" cols="60" value={queryText || ""} onChange={e => setQueryText(e.target.value)}></textarea>
-            <br />
+*/}
+
             <div className='red-text'>{error}</div>
-            <br />
+          {/*  <br />
             <button type="button" className="btn btn-grey mr-5" onClick={() => queryDocuments()} >Short Answer</button>
             <button type="button" className="btn btn-grey mr-5" onClick={() => queryDocuments('summary')} >Summary</button>
-            <br />
-            {queryResult && (<pre className='json-copy mt-3'>{JSON.stringify(queryResult, null, 2)}</pre>)}
+<br />
+            {queryResult && (<pre className='json-copy mt-3'>{JSON.stringify(queryResult, null, 2)}</pre>)}*/}
+             {queryResult &&(<span className='query-result'>{queryResult.result}</span>)}
 
 
           </div>
