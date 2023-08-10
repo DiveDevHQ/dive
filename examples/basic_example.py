@@ -4,7 +4,7 @@ from dive.util.configAPIKey import set_pinecone_api_key,set_pinecone_env,set_pin
 import time
 import requests
 #Use chromadb and model all-MiniLM-L6-v2 embeddings and llm
-
+ 
 index_example_data(256, 20, False, None,None)
 # wait 1 min to run query method
 print('------------Finish Indexing Data-----------------')
