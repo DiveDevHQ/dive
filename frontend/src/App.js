@@ -19,7 +19,7 @@ import './index.css'
 import { createClient } from '@supabase/supabase-js'
 import { Auth } from '@supabase/auth-ui-react'
 import { ThemeSupa, ThemeMinimal } from '@supabase/auth-ui-shared'
-import { getApps, getConnectors, clearData, syncConnectorData, queryData, setupVector, authWithPublicData, syncAccountData } from './api';
+import { getApps, getConnectors, clearData, syncConnectorData, queryData, setupVector, authWithPublicData, syncAccountData, getAccountTemplates } from './api';
 
 const supabase = createClient(process.env.REACT_APP_SUPABASE_CLIENT, process.env.REACT_APP_SUPABASE_ANON_KEY)
 
@@ -28,11 +28,10 @@ function App() {
   const [page, setPage] = useState(4);
   const [apps, setApps] = useState([]);
   const [connectors, setConnectors] = useState([]);
-  const [accountIds, setAccountIds] = useState([]);
-  const [connectIds, setConnectIds] = useState([]);
+  const [filters, setFilters] = useState([]);
   const [selectAccountId, setSelectAccountId] = useState();
   const [chunkSize, setChunkSize] = useState(4);
-  const [selectConnectorId, setSelectConnectorId] = useState('all');
+  const [selectedFilter, setSelectedFilter] = useState();
   const [queryResult, setQueryResult] = useState();
   const [queryText, setQueryText] = useState();
   const [error, setError] = useState();
@@ -84,27 +83,28 @@ function App() {
         setPage(4);
       }
       else {
-        var _connectIds = [];
-        var _accountIds = [];
+        
+        var _filters=[];
+        _filters.unshift({ 'label': 'All documents', 'value': 'account_id|'+session.user.id });
+     
         for (var i = 0; i < data.length; i++) {
-          _connectIds.push(
-            { 'label': data[i].connector_id, 'value': data[i].connector_id }
+          _filters.push(
+            { 'label': 'All documents from '+data[i].connector_id, 'value': 'connector_id|'+data[i].connector_id }
           );
-
-          const accountIndex = _accountIds.findIndex(
-            item => item.value === data[i].account_id
-          );
-          if (accountIndex === -1) {
-
-            _accountIds.push(
-              { 'label': data[i].account_id, 'value': data[i].account_id });
-          }
         }
-        _connectIds.unshift({ 'label': 'All documents', 'value': 'all' });
-        setConnectIds([..._connectIds]);
-        setAccountIds([..._accountIds]);
+        getAccountTemplates(session.user.id).then(data => {
+  
+          for (var i = 0; i < data.length; i++) {
+            _filters.push(
+              { 'label': data[i]['obj_type'], 'value': 'obj_type|'+data[i]['obj_type'] });
+          }
+          setFilters([..._filters]);
+          
+        })
+    
       }
     });
+    
   }
 
   useEffect(() => {
@@ -251,7 +251,7 @@ function App() {
   }
 
   function handleSelectConnectorChange(id, text, value) {
-    setSelectConnectorId(value);
+    setSelectedFilter(value);
 
   }
 
@@ -290,15 +290,23 @@ function App() {
     }
     setQueryResult(null);
     setLoading(true);
-    var connectId = '';
-    if (selectConnectorId == 'all') {
-      connectId = '';
-    }
-    else {
-      connectId = selectConnectorId;
-    }
+    var connectorId = '';
+    var obj_type='';
+    var filterParts= selectedFilter.split('|');
 
-    queryData(session.user.id, connectId,
+    if (filterParts[0] == 'account_id') {
+      connectorId = '';
+    }
+    else if(filterParts[0] == 'connector_id'){
+      connectorId = filterParts[1];
+    }
+    else if (filterParts[0] == 'obj_type') {
+      obj_type =filterParts[1];
+    }
+ 
+
+ 
+    queryData(session.user.id, connectorId,obj_type,
       queryText, chunkSize ? chunkSize : "", instruction ? instruction : "", query_type).then(data => {
         setQueryResult(data);
         setLoading(false);
@@ -309,7 +317,7 @@ function App() {
           setLoading(false);
         }
 
-      });
+      }); 
 
   }
 
@@ -469,7 +477,7 @@ function App() {
 
         </div>*/}
 
-              <div className='col-4'>     <SelectCtrl dataSource={connectIds} onSelectChange={handleSelectConnectorChange} label={"Select Data Source"} selectedValue={selectConnectorId} />
+              <div className='col-4'>     <SelectCtrl dataSource={filters} onSelectChange={handleSelectConnectorChange} label={"Select Data Source"} selectedValue={setSelectedFilter} />
               </div>
               <div className='col-4'>
                 <span className="svg-icon-sm svg-text cursor-pointer" simple-title='Top K chunks from the result, K between 2 to 10' >

@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 
-import { getObjTypes, clearData, syncConnectorData } from '../api';
+import { getAppTemplates, clearData, syncConnectorData } from '../api';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { ChunkingTypes } from '../references';
@@ -14,7 +14,7 @@ export default function DocumentCtrl({ app, account_id, connector_id, onSchemaEd
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
-        getObjTypes(app, account_id).then(data => {
+        getAppTemplates(app, account_id).then(data => {
             var _objTypes = [];
             for (var i = 0; i < data.length; i++) {
                 _objTypes.push(data[i]['obj_type']);
@@ -36,7 +36,7 @@ export default function DocumentCtrl({ app, account_id, connector_id, onSchemaEd
     );
 
     function handleReloadData() {
-        getObjTypes(app, account_id).then(data => {
+        getAppTemplates(app, account_id).then(data => {
             var _objTypes = [];
             for (var i = 0; i < data.length; i++) {
                 _objTypes.push(data[i]['obj_type']);

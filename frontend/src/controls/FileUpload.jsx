@@ -4,6 +4,7 @@ import FileProgress from './FileProgress';
 import { generateUUID, uploadFile } from '../utils';
 import { createClient } from '@supabase/supabase-js'
 import { addTemplate, authWithPublicData } from '../api';
+import axios from 'axios';
 
 const FileUpload = ({ fileType, account_id, onUploadFile }) => {
   const [file, setFile] = useState('');
@@ -14,58 +15,30 @@ const FileUpload = ({ fileType, account_id, onUploadFile }) => {
   const [error, setError] = useState();
 
   const onChange = e => {
-    setFile(e.target.files[0]);
-    setFilename(e.target.files[0].name);
+    if (e.target.files && e.target.files.length > 0) {
+      setFile(e.target.files[0]);
+      if (e.target.files[0]) {
+        setFilename(e.target.files[0].name);
+      }
+    }
+
   };
 
   const onSubmit = async e => {
     e.preventDefault();
+    var unique_filename = generateUUID() + '_' + filename;
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('account_id', account_id);
+    formData.append('file_name', unique_filename);
+    if (fileType === 'deck') {
+      formData.append('file_process', 'ocr');
+    }
+
 
     try {
 
-      const supabase = createClient(process.env.REACT_APP_SUPABASE_CLIENT, process.env.REACT_APP_SUPABASE_ANON_KEY)
-      const { bucket_data, bucket_error } = await supabase.storage.createBucket(account_id);
-
-      if (bucket_error) {
-        setError('Upload failed. Please try again!');
-        return;
-      }
-      const { data, error } = await supabase.storage
-        .from('files/user_files/' + account_id)
-        .upload(generateUUID() + '_' + filename, file);
-
-      if (error) {
-        setError('Upload failed. Please try again!');
-        return;
-      }
-      else {
-        setError('')
-        setUploadPercentage(80);
-        var path = data.path;
-        authWithPublicData('upload', account_id).then(data => {
-          var chunking_type = { 'chunking_type': 'custom' };
-          var schema_name = filename;
-          var mime_type = '';
-          if (filename.indexOf('.') > -1) {
-            schema_name = filename.split('.')[0];
-            mime_type = filename.split('.')[1];
-            if (fileType === 'deck' && mime_type == 'pdf') {
-              mime_type = 'pdf_image';
-            }
-          }
-          setUploadPercentage(90);
-          var schema = { 'name': schema_name, 'file_url': account_id + '/' + path, 'mime_type': mime_type };
-          addTemplate('upload', 'filestorage', schema_name, schema, account_id, chunking_type).then(data => {
-            setUploadPercentage(100);
-            onUploadFile();
-          });
-
-        })
-      }
-
-      /*const res = await axios.post('/upload', formData, {
+      const res = await axios.post(`${process.env.REACT_APP_API_URL}/file/upload`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         },
@@ -73,14 +46,31 @@ const FileUpload = ({ fileType, account_id, onUploadFile }) => {
           setUploadPercentage(parseInt(Math.round((progressEvent.loaded * 100) / progressEvent.total)));
           setTimeout(() => setUploadPercentage(0), 10000);
         }
-      });*/
+      });
 
+      authWithPublicData('upload', account_id).then(data => {
+        var chunking_type = { 'chunking_type': 'custom' };
+        var schema_name = filename;
+        var mime_type = '';
+        if (filename.indexOf('.') > -1) {
+          schema_name = filename.split('.')[0];
+          mime_type = filename.split('.')[1];
+          if (fileType === 'deck' && mime_type == 'pdf') {
+            mime_type = 'pdf_image';
+          }
+        }
+        var schema = { 'name': schema_name, 'file_url': account_id + '/' + unique_filename, 'mime_type': mime_type };
+        addTemplate('upload', 'filestorage', schema_name, schema, account_id, chunking_type).then(data => {
+          onUploadFile();
+        });
+
+      })
 
     } catch (err) {
       if (err.response.status === 500) {
-        setMessage('There was a problem witht he server');
+        setError('Upload failed. Please try again!');
       } else {
-        setMessage(err.response.data.msg);
+        setError(err.response.data.msg);
       }
     }
   }

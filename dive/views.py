@@ -429,7 +429,7 @@ def sync_instance_data(request, app, account_id, connector_id):
     templates = Template.objects.filter(app=app, account_id=account_id, deleted=False)
     if len(templates) > 0:
         for template in templates:
-            sync_template(template,connector_id)
+            sync_template(template, connector_id)
     return HttpResponse(status=204)
 
 
@@ -449,7 +449,8 @@ def sync_template(template, connector_id):
             chunk_size = int(chunk_size)
         if chunk_overlap:
             chunk_overlap = int(chunk_overlap)
-    index_data(template.module, template.account_id, connector_id, template.obj_type, template.schema, False, chunking_type,
+    index_data(template.module, template.account_id, connector_id, template.obj_type, template.schema, False,
+               chunking_type,
                chunk_size,
                chunk_overlap)
 
@@ -464,7 +465,6 @@ def sync_account_data(request, account_id):
                 for template in templates:
                     sync_template(template, integration.connector_id)
     return HttpResponse(status=204)
-
 
 
 @api_view(["PUT"])
@@ -484,8 +484,8 @@ def index_data(module, account_id, connector_id, obj_type, schema, reload, chunk
 
     auth.update_last_sync(account_id, connector_id, obj_type, False)
     data_id = str(integration.account_id) + str(connector_id)
-    metadata = {'account_id': integration.account_id, 'connector_id': connector_id, 'data_id': data_id,
-                'obj_type': obj_type}
+    metadata = {'account_id': integration.account_id, 'data_id': data_id,
+                'obj_type': str(integration.account_id) + obj_type}
     embedding_model = EmbeddingConfig()
     embedding_model.chunking_type = chunking_type
     embedding_model.chunk_size = chunk_size or embedding_model.chunk_size
@@ -533,12 +533,15 @@ def get_query_data(request):
     top_k = None
     instruction = None
     query_type = None
+    obj_type = None
     if url_params:
         url_params_dict = parse_qs(url_params)
         if 'connector_id' in url_params_dict and url_params_dict['connector_id'][0]:
             connector_id = url_params_dict['connector_id'][0]
         if 'account_id' in url_params_dict and url_params_dict['account_id'][0]:
             account_id = url_params_dict['account_id'][0]
+        if 'obj_type' in url_params_dict and url_params_dict['obj_type'][0]:
+            obj_type = url_params_dict['obj_type'][0]
         if 'query_text' in url_params_dict:
             query = url_params_dict['query_text'][0]
         if 'top_k' in url_params_dict:
@@ -559,7 +562,9 @@ def get_query_data(request):
     k = None
     if top_k:
         k = int(top_k)
-    if connector_id:
+    if obj_type:
+        where = {'obj_type': str(account_id) + obj_type}
+    elif connector_id:
         where = {'data_id': str(account_id) + str(connector_id)}
     else:
         where = {'account_id': str(account_id)}
@@ -687,10 +692,22 @@ def get_obj_templates(request, app, account_id):
     templates = Template.objects.filter(app=app, deleted=False, account_id=account_id)
     schemas = []
     for template in templates:
-        schemas.append({'template_id': template.id, 'app': app, 'obj_type': template.obj_type,
+        schemas.append({'template_id': template.id, 'app': app, 'module':template.module, 'obj_type': template.obj_type,
                         'schema': json.loads(template.schema) if template.schema else None,
                         'chunking_type': json.loads(template.chunking_type) if template.chunking_type else None})
     return JsonResponse(schemas, safe=False)
+
+
+@api_view(["GET"])
+def get_account_templates(request, account_id):
+    templates = Template.objects.filter(deleted=False, account_id=account_id)
+    schemas = []
+    for template in templates:
+        schemas.append({'template_id': template.id, 'app': template.app,'module':template.module, 'obj_type': template.obj_type,
+                        'schema': json.loads(template.schema) if template.schema else None,
+                        'chunking_type': json.loads(template.chunking_type) if template.chunking_type else None})
+    return JsonResponse(schemas, safe=False)
+
 
 
 @api_view(["POST"])
@@ -748,4 +765,23 @@ def patch_or_delete_template(request, template_id):
             template.save()
         except Template.DoesNotExist:
             return HttpResponse(status=404)
+    return HttpResponse(status=204)
+
+
+@api_view(["POST"])
+def upload_file(request):
+    import boto3
+    AWS_S3_BUCKET_NAME = env.str('AWS_S3_BUCKET_NAME', default='') or os.environ.get('AWS_S3_BUCKET_NAME', '')
+    AWS_ADMIN_ACCESS_KEY = env.str('AWS_ADMIN_ACCESS_KEY', default='') or os.environ.get('AWS_ADMIN_ACCESS_KEY', '')
+    AWS_ADMIN_SECRET_KEY = env.str('AWS_ADMIN_SECRET_KEY', default='') or os.environ.get('AWS_ADMIN_SECRET_KEY', '')
+    AWS_S3_BUCKET_REGION = env.str('AWS_S3_BUCKET_REGION', default='') or os.environ.get('AWS_S3_BUCKET_REGION', '')
+    file = request.FILES["file"]
+    account_id = request.POST.get('account_id')
+    file_name = request.POST.get('file_name')
+    client = boto3.client('s3', aws_access_key_id=AWS_ADMIN_ACCESS_KEY,
+                          aws_secret_access_key=AWS_ADMIN_SECRET_KEY,
+                          region_name=AWS_S3_BUCKET_REGION)
+    client.put_object(Body=file, Bucket=AWS_S3_BUCKET_NAME, Key=account_id + '/' + file_name)
+    file_process = request.POST.get('file_process', '')
+
     return HttpResponse(status=204)
