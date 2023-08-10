@@ -5,6 +5,7 @@ from langchain.embeddings import SentenceTransformerEmbeddings
 from dive.constants import DEFAULT_COLLECTION_NAME
 from langchain.embeddings.base import Embeddings
 import environ
+
 env = environ.Env()
 environ.Env.read_env()  # reading .env file
 import os
@@ -47,19 +48,36 @@ class StorageContext:
                 except ImportError:
                     raise ImportError(import_err_msg)
             else:
-                CHROMA_PERSIST_DIR=env.str('CHROMA_PERSIST_DIR', default='db') or os.environ.get('CHROMA_PERSIST_DIR', 'db')
                 import_err_msg = (
                     "`chromadb` package not found, please run `pip install chromadb`"
                 )
+                CHROMA_SERVER = env.str('CHROMA_SERVER', default=None) or os.environ.get('CHROMA_SERVER', default=None)
+                CHROMA_PORT = env.str('CHROMA_PORT', default=None) or os.environ.get('CHROMA_PORT', default=None)
+                CHROMA_PERSIST_DIR = env.str('CHROMA_PERSIST_DIR', default='db') or os.environ.get('CHROMA_PERSIST_DIR',
+                                                                                                   default='db')
+
                 try:
                     import chromadb
                     from dive.storages.vectorstores.chroma import Chroma
+                    from chromadb.config import Settings
                     if not embedding_function:
                         embedding_function = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
+                    client_settings=None
+
+                    if CHROMA_SERVER:
+                        CHROMA_PERSIST_DIR=None
+                        client_settings = chromadb.config.Settings(
+                            chroma_server_host=CHROMA_SERVER,
+                            chroma_server_http_port=CHROMA_PORT,
+                            chroma_api_impl='rest',
+                            allow_reset=True
+                        )
+
                     vector_store = Chroma(
-                                          collection_name=DEFAULT_COLLECTION_NAME,
-                                          persist_directory=CHROMA_PERSIST_DIR,
-                                          embedding_function=embedding_function)
+                        client_settings=client_settings,
+                        collection_name=DEFAULT_COLLECTION_NAME,
+                        persist_directory=CHROMA_PERSIST_DIR,
+                        embedding_function=embedding_function)
 
                 except ImportError:
                     raise ImportError(import_err_msg)
