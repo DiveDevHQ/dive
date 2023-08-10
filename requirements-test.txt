@@ -54,4 +54,5 @@ transformers>=4.31.0
 scipy==1.11.1
 nltk==3.8.1
 llama-cpp-python==0.1.77 --no-cache-dir
+boto3==1.28.23
 

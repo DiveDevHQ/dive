@@ -53,3 +53,4 @@ scipy==1.11.1
 scipy==1.11.1
 nltk==3.8.1
 psycopg2-binary==2.9.6
+boto3==1.28.23

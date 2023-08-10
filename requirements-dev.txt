@@ -53,3 +53,4 @@ scipy==1.11.1
 nltk==3.8.1
 chromadb==0.3.29
 transformers>=4.31.0
+boto3==1.28.23

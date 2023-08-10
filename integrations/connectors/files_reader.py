@@ -28,10 +28,10 @@ class PDFReader(BaseReader):
     """PDF parser."""
 
     def load_data_from_url(
-            self, doc_id, file_name, file_url, extra_info,token
+            self, doc_id, file_name, file_url, extra_info,private
     ):
-        r = get_file_data(file_url,token)
-        with BytesIO(r.content) as data:
+        r = get_file_data(file_url,private)
+        with BytesIO(r) as data:
             docs = []
             read_pdf = pypdf.PdfReader(data)
             part = 0
@@ -50,27 +50,27 @@ class PDFVisualReader(BaseReader):
     """PDF OCR parser."""
 
     def load_data_from_url(
-            self, doc_id, file_name, file_url, extra_info,token
+            self, doc_id, file_name, file_url, extra_info,private
     ):
         '''
         OCR_API_KEY = env.str('OCR_API_KEY', default='') or os.environ.get('OCR_API_KEY', '')
         headers = {
             'apikey': OCR_API_KEY,
         }
-        r = get_file_data(file_url,token)
-        encoded_string = 'data:application/pdf;base64,'+base64.b64encode(r.content).decode("utf-8")
+        r = get_file_data(file_url,private)
+        encoded_string = 'data:application/pdf;base64,'+base64.b64encode(r).decode("utf-8")
         print(encoded_string[0:100])
         body={'language':'eng', 'filetype':'pdf','base64Image': encoded_string}
         r = requests.post("https://api.ocr.space/parse/image", data=body, headers=headers)
-        print(r.content)
+        print(r)
         '''
 
         import pytesseract
         from pdf2image import convert_from_bytes
 
-        r = get_file_data(file_url,token)
+        r = get_file_data(file_url,private)
         docs = []
-        doc = convert_from_bytes(r.content)
+        doc = convert_from_bytes(r)
 
         part = 0
         for page_number, page_data in enumerate(doc):
@@ -89,11 +89,11 @@ class TxtReader(BaseReader):
     """Txt parser."""
 
     def load_data_from_url(
-            self, doc_id, file_name, file_url, extra_info,token
+            self, doc_id, file_name, file_url, extra_info,private
     ):
-        r = get_file_data(file_url,token)
+        r = get_file_data(file_url,private)
         docs = []
-        with BytesIO(r.content) as data:
+        with BytesIO(r) as data:
             metadata = {"file_name": file_name}
             if extra_info is not None:
                 metadata.update(extra_info)
@@ -105,12 +105,12 @@ class DocxReader(BaseReader):
     """Docx parser."""
 
     def load_data_from_url(
-            self, doc_id, file_name, file_url, extra_info,token
+            self, doc_id, file_name, file_url, extra_info,private
     ):
         """Parse file."""
-        r = get_file_data(file_url,token)
+        r = get_file_data(file_url,private)
         docs = []
-        with BytesIO(r.content) as data:
+        with BytesIO(r) as data:
             text = docx2txt.process(data)
             metadata = {"file_name": file_name}
             if extra_info is not None:
@@ -119,14 +119,18 @@ class DocxReader(BaseReader):
         return docs
 
 
-def get_file_data(file_url, token):
+def get_file_data(file_url, private):
+    import boto3
 
-    if token:
-        headers = {
-            'Authorization': 'Bearer ' + token
-        }
-        r = requests.get(url=file_url,
-                         headers=headers)
-        return r
+    if private:
+        AWS_S3_BUCKET_NAME = env.str('AWS_S3_BUCKET_NAME', default='') or os.environ.get('AWS_S3_BUCKET_NAME', '')
+        AWS_ADMIN_ACCESS_KEY = env.str('AWS_ADMIN_ACCESS_KEY', default='') or os.environ.get('AWS_ADMIN_ACCESS_KEY', '')
+        AWS_ADMIN_SECRET_KEY = env.str('AWS_ADMIN_SECRET_KEY', default='') or os.environ.get('AWS_ADMIN_SECRET_KEY', '')
+        AWS_S3_BUCKET_REGION = env.str('AWS_S3_BUCKET_REGION', default='') or os.environ.get('AWS_S3_BUCKET_REGION', '')
+        s3 = boto3.resource('s3',aws_access_key_id=AWS_ADMIN_ACCESS_KEY,
+                            aws_secret_access_key=AWS_ADMIN_SECRET_KEY,
+                            region_name=AWS_S3_BUCKET_REGION)
+        obj = s3.Object(AWS_S3_BUCKET_NAME, file_url)
+        return obj.get()['Body'].read()
     else:
-        return requests.get(file_url)
+        return requests.get(file_url).content

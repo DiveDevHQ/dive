@@ -28,7 +28,7 @@ def index_example_data(chunk_size, chunk_overlap, summarize, embeddings, llm):
     embedding_config.chunk_overlap = chunk_overlap
     embedding_config.summarize = summarize
     service_context = ServiceContext.from_defaults(embed_config=embedding_config, embeddings=embeddings, llm=llm)
-    #IndexContext.from_documents(documents=_documents, ids=_ids, service_context=service_context)
+    IndexContext.from_documents(documents=_documents, ids=_ids, service_context=service_context)
 
 
 
