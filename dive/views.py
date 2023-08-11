@@ -109,7 +109,7 @@ def authorization_api(request, app):
     if not connector_id:
         raise BadRequestException('connector_id is required')
     account_id = request.data.get('account_id', '')
-    print(connector_id)
+
     if not account_id:
         raise BadRequestException('account_id is required')
     redirect_uri = request.data.get('redirect_uri', '')
@@ -143,7 +143,7 @@ def authorization_api(request, app):
             url_dict['scope'] = scope_str
 
         try:
-            integration = Integration.objects.get(name=app, connector_id=connector_id)
+            integration = Integration.objects.get(name=app, connector_id=connector_id, account_id=account_id)
             integration.client_id = client_id
             integration.client_secret = client_secret
             integration.scope = scope_str
@@ -170,7 +170,7 @@ def authorization_api(request, app):
         if not api_key:
             raise BadRequestException('api_key is required')
         try:
-            integration = Integration.objects.get(name=app, connector_id=connector_id)
+            integration = Integration.objects.get(name=app, connector_id=connector_id,account_id=account_id)
             integration.api_key = api_key
             integration.enabled = True
             integration.connector_id = connector_id
@@ -186,7 +186,7 @@ def authorization_api(request, app):
     if integration_config['auth_method'] == 'NOAUTH':
 
         try:
-            integration = Integration.objects.get(name=app, connector_id=connector_id)
+            integration = Integration.objects.get(name=app, connector_id=connector_id, account_id=account_id)
             integration.enabled = True
             integration.connector_id = connector_id
             integration.account_id = account_id
