@@ -16,7 +16,7 @@ from dive.retrievers.query_context import QueryContext
 from dive.indices.index_context import IndexContext
 from dive.types import EmbeddingConfig
 from langchain.schema import Document
-from dive.constants import DEFAULT_COLLECTION_NAME, DEFAULT_CHUNKING_TYPE
+from dive.constants import DEFAULT_COLLECTION_NAME, DEFAULT_CHUNKING_TYPE,DEFAULT_TOP_K_SIZE
 from dive.util.model_util import get_llm, get_embeddings
 
 import json
@@ -530,7 +530,7 @@ def get_query_data(request):
     connector_id = None
     account_id = None
     query = None
-    top_k = None
+    top_k = DEFAULT_TOP_K_SIZE
     instruction = None
     query_type = None
     obj_type = None
@@ -579,6 +579,7 @@ def get_query_data(request):
 
     result_text = ''
     top_chunks = []
+
     if len(data) > 0:
         for d in data:
             top_chunks.append(d.page_content)
@@ -782,6 +783,7 @@ def upload_file(request):
                           aws_secret_access_key=AWS_ADMIN_SECRET_KEY,
                           region_name=AWS_S3_BUCKET_REGION)
     client.put_object(Body=file, Bucket=AWS_S3_BUCKET_NAME, Key=account_id + '/' + file_name)
-    file_process = request.POST.get('file_process', '')
 
     return HttpResponse(status=204)
+
+

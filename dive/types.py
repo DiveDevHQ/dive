@@ -1,6 +1,6 @@
 from typing import List, Dict, Optional, Any
 from pydantic import BaseModel
-from dive.constants import DEFAULT_CHUNK_OVERLAP, DEFAULT_CHUNK_SIZE, DEFAULT_CHUNKING_TYPE, DEFAULT_QUERY_CHUNK_SIZE
+from dive.constants import DEFAULT_CHUNK_OVERLAP, DEFAULT_CHUNK_SIZE, DEFAULT_CHUNKING_TYPE
 
 
 class EmbeddingConfig(BaseModel):

@@ -616,3 +616,9 @@ pre {
 .loading{
   display: flex;
 }
+
+
+.query-result{
+ 
+  width: 50%;
+}

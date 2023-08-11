@@ -116,6 +116,7 @@ class Chroma(VectorStore):
             metadata=collection_metadata
         )
 
+
         self.override_relevance_score_fn = relevance_score_fn
 
     @xor_args(("query_texts", "query_embeddings"))

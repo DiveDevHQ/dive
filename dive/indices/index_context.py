@@ -115,7 +115,6 @@ class IndexContext:
                         _metadata = {'summary_id': summary_id}
                     _document = Document(metadata=_metadata,
                                          page_content=d)
-
                     _documents.append(_document)
                     _ids.append(ids[i] + "_chunk_" + str(j))
 
@@ -129,8 +128,12 @@ class IndexContext:
                 embedding=service_context.embeddings)
 
         else:
+            CHROMA_SERVER = env.str('CHROMA_SERVER', default=None) or os.environ.get('CHROMA_SERVER', default=None)
             CHROMA_PERSIST_DIR = env.str('CHROMA_PERSIST_DIR', default='db') or os.environ.get('CHROMA_PERSIST_DIR',
-                                                                                               'db')
+                                                                                                'db')
+            if CHROMA_SERVER:
+                CHROMA_PERSIST_DIR=None
+
             storage_context.vector_store.from_documents(
                 collection_name=DEFAULT_COLLECTION_NAME,
                 documents=_documents, ids=_ids,
