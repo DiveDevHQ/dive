@@ -78,6 +78,7 @@ function App() {
   function loadApps() {
 
     getApps(session.user.id).then(data => {
+   
       setApps(data);
       if (data.length === 0) {
         setPage(4);
