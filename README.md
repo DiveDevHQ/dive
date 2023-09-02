@@ -20,9 +20,11 @@ CRM, Documentations, Payment, KYC, Databases
 
 ### Demo
 <p align="center">
-  <img alt="divelogo" width="600" src="https://docs.diveapi.co/images/demo.png">
+  <img alt="divelogo" width="700" src="https://docs.diveapi.co/images/demo.png">
 </p>
-
+<p align="center">
+  <img alt="divelogo" width="700" src="https://docs.diveapi.co/images/playground.png">
+</p>
 
 ## Table of Contents
 
