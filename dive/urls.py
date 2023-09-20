@@ -44,6 +44,7 @@ urlpatterns = [
     path("templates/<str:app>/<str:module>/<str:account_id>", views.get_obj_module_templates, name="get_obj_module_templates"),
     path("template/<str:template_id>", views.patch_or_delete_template, name="patch_or_delete_template"),
     path("template", views.add_obj_template, name="add_template"),
+    path("contact", views.contact_us, name="contact_us"),
     path("file/upload", views.upload_file, name="upload_file"),
     path("integrations/", include("integrations.urls")),
     path('admin/', admin.site.urls),

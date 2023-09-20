@@ -787,3 +787,16 @@ def upload_file(request):
     return HttpResponse(status=204)
 
 
+@api_view(["POST"])
+def contact_us(request):
+    business = request.POST.get('business')
+    firstName = request.POST.get('firstName')
+    lastName = request.POST.get('lastName')
+    email = request.POST.get('email')
+    phone = request.POST.get('phone')
+    notes = request.POST.get('notes')
+    title = request.POST.get('title')
+
+
+
+
