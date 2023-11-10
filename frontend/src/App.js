@@ -20,6 +20,7 @@ import { createClient } from '@supabase/supabase-js'
 import { Auth } from '@supabase/auth-ui-react'
 import { ThemeSupa, ThemeMinimal } from '@supabase/auth-ui-shared'
 import { getApps, getConnectors, clearData, syncConnectorData, queryData, setupVector, authWithPublicData, syncAccountData, getAccountTemplates } from './api';
+import saveAccessToken from './utils';
 
 const supabase = createClient(process.env.REACT_APP_SUPABASE_CLIENT, process.env.REACT_APP_SUPABASE_ANON_KEY)
 
@@ -43,14 +44,15 @@ function App() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-
+      setSession(session);
+      saveAccessToken(session.access_token);
     })
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
+      setSession(session);
+      saveAccessToken(session.access_token);
     })
     setTimeout(() => {
       setInitialized(true);
@@ -542,9 +544,9 @@ function App() {
               <div className='col-4'>
                 <button type="button" className="btn btn-grey mr-5" onClick={() => testDocuments()} >Try Test Docs</button>
               </div>
-              <div className='col-4'>
+             {/*<div className='col-4'>
                 <button type="button" className="btn btn-grey mr-5" onClick={() => openFileUploader()} >Upload Files</button>
-              </div>
+              </div> */} 
 
             </div>
             <div className='mt-5'>

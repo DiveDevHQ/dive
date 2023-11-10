@@ -15,12 +15,14 @@ class ServiceContext:
     embeddings: Embeddings
     llm: BaseModel
     instruction: str
+    version:str
 
     @classmethod
     def from_defaults(cls, embed_config: Optional[BaseModel] = None,
                       embeddings: Optional[Embeddings] = None,
                       llm: Optional[BaseLanguageModel] = None,
-                      instruction: Optional[str] = None
+                      instruction: Optional[str] = None,
+                      version: Optional[str] = None
                       ):
         if not embed_config:
             embed_config = DefaultEmbeddingConfig()
@@ -33,12 +35,13 @@ class ServiceContext:
             embed_config=embed_config,
             embeddings=embeddings,
             llm=llm,
-            instruction=instruction
+            instruction=instruction,
+            version=version
         )
 
 
 class DefaultEmbeddingConfig(BaseModel):
-    summarize = False
+
     chunking_type = DEFAULT_CHUNKING_TYPE
     chunk_size = DEFAULT_CHUNK_SIZE
     chunk_overlap = DEFAULT_CHUNK_OVERLAP

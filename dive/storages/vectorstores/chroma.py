@@ -72,7 +72,6 @@ class Chroma(VectorStore):
             collection_name: str = _LANGCHAIN_DEFAULT_COLLECTION_NAME,
             embedding_function: Optional[Embeddings] = None,
             persist_directory: Optional[str] = None,
-            client_settings: Optional[chromadb.config.Settings] = None,
             collection_metadata: Optional[Dict] = None,
             client: Optional[chromadb.Client] = None,
             relevance_score_fn: Optional[Callable[[float], float]] = None,
@@ -84,28 +83,18 @@ class Chroma(VectorStore):
         except ImportError:
             raise ValueError(
                 "Could not import chromadb python package. "
-                "Please install it with `pip install chromadb`."
+                "Please install it with `pip install chromadb==0.4.15`."
             )
 
         if client is not None:
-            self._client_settings = client_settings
             self._client = client
             self._persist_directory = persist_directory
         else:
-            if client_settings:
-                _client_settings = client_settings
-            elif persist_directory:
-                _client_settings = chromadb.config.Settings(
-                    chroma_db_impl="duckdb+parquet",
-                    persist_directory=persist_directory,
-                )
+
+            if persist_directory:
+                self._client=chromadb.PersistentClient(path=persist_directory)
             else:
-                _client_settings = chromadb.config.Settings()
-            self._client_settings = _client_settings
-            self._client = chromadb.Client(_client_settings)
-            self._persist_directory = (
-                    _client_settings.persist_directory or persist_directory
-            )
+                self._client=chromadb.EphemeralClient()
 
         self._embedding_function = embedding_function
         self._collection = self._client.get_or_create_collection(
@@ -451,18 +440,7 @@ class Chroma(VectorStore):
 
         return self._collection.get(**kwargs)
 
-    def persist(self) -> None:
-        """Persist the collection.
 
-        This can be used to explicitly persist the data to disk.
-        It will also be called automatically when the object is destroyed.
-        """
-        if self._persist_directory is None:
-            raise ValueError(
-                "You must specify a persist_directory on"
-                "creation to persist the collection."
-            )
-        self._client.persist()
 
     def update_document(self, document_id: str, document: Document) -> None:
         """Update a document in the collection.
@@ -563,8 +541,7 @@ class Chroma(VectorStore):
         texts = [doc.page_content for doc in documents]
         metadatas = [doc.metadata for doc in documents]
         self.add_texts(texts=texts, metadatas=metadatas, ids=ids)
-        if persist_directory:
-            self.persist()
+
 
     def delete(self, ids: Optional[List[str]] = None,
                delete_all: Optional[bool] = None,

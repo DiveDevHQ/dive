@@ -13,6 +13,8 @@ print('------------Finish Indexing Data-----------------')
 time.sleep(30)
 print('------------Start Querying Data-----------------')
 question='What is airbnb\'s revenue?'
-instruction = None # 'summarise your response in no more than 5 lines' or 'answer this question in Indonesian'
-query_example_data(question, 4, OpenAIEmbeddings(), OpenAI(temperature=0), instruction)
+instruction = None
+#instruction = 'answer this question in Indonesian only'
+openai_model='gpt-3.5-turbo'
+query_example_data(question, 4, OpenAIEmbeddings(), OpenAI(temperature=0), instruction,openai_model)
 #clear_example_data()

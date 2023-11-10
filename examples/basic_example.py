@@ -13,7 +13,7 @@ print('------------Finish Indexing Data-----------------')
 time.sleep(30)
 print('------------Start Querying Data-----------------')
 question='What is airbnb\'s revenue?'
-query_example_data(question, 4, None, None, None)
+query_example_data(question, 4, None, None, None,None)
 #clear_example_data()
 
 #Use pinecone instead of chromadb

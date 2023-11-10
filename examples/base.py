@@ -32,8 +32,8 @@ def index_example_data(chunk_size, chunk_overlap, summarize, embeddings, llm):
 
 
 
-def query_example_data(question, chunk_size, embeddings, llm, instruction):
-    service_context = ServiceContext.from_defaults(embeddings=embeddings, llm=llm, instruction=instruction)
+def query_example_data(question, chunk_size, embeddings, llm, instruction, version):
+    service_context = ServiceContext.from_defaults(embeddings=embeddings, llm=llm, instruction=instruction,version=version)
     query_context = QueryContext.from_defaults(service_context=service_context)
     data = query_context.query(query=question, k=chunk_size)
 

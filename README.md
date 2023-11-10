@@ -22,6 +22,9 @@ CRM, Documentations, Payment, KYC, Databases
 <p align="center">
   <img alt="divelogo" width="600" src="https://docs.diveapi.co/images/demo.png">
 </p>
+<p align="center">
+  <img alt="divelogo" width="600" src="https://docs.diveapi.co/images/playground.png">
+</p>
 
 
 ## Table of Contents
@@ -53,11 +56,6 @@ You can install all the required dependencies by running command
 Prod ready:
 ```
 pip install -r requirements.txt
-```
-
-Test locally:
-```
-pip install -r requirements-dev.txt
 ```
 
 If you have issue installing chromadb, try to run below command:
