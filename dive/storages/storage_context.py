@@ -62,19 +62,14 @@ class StorageContext:
                     from chromadb.config import Settings
                     if not embedding_function:
                         embedding_function = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
-                    client_settings=None
+                    chromadb_client=None
 
                     if CHROMA_SERVER:
                         CHROMA_PERSIST_DIR=None
-                        client_settings = chromadb.config.Settings(
-                            chroma_server_host=CHROMA_SERVER,
-                            chroma_server_http_port=CHROMA_PORT,
-                            chroma_api_impl='rest',
-                            allow_reset=True
-                        )
+                        chromadb_client=chromadb.HttpClient(host=CHROMA_SERVER, port=CHROMA_PORT)
 
                     vector_store = Chroma(
-                        client_settings=client_settings,
+                        client=chromadb_client,
                         collection_name=DEFAULT_COLLECTION_NAME,
                         persist_directory=CHROMA_PERSIST_DIR,
                         embedding_function=embedding_function)

@@ -1,3 +1,4 @@
+import Cookie from 'universal-cookie';
 
 export function randomColor() {
     return `hsl(${Math.floor(Math.random() * 360)}, 95%, 90%)`;
@@ -29,3 +30,32 @@ export function randomColor() {
   
   }
   
+
+export function getUserId() {
+  var cookie = new Cookie();
+  var access_token = cookie.get('user_id');
+  return access_token;
+}
+
+
+export function getAccessToken() {
+  var cookie = new Cookie();
+  var access_token = cookie.get('access_token');
+  return access_token;
+}
+
+
+export function clearCookie() {
+  var cookie = new Cookie();
+  cookie.remove('access_token');
+}
+
+
+
+export default function saveAccessToken(accessToken) {
+  var cookie = new Cookie();
+  cookie.set('access_token', accessToken, {
+    path: '/', httpOnly: false,
+    maxAge: 365 * 24 * 60 * 60 * 1000
+  });
+}
