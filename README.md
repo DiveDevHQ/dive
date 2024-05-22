@@ -1,9 +1,9 @@
 <p align="center">
-  <img alt="divelogo" width="350" src="https://docs.diveapi.co/images/logo_dark-1a726960.png">
+  <img alt="divelogo" width="350" src="https://docs.chenxueyan.com/images/logo_dark-1a726960.png">
 </p>
 
 <p align="center">
-  <a href="https://docs.diveapi.co/" target="blank">Dive API Docs</a>
+  <a href="https://docs.chenxueyan.com/" target="blank">Dive API Docs</a>
 </p>
 
 ## Dive is a managed data platform to build LLM fintech applications
@@ -20,11 +20,11 @@ CRM, Documentations, Payment, KYC, Databases
 
 ### Demo
 <p align="center">
-  <img alt="divelogo" width="700" src="https://docs.diveapi.co/images/demo.png">
+  <img alt="divelogo" width="700" src="https://docs.chenxueyan.com/images/demo.png">
 </p>
 
 <p align="center">
-  <img alt="divelogo" width="700" src="https://docs.diveapi.co/images/playground.png">
+  <img alt="divelogo" width="700" src="https://docs.chenxueyan.com/images/playground.png">
 </p>
 
  
@@ -117,11 +117,11 @@ Once authentication is completed, data with default format will be indexed into 
 
 
 ## Docs and support
-Read how to use Dive API in our <a href="https://docs.diveapi.co/" target="blank">documentation</a>
+Read how to use Dive API in our <a href="https://docs.chenxueyan.com/" target="blank">documentation</a>
 
 Supported business apps can be found at integrations/config.yaml
 
-<a href="mailto:sherry@diveapi.co">Ask questions, request integrations or give feedback</a>
+<a href="mailto:sherry@chenxueyan.com">Ask questions, request integrations or give feedback</a>
 
 ## Contributing
 Get started by checking Github issues and creating a Pull Request. An easy way to start contributing is to update an existing connector or create a new connector. You can find the code for existing connectors in the connectors directory. The Dive platform is written in python.
