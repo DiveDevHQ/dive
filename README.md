@@ -71,8 +71,6 @@ DEBUG=True
 ENVIRONMENT=test 
 DOMAIN=http://localhost:8000/  
 ALLOWED_HOSTS=.localhost  
-CORS_ORIGIN_WHITELIST=http://localhost:3000  
-HOME_URL=http://localhost:3000  
 ```
 
 Then simply apply the migrations:
