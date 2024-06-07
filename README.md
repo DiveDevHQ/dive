@@ -85,28 +85,7 @@ You can now run the development server:
 ```
 python manage.py runserver
 ```
-
-Open a new terminal and navigate to "frontend" folder:
-```
-cd frontend
-```
-Add a **.env** file under "frontend" folder with the following content:
-```
-REACT_APP_API_URL=http://localhost:8000 
-```
-Install reactjs with the following command:
-
-```
-npm install
-```
-
-You can now start the website:
-
-```
-npm start
-```
-
-Open http://localhost:3000 and follow web app UI instructions to connect with your data sources.
+Open http://localhost:8000 and follow web app UI instructions to connect with your data sources.
 
 Once authentication is completed, data with default format will be indexed into vector DB. 
 
