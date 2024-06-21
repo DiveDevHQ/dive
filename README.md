@@ -87,11 +87,6 @@ Open http://localhost:8000 and follow web app UI instructions to connect with yo
 
 Once authentication is completed, data with default format will be indexed into vector DB. 
 
-### Dive Cloud
-
-<a href="mailto:sherry@diveapi.co">Sign up for cloud version</a>
-
-
 
 ## Docs and support
 Read how to use Dive API in our <a href="https://docs.chenxueyan.com/" target="blank">documentation</a>
